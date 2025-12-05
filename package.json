@@ -1,0 +1,28 @@
+{
+  "name": "kotomiref",
+  "version": "0.1.0",
+  "description": "kotomiref",
+  "homepage": "https://github.com/6607changchun/kotomiref#readme",
+  "bugs": {
+    "url": "https://github.com/6607changchun/kotomiref/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/6607changchun/kotomiref.git"
+  },
+  "license": "Apache-2.0",
+  "author": "",
+  "type": "typescript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "electron": "^39.2.5",
+    "electron-builder": "^26.0.12",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-router": "^7.10.1"
+  }
+}
