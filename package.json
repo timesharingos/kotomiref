@@ -1,28 +1,40 @@
 {
   "name": "kotomiref",
-  "version": "0.1.0",
-  "description": "kotomiref",
-  "homepage": "https://github.com/6607changchun/kotomiref#readme",
-  "bugs": {
-    "url": "https://github.com/6607changchun/kotomiref/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/6607changchun/kotomiref.git"
-  },
-  "license": "Apache-2.0",
-  "author": "",
-  "type": "typescript",
-  "main": "index.js",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "vite": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "dev": "concurrently --kill-others \"wait-on http://localhost:5173 && cross-env NODE_ENV=dev electron .\" \"vite\" ",
+    "prod": "npm run build && cross-env NODE_ENV=prod electron .",
+    "build-all": "electron-builder build"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",
-    "electron": "^39.2.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.6",
     "electron-builder": "^26.0.12",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "react-router": "^7.10.1"
-  }
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.4",
+    "wait-on": "^9.0.3"
+  },
+  "main": "electron/main.cjs"
 }
