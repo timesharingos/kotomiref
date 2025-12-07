@@ -3,6 +3,13 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
+import Button from '@mui/material/Button';
+
+function ButtonUsage() {
+  return <Button variant="contained">Hello world</Button>;
+}
+
+
 function App() {
   const [count, setCount] = useState(0)
 
@@ -31,6 +38,9 @@ function App() {
       <div>
         <button onClick={() => window.dev.send("react")}>send</button>
         <button onClick={async () => alert(await window.dev.invoke("react"))}>invoke</button>
+      </div>
+      <div>
+        <ButtonUsage></ButtonUsage>
       </div>
     </>
   )
