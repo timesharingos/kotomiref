@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron")
 
 const path = require("path")
+const db = require("./sqlite/init.cjs")()
 
 function loadWindow(mainWin, env){
     if(env == "dev"){
