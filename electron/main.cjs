@@ -5,14 +5,17 @@ const path = require("path")
 const db = require("./sqlite/init.cjs")()
 
 function loadWindow(mainWin, env){
-    if(env == "dev"){
+    if(app.isPackaged){
+        mainWin.loadFile("./dist/index.html")
+    } else if(env == "dev"){
         mainWin.loadURL("http://localhost:5173")
     } else if(env == "prod") {
         mainWin.loadFile(path.join(__dirname, "../dist/index.html"))
-    } else {
+    } else if(app.isPackage){
         console.log("illegal type")
         app.quit()
     }
+    mainWin.webContents.openDevTools()
 }
 
 function createWindow(){

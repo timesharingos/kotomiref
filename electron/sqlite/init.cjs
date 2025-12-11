@@ -1,5 +1,6 @@
 const path = require("path")
-const db_path = path.join(__dirname, "../../kotomiref.db")
+const { app } = require("electron")
+const db_path = path.join(app.getPath("userData"), "kotomiref.db")
 const fs = require("fs")
 
 function init_db(){
