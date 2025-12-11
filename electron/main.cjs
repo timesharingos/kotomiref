@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron")
+const { Menu } = require("electron/main")
 
 const path = require("path")
 const db = require("./sqlite/init.cjs")()
@@ -22,6 +23,7 @@ function createWindow(){
             preload: path.join(__dirname, "preload.cjs")
         }
     })
+    Menu.setApplicationMenu(null)
     loadWindow(mainWin, process.env.NODE_ENV ?? "dev")
 }
 app.whenReady().then(() => {
