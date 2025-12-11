@@ -44,5 +44,17 @@
     "vite": "^7.2.4",
     "wait-on": "^9.0.3"
   },
-  "main": "electron/main.cjs"
+  "main": "electron/main.cjs",
+  "homepage": ".",
+  "build": {
+    "directories": {
+      "output": "build"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "deleteAppDataOnUninstall": true
+    }
+  }
 }
