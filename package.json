@@ -20,6 +20,7 @@
     "@mui/material": "^7.3.6",
     "@mui/styled-engine-sc": "^7.3.6",
     "better-sqlite3": "^12.5.0",
+    "js-sha256": "^0.11.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router": "^7.10.1",
