@@ -299,3 +299,20 @@ class Rel extends ToDb {
         this.#toid = obj.to
     }
 }
+
+module.exports = {
+    ToDb,
+    Type,
+    ConceptType,
+    RelType,
+    AttributeType,
+    EntityType,
+    Concept,
+    Attribute,
+    Entity,
+    InstanceRel,
+    TypeRel,
+    AttributeInstance,
+    Node,
+    Rel
+}
