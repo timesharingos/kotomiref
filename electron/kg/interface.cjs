@@ -2,6 +2,8 @@ const sha256 = require("js-sha256").sha256
 class ToDb{
     toDb(){return null}
     fromDb(obj){throw new TypeError("not implemented")}
+    encode(data){return data}
+    decode(data){return data}
 }
 
 class Type extends ToDb{
@@ -10,6 +12,8 @@ class Type extends ToDb{
     #args
     #supertype
     #id
+    #encoder
+    #decoder
     constructor(typeclass, typename, supertype, args){
         this.#typeclass = typeclass
         this.#typename = typename
@@ -25,6 +29,10 @@ class Type extends ToDb{
     get supertype() { return this.#supertype }
     get args() { return this.#args }
     get id() { return this.#id }
+    set processor(processor){
+        this.#encoder = processor.encoder
+        this.#decoder = processor.decoder
+    }
 
     resolveArgs(){return JSON.stringify(this.#args)}
     restoreArgs(args){return JSON.parse(args)}
@@ -36,6 +44,7 @@ class Type extends ToDb{
     }
     toDb(){
         let base = {
+            id: this.#id,
             typeclass: this.#typeclass,
             typename: this.#typename,
             supertype: this.#supertype,
@@ -45,10 +54,17 @@ class Type extends ToDb{
         return base
     }
     fromDb(obj){
+        this.#id = obj.id
         this.#typeclass = obj.typeclass,
         this.#typename = obj.typename,
         this.#supertype = obj.supertype,
         this.#args = obj.#args == null ? obj.#args : restoreArgs(obj.#args)
+    }
+    encode(data){
+        return this.#encoder(data)
+    }
+    decode(data){
+        return this.#decoder(data)
     }
 }
 class ConceptType extends Type{
@@ -176,38 +192,28 @@ class AttributeInstance extends ToDb{
     #typeid
     #attrid
     #value
-    #encode
-    #decode
-    constructor(typeid, value, encode, decode){
+    constructor(typeid, value){
         this.#typeid = typeid
         this.#value = value
         this.#attrid = `attr_${sha256(`${this.#typeid}_${Date.now()}`)}`
-        this.#encode = encode
-        this.#decode = decode
     }
 
     get type(){return this.#typeid}
     get id(){return this.#attrid}
     get value(){return this.#value}
-    get encode(){return this.#encode}
-    get decode(){return this.#decode}
-    set processor(processor){
-        this.#encode = processor.encode
-        this.#decode = processor.decode
-    }
 
     toDb(){
         return {
             type: this.#typeid,
             id: this.#attrid,
-            data: this.#encode(this.#value)
+            raw: this.#value
         }
     }
 
     fromDb(obj){
         this.#typeid = obj.type
         this.#attrid = obj.id
-        this.#value = this.#decode(obj.data)
+        this.#value = obj.decoded
     }
 }
 
