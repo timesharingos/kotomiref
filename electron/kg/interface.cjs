@@ -77,7 +77,7 @@ class ConceptType extends Type{
         }
         ConceptType.#first_create = false
     }
-    get instance(){return ConceptType.#instance}
+    static get instance(){return ConceptType.#instance}
 }
 
 class AttributeType extends Type{
@@ -90,7 +90,7 @@ class AttributeType extends Type{
         }
         AttributeType.#first_create = false
     }
-    get instance(){return AttributeType.#instance}
+    static get instance(){return AttributeType.#instance}
 }
 
 class EntityType extends Type{
@@ -103,7 +103,7 @@ class EntityType extends Type{
         }
         EntityType.#first_create = false
     }
-    get instance(){return EntityType.#instance}
+    static get instance(){return EntityType.#instance}
 }
 
 class RelType extends Type{
@@ -116,7 +116,7 @@ class RelType extends Type{
         }
         RelType.#first_create = false
     }
-    get instance(){return RelType.#instance}
+    static get instance(){return RelType.#instance}
 }
 
 class Attribute extends Type{
