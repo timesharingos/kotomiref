@@ -121,7 +121,7 @@ class RelType extends Type{
 
 class Attribute extends Type{
     constructor(req, name, typeid){
-        super("attribute", name, AttributeType.id, {req: req, typeid: typeid})
+        super("attribute", name, AttributeType.instance.id, {req: req, typeid: typeid})
     }
 
     get req(){return this.args.req}
@@ -138,7 +138,7 @@ class Attribute extends Type{
 
 class Concept extends Type{
     constructor(attributeIds, name){
-        super("concept", name, ConceptType.id, attributeIds)
+        super("concept", name, ConceptType.instance.id, attributeIds)
     }
     get attributes(){return this.args}
     resolveArgs(){
@@ -151,14 +151,14 @@ class Concept extends Type{
 
 class Entity extends Type{
     constructor(conceptId, name){
-        super("entity", name, EntityType.id, conceptId)
+        super("entity", name, EntityType.instance.id, conceptId)
     }
     get concept(){return this.args}
 }
 
 class TypeRel extends Type{
     constructor(conceptId, name, from, to){
-        super("typeRel", name, RelType.id, {from: from, to: to})
+        super("typeRel", name, RelType.instance.id, {from: from, to: to})
     }
     get from(){return this.args.from}
     get to(){return this.args.to}
@@ -174,7 +174,7 @@ class TypeRel extends Type{
 
 class InstanceRel extends Type{
     constructor(conceptId, name, from, to){
-        super("instanceRel", name, RelType.id, {from: from, to: to})
+        super("instanceRel", name, RelType.instance.id, {from: from, to: to})
     }
     get from(){return this.args.from}
     get to(){return this.args.to}
