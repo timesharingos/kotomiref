@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "dev": "concurrently --kill-others \"wait-on http://localhost:5173 && cross-env NODE_ENV=dev electron .\" \"vite\" ",
     "prod": "npm run build && cross-env NODE_ENV=prod electron .",
-    "build-all": "electron-builder build",
+    "build-all": "npm run build && electron-builder --win",
     "test": "jest"
   },
   "dependencies": {
@@ -58,6 +58,16 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "deleteAppDataOnUninstall": true
-    }
+    },
+    "files": [
+      "package.json",
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*",
+      "LICENSE",
+      "README.md",
+      "!**/*.test.cjs",
+      "!**/*.d.ts"
+    ]
   }
 }
