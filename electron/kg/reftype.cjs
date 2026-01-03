@@ -1,0 +1,1 @@
+const subjectType = require("./reftype/subject.cjs")
