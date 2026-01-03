@@ -157,7 +157,7 @@ class Entity extends Type{
 }
 
 class TypeRel extends Type{
-    constructor(conceptId, name, from, to){
+    constructor(name, from, to){
         super("typeRel", name, RelType.instance.id, {from: from, to: to})
     }
     get from(){return this.args.from}
@@ -173,7 +173,7 @@ class TypeRel extends Type{
 }
 
 class InstanceRel extends Type{
-    constructor(conceptId, name, from, to){
+    constructor(name, from, to){
         super("instanceRel", name, RelType.instance.id, {from: from, to: to})
     }
     get from(){return this.args.from}
