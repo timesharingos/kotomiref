@@ -15,6 +15,7 @@ class Type extends ToDb{
     #encoder
     #decoder
     constructor(typeclass, typename, supertype, args){
+        super()
         this.#typeclass = typeclass
         this.#typename = typename
         this.#args = args
@@ -156,6 +157,10 @@ class Entity extends Type{
     get concept(){return this.args}
 }
 
+/*
+ * TypeRel: only used between concepts, such as subclassof/parentof.
+ * InstanceRel: used for instance, and an "adjugate" TypeRel is created implicitly.
+ */
 class TypeRel extends Type{
     constructor(name, from, to){
         super("typeRel", name, RelType.instance.id, {from: from, to: to})
@@ -173,11 +178,39 @@ class TypeRel extends Type{
 }
 
 class InstanceRel extends Type{
+    static #relTypeMap = new WeakMap()
+    #relInstance
     constructor(name, from, to){
         super("instanceRel", name, RelType.instance.id, {from: from, to: to})
     }
     get from(){return this.args.from}
     get to(){return this.args.to}
+
+    static getTypeRel(selfType){
+        let type
+        if(!InstanceRel.#relTypeMap.has(selfType)){
+            if(selfType === InstanceRel){
+                type = TypeRel
+            } else {
+                type = class extends InstanceRel.getTypeRel(Object.getPrototypeOf(selfType)) {
+                    constructor(name, from, to){
+                        super(name, from, to)
+                    }
+                }
+            }
+            InstanceRel.#relTypeMap.set(selfType, type)
+        } else {
+            type = InstanceRel.#relTypeMap.get(selfType)
+        }
+        return type
+    }
+    getTypeRelInstance(selfType){
+        if(!this.#relInstance){
+            let typerel = InstanceRel.getTypeRel(selfType)
+            this.#relInstance = new typerel(this.typename, this.args.from, this.args.to)
+        }
+        return this.#relInstance
+    }
 
     resolveArgs(){
         return `${this.from}/${this.to}`

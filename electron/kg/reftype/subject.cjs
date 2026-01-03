@@ -41,7 +41,7 @@ class SubSubject extends kg_interface.Concept {
     static get instance(){return SubSubject.#instance}
 }
 
-class SubSubjectRel extends kg_interface.TypeRel {
+class SubSubjectRel extends kg_interface.InstanceRel {
     static #instance = new SubSubjectRel()
     static #first_create = true
     constructor(){
