@@ -99,7 +99,7 @@ const AttrReq = class Req {
     static #required = new Req("required", true)
     static #optional = new Req("optional", true)
     static #multiple = new Req("multiple", true)
-    // condition Level, describing the relationship between the current attr and the previous one
+    // condition Level, describing the relationship between the current attr and the previous one, condition* AttrReq is optional by default.
     // Sib = depends on what the previous one depends on (common parent)
     // Child = depends on the previous one (exact parent)
     // Par = depends on the what the parent of the preivous one depends on (common grandparent)
@@ -122,7 +122,19 @@ const AttrReq = class Req {
     static get conditionPar(){return Req.#conditionPar}
 }
 
+//constraints
+class SubConceptOf extends kg_interface.TypeRel{
+    constructor(from, to){
+        super("subConceptOf", from, to)
+    }
+}
+
+const constraints = {
+    SubConceptOf
+}
+
 module.exports = {
     primitive: primitiveType,
+    constraints,
     AttrReq,
 }
