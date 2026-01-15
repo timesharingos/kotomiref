@@ -15,6 +15,7 @@ class Type extends ToDb{
     #encoder
     #decoder
     constructor(typeclass, typename, supertype, args){
+        super()
         this.#typeclass = typeclass
         this.#typename = typename
         this.#args = args
@@ -121,7 +122,7 @@ class RelType extends Type{
 
 class Attribute extends Type{
     constructor(req, name, typeid){
-        super("attribute", name, AttributeType.id, {req: req, typeid: typeid})
+        super("attribute", name, AttributeType.instance.id, {req: req, typeid: typeid})
     }
 
     get req(){return this.args.req}
@@ -138,7 +139,7 @@ class Attribute extends Type{
 
 class Concept extends Type{
     constructor(attributeIds, name){
-        super("concept", name, ConceptType.id, attributeIds)
+        super("concept", name, ConceptType.instance.id, attributeIds)
     }
     get attributes(){return this.args}
     resolveArgs(){
@@ -151,40 +152,87 @@ class Concept extends Type{
 
 class Entity extends Type{
     constructor(conceptId, name){
-        super("entity", name, EntityType.id, conceptId)
+        super("entity", name, EntityType.instance.id, conceptId)
     }
     get concept(){return this.args}
 }
 
+/*
+ * TypeRel: only used between concepts, such as subclassof/parentof.
+ * InstanceRel: used for instance, and an "adjugate" TypeRel is created implicitly.
+ */
 class TypeRel extends Type{
-    constructor(conceptId, name, from, to){
-        super("typeRel", name, RelType.id, {from: from, to: to})
+    constructor(name, from, to, attributeIds = []){
+        super("typeRel", name, RelType.instance.id, {from: from, to: to, attributeIds: attributeIds})
     }
     get from(){return this.args.from}
     get to(){return this.args.to}
+    get attributes(){return this.args.attributeIds}
 
     resolveArgs(){
-        return `${this.from}/${this.to}`
+        return `${this.from}/${this.to}!${this.args.attributeIds.join("@")}`
     }
     restoreArgs(args){
         let split_args = args.split("/")
-        return {from: split_args[0], to: split_args[1]}
+        let from = split_args[0]
+        let to, attributes = split_args[1].split("!")
+        if(attributes === ""){
+            attributes = []
+        } else {
+            attributes = attributes.split("@")
+        }
+        return {from: from, to: to, attributeIds: attributes}
     }
 }
 
 class InstanceRel extends Type{
-    constructor(conceptId, name, from, to){
-        super("instanceRel", name, RelType.id, {from: from, to: to})
+    static #relTypeMap = new WeakMap()
+    #relInstance
+    constructor(name, from, to, attributeIds = []){
+        super("instanceRel", name, RelType.instance.id, {from: from, to: to, attributeIds: attributeIds})
     }
     get from(){return this.args.from}
     get to(){return this.args.to}
+    get attributes(){return this.args.attributeIds}
 
     resolveArgs(){
-        return `${this.from}/${this.to}`
+        return `${this.from}/${this.to}!${this.args.attributeIds.join("@")}`
     }
     restoreArgs(args){
         let split_args = args.split("/")
-        return {from: split_args[0], to: split_args[1]}
+        let from = split_args[0]
+        let to, attributes = split_args[1].split("!")
+        if(attributes === "") {
+            attributes = []
+        } else {
+            attributes = attributes.split("@")
+        }
+        return {from: from, to: to, attributeIds: attributes}
+    }
+    static getTypeRel(selfType){
+        let type
+        if(!InstanceRel.#relTypeMap.has(selfType)){
+            if(selfType === InstanceRel){
+                type = TypeRel
+            } else {
+                type = class extends InstanceRel.getTypeRel(Object.getPrototypeOf(selfType)) {
+                    constructor(name, from, to, attributeIds){
+                        super(name, from, to, attributeIds)
+                    }
+                }
+            }
+            InstanceRel.#relTypeMap.set(selfType, type)
+        } else {
+            type = InstanceRel.#relTypeMap.get(selfType)
+        }
+        return type
+    }
+    getTypeRelInstance(selfType){
+        if(!this.#relInstance){
+            let typerel = InstanceRel.getTypeRel(selfType)
+            this.#relInstance = new typerel(this.typename, this.args.from, this.args.to, this.args.attributeIds)
+        }
+        return this.#relInstance
     }
 }
 
