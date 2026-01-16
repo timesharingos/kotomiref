@@ -3,8 +3,8 @@ const { primitive, AttrReq } = require("../predefine.cjs")
 
 //Authors
 class AttributeSigName extends kg_interface.Attribute {
-    static #instance = new AttributeSigName()
     static #first_create = true
+    static #instance = new AttributeSigName()
     constructor(){
         if(!AttributeSigName.#first_create){
             throw new TypeError("AttributeSigName is not constructable, use AttributeSigName.instance instead.")
@@ -16,8 +16,8 @@ class AttributeSigName extends kg_interface.Attribute {
 }
 
 class Author extends kg_interface.Concept{
-    static #instance = new Author()
     static #first_create = true
+    static #instance = new Author()
     constructor(){
         if(!Author.#first_create){
             throw new TypeError("Author is not constructable, use Author.instance instead.")
@@ -29,8 +29,8 @@ class Author extends kg_interface.Concept{
 }
 
 class Affiliation extends kg_interface.Concept {
-    static #instance = new Affiliation()
     static #first_create = true
+    static #instance = new Affiliation()
     constructor(){
         if(!Affiliation.#first_create){
             throw new TypeError("Affiliation is not constructable, use Affiliation.instance instead.")
@@ -42,8 +42,8 @@ class Affiliation extends kg_interface.Concept {
 }
 
 class AuthorBelongTo extends kg_interface.InstanceRel{
-    static #instance = new AuthorBelongTo()
     static #first_create = true
+    static #instance = new AuthorBelongTo()
     constructor(){
         if(!AuthorBelongTo.#first_create){
             throw new TypeError("AuthorBelongTo is not constructable, use AuthorBelongTo.instance instead.")
@@ -55,8 +55,8 @@ class AuthorBelongTo extends kg_interface.InstanceRel{
 }
 
 class AffiliationBelongTo extends kg_interface.InstanceRel{
-    static #instance = new AffiliationBelongTo()
     static #first_create = true
+    static #instance = new AffiliationBelongTo()
     constructor(){
         if(!AffiliationBelongTo.#first_create){
             throw new TypeError("AffiliationBelongTo is not constructable, use AffiliationBelongTo.instance instead.")

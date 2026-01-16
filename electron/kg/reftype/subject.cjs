@@ -3,8 +3,8 @@ const { primitive, AttrReq } = require("../predefine.cjs")
 
 //Subject Concept
 class AttributeSubjectName extends kg_interface.Attribute {
-    static #instance = new AttributeSubjectName()
     static #first_create = true
+    static #instance = new AttributeSubjectName()
     constructor(){
         if(!AttributeSubjectName.#first_create){
             throw new TypeError("AttributeSubjectName is not constructable, use AttributeSubjectName.instance instead.")
@@ -16,8 +16,8 @@ class AttributeSubjectName extends kg_interface.Attribute {
 }
 
 class Subject extends kg_interface.Concept {
-    static #instance = new Subject()
     static #first_create = true
+    static #instance = new Subject()
     constructor(){
         super([AttributeSubjectName.instance.id], "subject")
         if(!Subject.#first_create){
@@ -29,8 +29,8 @@ class Subject extends kg_interface.Concept {
 }
 
 class SubSubject extends kg_interface.Concept {
-    static #instance = new SubSubject()
     static #first_create = true
+    static #instance = new SubSubject()
     constructor(){
         if(!SubSubject.#first_create){
             throw new TypeError("SubSubject is not constructable, use SubSubject.instance instead.")
@@ -42,8 +42,8 @@ class SubSubject extends kg_interface.Concept {
 }
 
 class SubSubjectRel extends kg_interface.InstanceRel {
-    static #instance = new SubSubjectRel()
     static #first_create = true
+    static #instance = new SubSubjectRel()
     constructor(){
         if(!SubSubjectRel.#first_create){
             throw new TypeError("SubSubjectRel is not constructable, use SubSubjectRel.instance instead.")

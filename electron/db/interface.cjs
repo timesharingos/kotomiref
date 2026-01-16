@@ -82,3 +82,7 @@ class AbastractDb{
         this.dbops.close()
     }
 }
+
+module.exports = {
+    DbOps, TypeOps, NodeOps, RelOps, AttrOps, AbastractDb
+}

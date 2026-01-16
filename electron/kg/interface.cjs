@@ -270,7 +270,7 @@ class Node extends ToDb{
     #nodeid
     #attributes
     #name
-    constructor(typeid, attributes){
+    constructor(typeid, attributes, name){
         this.#typeid = typeid
         this.#attributes = attributes
         this.#nodeid = `node_${sha256(`${this.#typeid}_${this.#name}`)}`
