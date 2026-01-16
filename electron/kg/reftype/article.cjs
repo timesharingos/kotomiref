@@ -5,8 +5,8 @@ const kg_signature = require("./signature.cjs")
 
 // Article/Refentry
 class AttributeArtTitle extends kg_interface.Attribute {
-    static #instance = new AttributeArtTitle()
     static #first_create = true
+    static #instance = new AttributeArtTitle()
     constructor(){
         if(!AttributeArtTitle.#first_create){
             throw new TypeError("AttributeArtTitle is not constructable, use AttributeArtTitle.instance instead.")
@@ -17,8 +17,8 @@ class AttributeArtTitle extends kg_interface.Attribute {
     static get instance(){return AttributeArtTitle.#instance}
 }
 class AttributeArtPrimaryRefEntry extends kg_interface.Attribute {
-    static #instance = new AttributeArtPrimaryRefEntry()
     static #first_create = true
+    static #instance = new AttributeArtPrimaryRefEntry()
     constructor(){
         if(!AttributeArtPrimaryRefEntry.#first_create){
             throw new TypeError("AttributeArtPrimaryRefEntry is not constructable, use AttributeArtPrimaryRefEntry.instance instead.")
@@ -30,8 +30,8 @@ class AttributeArtPrimaryRefEntry extends kg_interface.Attribute {
 }
 
 class AttributeRefNo extends kg_interface.Attribute {
-    static #instance = new AttributeRefNo()
     static #first_create = true
+    static #instance = new AttributeRefNo()
     constructor(){
         if(!AttributeRefNo.#first_create){
             throw new TypeError("AttributeRefNo is not constructable, use AttributeRefNo.instance instead.")
@@ -42,8 +42,8 @@ class AttributeRefNo extends kg_interface.Attribute {
     static get instance(){return AttributeRefNo.#instance}
 }
 class AttributeRefTitle extends kg_interface.Attribute {
-    static #instance = new AttributeRefTitle()
     static #first_create = true
+    static #instance = new AttributeRefTitle()
     constructor(){
         if(!AttributeRefTitle.#first_create){
             throw new TypeError("AttributeRefTitle is not constructable, use AttributeRefTitle.instance instead.")
@@ -54,8 +54,8 @@ class AttributeRefTitle extends kg_interface.Attribute {
     static get instance(){return AttributeRefTitle.#instance}
 }
 class AttributeRefYear extends kg_interface.Attribute {
-    static #instance = new AttributeRefYear()
     static #first_create = true
+    static #instance = new AttributeRefYear()
     constructor(){
         if(!AttributeRefYear.#first_create){
             throw new TypeError("AttributeRefYear is not constructable, use AttributeRefYear.instance instead.")
@@ -66,8 +66,8 @@ class AttributeRefYear extends kg_interface.Attribute {
     static get instance(){return AttributeRefYear.#instance}
 }
 class AttributeRefPublication extends kg_interface.Attribute {
-    static #instance = new AttributeRefPublication()
     static #first_create = true
+    static #instance = new AttributeRefPublication()
     constructor(){
         if(!AttributeRefPublication.#first_create){
             throw new TypeError("AttributeRefPublication is not constructable, use AttributeRefPublication.instance instead.")
@@ -78,8 +78,8 @@ class AttributeRefPublication extends kg_interface.Attribute {
     static get instance(){return AttributeRefPublication.#instance}
 }
 class AttributeRefIndex extends kg_interface.Attribute {
-    static #instance = new AttributeRefIndex()
     static #first_create = true
+    static #instance = new AttributeRefIndex()
     constructor(){
         if(!AttributeRefIndex.#first_create){
             throw new TypeError("AttributeRefIndex is not constructable, use AttributeRefIndex.instance instead.")
@@ -90,8 +90,8 @@ class AttributeRefIndex extends kg_interface.Attribute {
     static get instance(){return AttributeRefIndex.#instance}
 }
 class AttributeRefVolume extends kg_interface.Attribute {
-    static #instance = new AttributeRefVolume()
     static #first_create = true
+    static #instance = new AttributeRefVolume()
     constructor(){
         if(!AttributeRefVolume.#first_create){
             throw new TypeError("AttributeRefVolume is not constructable, use AttributeRefVolume.instance instead.")
@@ -102,8 +102,8 @@ class AttributeRefVolume extends kg_interface.Attribute {
     static get instance(){return AttributeRefVolume.#instance}
 }
 class AttributeRefIssue extends kg_interface.Attribute {
-    static #instance = new AttributeRefIssue()
     static #first_create = true
+    static #instance = new AttributeRefIssue()
     constructor(){
         if(!AttributeRefIssue.#first_create){
             throw new TypeError("AttributeRefIssue is not constructable, use AttributeRefIssue.instance instead.")
@@ -114,8 +114,8 @@ class AttributeRefIssue extends kg_interface.Attribute {
     static get instance(){return AttributeRefIssue.#instance}
 }
 class AttributeRefStartPage extends kg_interface.Attribute {
-    static #instance = new AttributeRefStartPage()
     static #first_create = true
+    static #instance = new AttributeRefStartPage()
     constructor(){
         if(!AttributeRefStartPage.#first_create){
             throw new TypeError("AttributeRefStartPage is not constructable, use AttributeRefStartPage.instance instead.")
@@ -126,8 +126,8 @@ class AttributeRefStartPage extends kg_interface.Attribute {
     static get instance(){return AttributeRefStartPage.#instance}
 }
 class AttributeRefEndPage extends kg_interface.Attribute {
-    static #instance = new AttributeRefEndPage()
     static #first_create = true
+    static #instance = new AttributeRefEndPage()
     constructor(){
         if(!AttributeRefEndPage.#first_create){
             throw new TypeError("AttributeRefEndPage is not constructable, use AttributeRefEndPage.instance instead.")
@@ -138,8 +138,8 @@ class AttributeRefEndPage extends kg_interface.Attribute {
     static get instance(){return AttributeRefEndPage.#instance}
 }
 class AttributeRefDoi extends kg_interface.Attribute {
-    static #instance = new AttributeRefDoi()
     static #first_create = true
+    static #instance = new AttributeRefDoi()
     constructor(){
         if(!AttributeRefDoi.#first_create){
             throw new TypeError("AttributeRefDoi is not constructable, use AttributeRefDoi.instance instead.")
@@ -150,8 +150,8 @@ class AttributeRefDoi extends kg_interface.Attribute {
     static get instance(){return AttributeRefDoi.#instance}
 }
 class AttributeRefAbstract extends kg_interface.Attribute {
-    static #instance = new AttributeRefAbstract()
     static #first_create = true
+    static #instance = new AttributeRefAbstract()
     constructor(){
         if(!AttributeRefAbstract.#first_create){
             throw new TypeError("AttributeRefAbstract is not constructable, use AttributeRefAbstract.instance instead.")
@@ -163,8 +163,8 @@ class AttributeRefAbstract extends kg_interface.Attribute {
 }
 
 class Article extends kg_interface.Concept{
-    static #instance = new Article()
     static #first_create = true
+    static #instance = new Article()
     constructor(){
         if(!Article.#first_create){
             throw new TypeError("Article is not constructable, use Article.instance instead.")
@@ -175,8 +175,8 @@ class Article extends kg_interface.Concept{
     static get instance(){return Article.#instance}
 }
 class Reference extends kg_interface.Concept{
-    static #instance = new Reference()
     static #first_create = true
+    static #instance = new Reference()
     constructor(){
         if(!Reference.#first_create){
             throw new TypeError("Reference is not constructable, use Reference.instance instead.")
@@ -200,8 +200,8 @@ class Reference extends kg_interface.Concept{
 // ref -> author
 // atricle -> contribution
 class ArticleRefEntry extends kg_interface.InstanceRel{
-    static #instance = new ArticleRefEntry()
     static #first_create = true
+    static #instance = new ArticleRefEntry()
     constructor(){
         if(!ArticleRefEntry.#first_create){
             throw new TypeError("ArticleRefEntry is not constructable, use ArticleRefEntry.instance instead.")
@@ -212,8 +212,8 @@ class ArticleRefEntry extends kg_interface.InstanceRel{
     static get instance(){return ArticleRefEntry.#instance}
 }
 class ArticleTag extends kg_interface.InstanceRel{
-    static #instance = new ArticleTag()
     static #first_create = true
+    static #instance = new ArticleTag()
     constructor(){
         if(!ArticleTag.#first_create){
             throw new TypeError("ArticleTag is not constructable, use ArticleTag.instance instead.")
@@ -224,8 +224,8 @@ class ArticleTag extends kg_interface.InstanceRel{
     static get instance(){return ArticleTag.#instance}
 }
 class RefAuthor extends kg_interface.InstanceRel{
-    static #instance = new RefAuthor()
     static #first_create = true
+    static #instance = new RefAuthor()
     constructor(){
         if(!RefAuthor.#first_create){
             throw new TypeError("RefAuthor is not constructable, use RefAuthor.instance instead.")
@@ -236,8 +236,8 @@ class RefAuthor extends kg_interface.InstanceRel{
     static get instance(){return RefAuthor.#instance}
 }
 class ArticleContrib extends kg_interface.InstanceRel{
-    static #instance = new ArticleContrib()
     static #first_create = true
+    static #instance = new ArticleContrib()
     constructor(){
         if(!ArticleContrib.#first_create){
             throw new TypeError("ArticleContrib is not constructable, use ArticleContrib.instance instead.")

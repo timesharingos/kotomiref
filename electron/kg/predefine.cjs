@@ -1,8 +1,8 @@
 const kg_interface = require("./interface.cjs")
 
 class NumberType extends kg_interface.Type{
-    static #instance = new NumberType()
     static #first_create = true
+    static #instance = new NumberType()
 
     constructor(){
         super("primitive", "number", null, null)
@@ -23,8 +23,8 @@ class NumberType extends kg_interface.Type{
 }
 
 class StringType extends kg_interface.Type{
-    static #instance = new StringType()
     static #first_create = true
+    static #instance = new StringType()
 
     constructor(){
         super("primitive", "number", null, null)
@@ -45,8 +45,8 @@ class StringType extends kg_interface.Type{
 }
 
 class BooleanType extends kg_interface.Type{
-    static #instance = new BooleanType()
     static #first_create = true
+    static #instance = new BooleanType()
 
     constructor(){
         super("primitive", "number", null, null)
@@ -67,8 +67,8 @@ class BooleanType extends kg_interface.Type{
 }
 
 class VoidType extends kg_interface.Type{
-    static #instance = new VoidType()
     static #first_create = true
+    static #instance = new VoidType()
 
     constructor(){
         super("primitive", "number", null, null)
