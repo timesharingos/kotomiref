@@ -251,7 +251,7 @@ class ArticleContrib extends kg_interface.InstanceRel{
 module.exports = {
     AttributeArtTitle, AttributeArtPrimaryRefEntry,
     AttributeRefNo, AttributeRefIndex, AttributeRefTitle,
-    AttributeRefAbstract, AttributeRefYear, AttributeRefVolume, AttributeRefIssue,
+    AttributeRefPublication, AttributeRefYear, AttributeRefVolume, AttributeRefIssue,
     AttributeRefStartPage, AttributeRefEndPage, AttributeRefDoi,
     AttributeRefAbstract,
     Article, Reference,
