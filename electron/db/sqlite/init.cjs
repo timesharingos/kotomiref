@@ -1,9 +1,10 @@
 const path = require("path")
-const { app } = require("electron")
-const db_path = path.join(app.getPath("userData"), "kotomiref.db")
 const fs = require("fs")
+const db_interface = require("../interface.cjs")
 
 function init_db(){
+    const { app } = require("electron")
+    const db_path = path.join(app.getPath("userData"), "kotomiref.db")
     let db
     if(!fs.existsSync(db_path)){
         db = require("better-sqlite3")(db_path)
@@ -14,4 +15,9 @@ function init_db(){
     return db
 }
 
-module.exports = init_db
+// class SqliteDb extends db_interface.AbastractDb{
+    //TODO
+class SqliteDb{
+}
+
+module.exports = new SqliteDb()

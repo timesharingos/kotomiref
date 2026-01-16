@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron")
 const { Menu } = require("electron/main")
 
 const path = require("path")
-const db = require("./db/sqlite/init.cjs")()
+const config = require("./config/default.cjs")
 
 function loadWindow(mainWin, env){
     if(app.isPackaged){
