@@ -7,13 +7,6 @@ class SqliteDbOps extends DbOps{
         super(db)
     }
 
-    init(){
-        // Enable foreign keys
-        this.db.pragma('foreign_keys = ON')
-        // Set journal mode to WAL for better concurrency
-        this.db.pragma('journal_mode = WAL')
-    }
-
     close(){
         if(this.db && this.db.open){
             this.db.close()

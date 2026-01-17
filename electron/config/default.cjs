@@ -1,6 +1,6 @@
 const { SystemConfig } = require("./system.cjs")
 const db_mapping = {
-    "sqlite": require("../db/sqlite/init.cjs")
+    "sqlite": require("../db/sqlite/init.cjs").SqliteDb
 }
 
 let db = null
@@ -12,7 +12,7 @@ function init(dbmode = "sqlite", filemode = "readonly", filedir = ""){
         config = new systemConfig.SystemConfig(dbmode, filemode, filedir, true, process.env.npm_package_version, process.env.npm_package_version)
         SystemConfig.writeConfig(config)
     }
-    db = db_mapping[dbmode]
+    db = new db_mapping[dbmode]()
 }
 
 function getConfig(){
