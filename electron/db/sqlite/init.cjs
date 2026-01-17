@@ -1,6 +1,7 @@
+const { Dbops } = require("./dbops.cjs")
+const { AbastractDb } = require("../interface.cjs")
 const path = require("path")
 const fs = require("fs")
-const db_interface = require("../interface.cjs")
 
 function init_db(){
     const { app } = require("electron")
@@ -20,4 +21,6 @@ function init_db(){
 class SqliteDb{
 }
 
-module.exports = new SqliteDb()
+module.exports = {
+    SqliteDb
+}
