@@ -9,10 +9,10 @@ let config = null
 function init(dbmode = "sqlite", filemode = "readonly", filedir = ""){
     config = SystemConfig.initConfig()
     if(config === null || !config.initialized){
-        config = new systemConfig.SystemConfig(dbmode, filemode, filedir, true, process.env.npm_package_version, process.env.npm_package_version)
+        db = new db_mapping[dbmode]()
+        config = new SystemConfig(dbmode, filemode, filedir, true, process.env.npm_package_version || "0.0.0", process.env.npm_package_version || "0.0.0")
         SystemConfig.writeConfig(config)
     }
-    db = new db_mapping[dbmode]()
 }
 
 function getConfig(){

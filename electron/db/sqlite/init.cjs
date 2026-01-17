@@ -87,15 +87,15 @@ function createTables(db){
     `).run()
 
     db.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_rel_from ON rel("from")
+        CREATE INDEX IF NOT EXISTS idx_rel_from ON rel(fromid)
     `).run()
 
     db.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_rel_to ON rel("to")
+        CREATE INDEX IF NOT EXISTS idx_rel_to ON rel(toid)
     `).run()
 
     db.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_rel_from_to ON rel("from", "to")
+        CREATE INDEX IF NOT EXISTS idx_rel_from_to ON rel(fromid, toid)
     `).run()
 }
 
@@ -107,8 +107,8 @@ function init_db(){
     const db = require("better-sqlite3")(db_path)
 
     if(is_new){
-        db.prepare('set foreign_keys = ON').run()
-        db.prepare('set journal_mode = WAL').run()
+        db.pragma('foreign_keys = ON')
+        db.pragma('journal_mode = WAL')
         createTables(db)
     }
 

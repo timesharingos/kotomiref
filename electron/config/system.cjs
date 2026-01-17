@@ -37,36 +37,57 @@ class SystemConfig{
     }
 
     static initConfig(){
-        let config = readConfig()
+        let config = SystemConfig.readConfig()
         if(config !== null){
             return config
         }
-        return {
-            dbmode: "sqlite",
-            filemode: "readonly",
-            filedir: "",
-            initialized: false,
-            stateVersion: process.env.npm_package_version,
-            compatibleVersion: process.env.npm_package_version,
-        }
+        return new SystemConfig(
+            "sqlite",
+            "readonly",
+            "",
+            false,
+            process.env.npm_package_version,
+            process.env.npm_package_version,
+        )
     }
 
     static readConfig(){
         const { app } = require("electron")
         const config_path = path.join(app.getPath("userData"), "config.json")
         if(fs.existsSync(config_path)){
-            return JSON.parse(fs.readFileSync(config_path))
+            return new SystemConfig(...Object.values(JSON.parse(fs.readFileSync(config_path, 'utf-8'))))
         } else {
             return null
         }
     }
 
     static writeConfig(config){
-        if(!SystemConfig.#checkAllowed(config.#dbmode, SystemConfig.dbmode_allowed) || !SystemConfig.#checkAllowed(config.#filemode, SystemConfig.filemode_allowed)){
+        if(!SystemConfig.#checkAllowed(config.dbmode, SystemConfig.dbmode_allowed) || !SystemConfig.#checkAllowed(config.filemode, SystemConfig.filemode_allowed)){
             return false
         }
-        fs.writeFileSync(config_path, JSON.stringify(config))
+        const { app } = require("electron")
+        const config_path = path.join(app.getPath("userData"), "config.json")
+        const configData = {
+            dbmode: config.dbmode,
+            filemode: config.filemode,
+            filedir: config.filedir,
+            initialized: config.initialized,
+            stateVersion: config.stateVersion,
+            compatibleVersion: config.compatibleVersion
+        }
+        fs.writeFileSync(config_path, JSON.stringify(configData, null, 2), 'utf-8')
         return true
+    }
+
+    toJSON(){
+        return {
+            dbmode: this.#dbmode,
+            filemode: this.#filemode,
+            filedir: this.#filedir,
+            initialized: this.#initialized,
+            stateVersion: this.#stateVersion,
+            compatibleVersion: this.#compatibleVersion
+        }
     }
 
     changeDbMode(newMode){
