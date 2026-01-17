@@ -27,7 +27,6 @@ class DbOps{
     }
 }
 
-//TODO
 class TypeOps{
     mergeType(type){throw new TypeError("not implemented")}
     deleteType(type){throw new TypeError("not implemented")}
@@ -37,7 +36,6 @@ class TypeOps{
         this.db = db
     }
 }
-//TODO
 class NodeOps{
     mergeNode(node){throw new TypeError("not implemented")}
     deleteNode(node){throw new TypeError("not implemented")}
@@ -47,7 +45,6 @@ class NodeOps{
         this.db = db
     }
 }
-//TODO
 class RelOps{
     mergeRel(rel){throw new TypeError("not implemented")}
     deleteRel(rel){throw new TypeError("not implemented")}
@@ -57,7 +54,6 @@ class RelOps{
         this.db = db
     }
 }
-//TODO
 class AttrOps{
     mergeAttr(attr){throw new TypeError("not implemented")}
     deleteAttr(attr){throw new TypeError("not implemented")}
@@ -72,10 +68,10 @@ class AbastractDb{
     //class def
     constructor(db, dbops, typeops, nodeops, relops, attrops){
         this.dbops = new dbops(db)
-        this.typeops = new typeops(db)
-        this.nodeops = new nodeops(db)
-        this.relops = new relops(db)
-        this.attrops = new attrops(db)
+        this.typeops = new typeops(dbops)
+        this.nodeops = new nodeops(dbops)
+        this.relops = new relops(dbops)
+        this.attrops = new attrops(dbops)
     }
 
     [Symbol.dispose](){

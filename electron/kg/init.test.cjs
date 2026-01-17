@@ -5,7 +5,7 @@ const predefine = require("./predefine.cjs")
 
 test('collectCommon', () => {
     const { types, typeRels } = collectTypes(refType.articleType)
-    expect(types.length).toBe(19)
+    expect(types.length).toBe(20)
     expect(typeRels.length).toBe(0)
     const { types: types2, typeRels: typeRels2 } = collectTypes(kg_interface)
     expect(types2.length).toBe(4)

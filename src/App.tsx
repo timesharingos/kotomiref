@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
@@ -12,6 +13,22 @@ function ButtonUsage() {
 
 function App() {
   const [count, setCount] = useState(0)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // Check if config is initialized
+    const checkConfig = async () => {
+      try {
+        const initialized = await window.config.checkInitialized()
+        if (!initialized) {
+          navigate('/config')
+        }
+      } catch (e) {
+        console.error('Failed to check config:', e)
+      }
+    }
+    checkConfig()
+  }, [navigate])
 
   return (
     <>

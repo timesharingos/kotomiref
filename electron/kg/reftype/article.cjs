@@ -28,6 +28,18 @@ class AttributeArtPrimaryRefEntry extends kg_interface.Attribute {
     }
     static get instance(){return AttributeArtPrimaryRefEntry.#instance}
 }
+class AttributeArtPath extends kg_interface.Attribute {
+    static #first_create = true
+    static #instance = new AttributeArtPath()
+    constructor(){
+        if(!AttributeArtPath.#first_create){
+            throw new TypeError("AttributeArtPath is not constructable, use AttributeArtPath.instance instead.")
+        }
+        AttributeArtPath.#first_create = false
+        super(AttrReq.required.value, "artPath", primitive.StringType.instance.id)
+    }
+    static get instance(){return AttributeArtPath.#instance}
+}
 
 class AttributeRefNo extends kg_interface.Attribute {
     static #first_create = true
@@ -170,7 +182,7 @@ class Article extends kg_interface.Concept{
             throw new TypeError("Article is not constructable, use Article.instance instead.")
         }
         Article.#first_create = false
-        super([AttributeArtTitle.instance.id, AttributeArtPrimaryRefEntry.instance.id], "article")
+        super([AttributeArtTitle.instance.id, AttributeArtPrimaryRefEntry.instance.id, AttributeArtPath.instance.id], "article")
     }
     static get instance(){return Article.#instance}
 }
@@ -249,7 +261,7 @@ class ArticleContrib extends kg_interface.InstanceRel{
 }
 
 module.exports = {
-    AttributeArtTitle, AttributeArtPrimaryRefEntry,
+    AttributeArtTitle, AttributeArtPrimaryRefEntry, AttributeArtPath,
     AttributeRefNo, AttributeRefIndex, AttributeRefTitle,
     AttributeRefPublication, AttributeRefYear, AttributeRefVolume, AttributeRefIssue,
     AttributeRefStartPage, AttributeRefEndPage, AttributeRefDoi,

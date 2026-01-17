@@ -1,8 +1,10 @@
-const { app, BrowserWindow, ipcMain } = require("electron")
+const { app, BrowserWindow } = require("electron")
 const { Menu } = require("electron/main")
 
 const path = require("path")
-const db = require("./db/sqlite/init.cjs")()
+const config = require("./config/default.cjs")
+const { SystemConfig } = require("./config/system.cjs")
+const { registerAllHandlers } = require("./api/index.cjs")
 
 function loadWindow(mainWin, env){
     if(app.isPackaged){
@@ -20,8 +22,8 @@ function loadWindow(mainWin, env){
 
 function createWindow(){
     const mainWin = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1200,
+        height: 800,
         webPreferences: {
             preload: path.join(__dirname, "preload.cjs")
         }
@@ -30,9 +32,9 @@ function createWindow(){
     loadWindow(mainWin, process.env.NODE_ENV ?? "dev")
 }
 app.whenReady().then(() => {
+    // Register all IPC handlers
+    registerAllHandlers(createWindow)
     createWindow()
-    ipcMain.on("dev:test", (ev, msg) => console.log("receive!" + msg))
-    ipcMain.handle("dev:bitest", (ev, msg) => {console.log("bi receive!"); return "hello ipc" + msg})
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
