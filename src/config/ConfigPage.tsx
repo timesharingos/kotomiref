@@ -37,7 +37,7 @@ function ConfigPage() {
       if (dir) {
         setFiledir(dir)
       }
-    } catch (e) {
+    } catch {
       setError('Failed to select directory')
     }
   }
@@ -67,7 +67,7 @@ function ConfigPage() {
       if (!success) {
         setError('Failed to save configuration')
       }
-    } catch (e) {
+    } catch {
       setError('An error occurred while saving configuration')
     } finally {
       setLoading(false)
