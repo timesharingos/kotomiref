@@ -6,7 +6,7 @@ import DangerousOperationsGroup from './settings/DangerousOperationsGroup'
 function SettingPage() {
   return (
     <Layout>
-      <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+      <Box sx={{ maxWidth: '80%', mx: 'auto', width: '100%' }}>
         <Typography variant="h4" gutterBottom>
           Settings
         </Typography>
