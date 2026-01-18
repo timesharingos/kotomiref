@@ -23,5 +23,11 @@ declare global {
       getConfig: () => Promise<ConfigData | null>;
       selectDirectory: () => Promise<string | null>;
     };
+    data: {
+      backup: (targetDir: string, includeConfig: boolean) => Promise<boolean>;
+      restore: (sourceDir: string, includeConfig: boolean) => Promise<boolean>;
+      reset: (includeConfig: boolean) => Promise<boolean>;
+      selectDirectory: () => Promise<string | null>;
+    };
   }
 }

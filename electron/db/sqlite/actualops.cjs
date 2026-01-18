@@ -169,14 +169,14 @@ class SqliteRelOps extends RelOps{
         // attr is an array, need to serialize to JSON
         const attrJson = JSON.stringify(rel.attr)
         const stmt = this.db.prepare(`
-            INSERT INTO rel (id, type, name, attr, "from", "to")
+            INSERT INTO rel (id, type, name, attr, fromid, toid)
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 type = excluded.type,
                 name = excluded.name,
                 attr = excluded.attr,
-                "from" = excluded."from",
-                "to" = excluded."to"
+                fromid = excluded.fromid,
+                toid = excluded.toid
         `)
         stmt.run(rel.id, rel.type, rel.name, attrJson, rel.from, rel.to)
     }

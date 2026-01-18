@@ -19,3 +19,13 @@ contextBridge.exposeInMainWorld(
         selectDirectory: () => ipcRenderer.invoke("config:selectDirectory")
     }
 )
+
+contextBridge.exposeInMainWorld(
+    'data',
+    {
+        backup: (targetDir, includeConfig) => ipcRenderer.invoke("data:backup", targetDir, includeConfig),
+        restore: (sourceDir, includeConfig) => ipcRenderer.invoke("data:restore", sourceDir, includeConfig),
+        reset: (includeConfig) => ipcRenderer.invoke("data:reset", includeConfig),
+        selectDirectory: () => ipcRenderer.invoke("data:selectDirectory")
+    }
+)

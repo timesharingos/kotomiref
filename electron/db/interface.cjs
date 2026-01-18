@@ -68,10 +68,10 @@ class AbastractDb{
     //class def
     constructor(db, dbops, typeops, nodeops, relops, attrops){
         this.dbops = new dbops(db)
-        this.typeops = new typeops(dbops)
-        this.nodeops = new nodeops(dbops)
-        this.relops = new relops(dbops)
-        this.attrops = new attrops(dbops)
+        this.typeops = new typeops(this.dbops)
+        this.nodeops = new nodeops(this.dbops)
+        this.relops = new relops(this.dbops)
+        this.attrops = new attrops(this.dbops)
     }
 
     [Symbol.dispose](){

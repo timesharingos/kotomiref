@@ -170,12 +170,12 @@ class EvoDefinition extends kg_interface.Concept{
 const evoConcepts = { EvoEntity, EvoObject, EvoAlgo, EvoImprovement, EvoContrib, EvoProblem, EvoDefinition }
 
 const evoConstraints = {
-    subObject: new constraints.SubConceptOf("subEvoObject", EvoObject.instance.id, EvoEntity.instance.id),
-    subAlgo: new constraints.SubConceptOf("subEvoAlgo", EvoAlgo.instance.id, EvoEntity.instance.id),
-    subImprovement: new constraints.SubConceptOf("subEvoImprovement", EvoImprovement.instance.id, EvoEntity.instance.id),
-    subContrib: new constraints.SubConceptOf("subEvoContrib", EvoContrib.instance.id, EvoEntity.instance.id),
-    subProblem: new constraints.SubConceptOf("subEvoProblem", EvoProblem.instance.id, EvoEntity.instance.id),
-    subDefinition: new constraints.SubConceptOf("subEvoDefinition", EvoDefinition.instance.id, EvoEntity.instance.id),
+    subObject: new constraints.SubConceptOf(EvoObject.instance.id, EvoEntity.instance.id),
+    subAlgo: new constraints.SubConceptOf(EvoAlgo.instance.id, EvoEntity.instance.id),
+    subImprovement: new constraints.SubConceptOf(EvoImprovement.instance.id, EvoEntity.instance.id),
+    subContrib: new constraints.SubConceptOf(EvoContrib.instance.id, EvoEntity.instance.id),
+    subProblem: new constraints.SubConceptOf(EvoProblem.instance.id, EvoEntity.instance.id),
+    subDefinition: new constraints.SubConceptOf(EvoDefinition.instance.id, EvoEntity.instance.id),
 }
 
 // InstanceRel
