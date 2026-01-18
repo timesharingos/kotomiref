@@ -14,6 +14,12 @@ function registerDevHandlers() {
         console.log("bi receive!")
         return "hello ipc" + msg
     })
+
+    // Get app version
+    ipcMain.handle("dev:getVersion", () => {
+        const { app } = require("electron")
+        return app.getVersion()
+    })
 }
 
 module.exports = {

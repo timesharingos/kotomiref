@@ -4,7 +4,8 @@ contextBridge.exposeInMainWorld(
     'dev',
     {
         send: (msg) => ipcRenderer.send("dev:test", msg),
-        invoke: (msg) => ipcRenderer.invoke("dev:bitest", msg)
+        invoke: (msg) => ipcRenderer.invoke("dev:bitest", msg),
+        getVersion: () => ipcRenderer.invoke("dev:getVersion")
     }
 )
 
@@ -13,6 +14,7 @@ contextBridge.exposeInMainWorld(
     {
         checkInitialized: () => ipcRenderer.invoke("config:checkInitialized"),
         saveConfig: (config) => ipcRenderer.invoke("config:save", config),
+        updateConfig: (config) => ipcRenderer.invoke("config:update", config),
         getConfig: () => ipcRenderer.invoke("config:get"),
         selectDirectory: () => ipcRenderer.invoke("config:selectDirectory")
     }

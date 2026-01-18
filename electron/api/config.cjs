@@ -13,7 +13,7 @@ function registerConfigHandlers(createWindow) {
         return cfg ? cfg.initialized : false
     })
 
-    // Save configuration
+    // Save configuration (for initial setup)
     ipcMain.handle("config:save", (_ev, configData) => {
         try {
             const newConfig = new SystemConfig(
@@ -24,20 +24,36 @@ function registerConfigHandlers(createWindow) {
                 app.getVersion(),
                 app.getVersion()
             )
-            const success = SystemConfig.writeConfig(newConfig)
-            if (success) {
-                // Initialize the system with new config (including database)
-                config.init(configData.dbmode, configData.filemode, configData.filedir)
-                // Close config window and open main window
-                const configWin = BrowserWindow.getFocusedWindow()
-                if (configWin) {
-                    configWin.close()
-                }
-                createWindow()
+            // Initialize the system with new config (including database)
+            config.init(configData.dbmode, configData.filemode, configData.filedir)
+            // Close config window and open main window
+            const configWin = BrowserWindow.getFocusedWindow()
+            if (configWin) {
+                configWin.close()
             }
-            return success
+            createWindow()
+            return true
         } catch (e) {
             console.error("Failed to save config:", e)
+            return false
+        }
+    })
+
+    // Update configuration (for edit mode - only updates config file, no init)
+    ipcMain.handle("config:update", (_ev, configData) => {
+        try {
+            const newConfig = new SystemConfig(
+                configData.dbmode,
+                configData.filemode,
+                configData.filedir,
+                configData.initialized,
+                configData.stateVersion,
+                configData.compatibleVersion
+            )
+            const success = SystemConfig.writeConfig(newConfig)
+            return success
+        } catch (e) {
+            console.error("Failed to update config:", e)
             return false
         }
     })

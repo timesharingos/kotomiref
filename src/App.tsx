@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
+import Layout from './components/Layout'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
@@ -31,7 +32,7 @@ function App() {
   }, [navigate])
 
   return (
-    <>
+    <Layout>
       <div>
         <a href="https://vite.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
@@ -59,7 +60,7 @@ function App() {
       <div>
         <ButtonUsage></ButtonUsage>
       </div>
-    </>
+    </Layout>
   )
 }
 

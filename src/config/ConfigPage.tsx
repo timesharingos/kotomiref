@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Container,
@@ -11,9 +11,13 @@ import {
   Select,
   MenuItem,
   Alert,
-  Stack
+  Stack,
+  IconButton,
+  Snackbar
 } from '@mui/material'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { useNavigate } from 'react-router'
 
 interface ConfigData {
   dbmode: string
@@ -30,6 +34,29 @@ function ConfigPage() {
   const [filedir, setFiledir] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [isReadonly, setIsReadonly] = useState(false)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // Check if config already exists
+    const loadConfig = async () => {
+      try {
+        const config = await window.config.getConfig()
+        if (config && config.initialized) {
+          setIsEditMode(true)
+          setDbmode(config.dbmode)
+          setFilemode(config.filemode)
+          setFiledir(config.filedir)
+          setIsReadonly(config.filemode === 'readonly')
+        }
+      } catch (e) {
+        console.error('Failed to load config:', e)
+      }
+    }
+    loadConfig()
+  }, [])
 
   const handleSelectDirectory = async () => {
     try {
@@ -63,7 +90,18 @@ function ConfigPage() {
         compatibleVersion: '0.0.0'
       }
 
-      const success = await window.config.saveConfig(config)
+      let success
+      if (isEditMode) {
+        // In edit mode, only update config file without reinitializing
+        success = await window.config.updateConfig(config)
+        if (success) {
+          setSnackbarOpen(true)
+        }
+      } else {
+        // In initial setup mode, save and initialize
+        success = await window.config.saveConfig(config)
+      }
+
       if (!success) {
         setError('Failed to save configuration')
       }
@@ -74,14 +112,32 @@ function ConfigPage() {
     }
   }
 
+  const handleBack = () => {
+    navigate('/')
+  }
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false)
+  }
+
   return (
-    <Container maxWidth="md" sx={{ mt: 8 }}>
+    <Container maxWidth="md" sx={{ mt: 4, width: '100%' }}>
       <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Initial Configuration
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph align="center">
-          Welcome to Kotomiref! Please configure your initial settings.
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          {isEditMode && (
+            <IconButton onClick={handleBack} aria-label="back" sx={{ mr: 2 }}>
+              <ArrowBackIcon />
+            </IconButton>
+          )}
+          <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
+            {isEditMode ? 'Edit Configuration' : 'Initial Configuration'}
+          </Typography>
+        </Box>
+
+        <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 2 }}>
+          {isEditMode
+            ? 'You can only modify the file directory in edit mode.'
+            : 'Welcome to Kotomiref! Please configure your initial settings.'}
         </Typography>
 
         {error && (
@@ -90,8 +146,14 @@ function ConfigPage() {
           </Alert>
         )}
 
+        {isReadonly && isEditMode && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            File mode is set to readonly. No changes can be made.
+          </Alert>
+        )}
+
         <Stack spacing={3} sx={{ mt: 4 }}>
-          <FormControl fullWidth>
+          <FormControl fullWidth disabled={isEditMode}>
             <InputLabel id="dbmode-label">Database Mode</InputLabel>
             <Select
               labelId="dbmode-label"
@@ -103,7 +165,7 @@ function ConfigPage() {
             </Select>
           </FormControl>
 
-          <FormControl fullWidth>
+          <FormControl fullWidth disabled={isEditMode}>
             <InputLabel id="filemode-label">File Mode</InputLabel>
             <Select
               labelId="filemode-label"
@@ -129,12 +191,14 @@ function ConfigPage() {
                   }
                 }}
                 placeholder="Select a directory"
+                disabled={isReadonly}
               />
               <Button
                 variant="outlined"
                 startIcon={<FolderOpenIcon />}
                 onClick={handleSelectDirectory}
                 sx={{ mt: 1 }}
+                disabled={isReadonly}
               >
                 Select Directory
               </Button>
@@ -145,35 +209,44 @@ function ConfigPage() {
             variant="contained"
             size="large"
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || isReadonly}
             fullWidth
           >
             {loading ? 'Saving...' : 'Save Configuration'}
           </Button>
         </Stack>
 
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="caption" color="text.secondary">
-            <strong>Database Mode:</strong> Currently only SQLite is supported.
-          </Typography>
-          <br />
-          <Typography variant="caption" color="text.secondary">
-            <strong>File Mode:</strong>
-          </Typography>
-          <br />
-          <Typography variant="caption" color="text.secondary">
-            • Read Only: Files remain in their original location
-          </Typography>
-          <br />
-          <Typography variant="caption" color="text.secondary">
-            • Copy: Files are copied to the specified directory
-          </Typography>
-          <br />
-          <Typography variant="caption" color="text.secondary">
-            • Cut: Files are moved to the specified directory
-          </Typography>
-        </Box>
+        {!isEditMode && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="caption" color="text.secondary">
+              <strong>Database Mode:</strong> Currently only SQLite is supported.
+            </Typography>
+            <br />
+            <Typography variant="caption" color="text.secondary">
+              <strong>File Mode:</strong>
+            </Typography>
+            <br />
+            <Typography variant="caption" color="text.secondary">
+              • Read Only: Files remain in their original location
+            </Typography>
+            <br />
+            <Typography variant="caption" color="text.secondary">
+              • Copy: Files are copied to the specified directory
+            </Typography>
+            <br />
+            <Typography variant="caption" color="text.secondary">
+              • Cut: Files are moved to the specified directory
+            </Typography>
+          </Box>
+        )}
       </Paper>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message="Configuration updated successfully. Changes will take effect on next restart."
+      />
     </Container>
   )
 }

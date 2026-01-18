@@ -14,10 +14,12 @@ declare global {
     dev: {
       send: (msg: string) => void;
       invoke: (msg: string) => Promise<string>;
+      getVersion: () => Promise<string>;
     };
     config: {
       checkInitialized: () => Promise<boolean>;
       saveConfig: (config: ConfigData) => Promise<boolean>;
+      updateConfig: (config: ConfigData) => Promise<boolean>;
       getConfig: () => Promise<ConfigData | null>;
       selectDirectory: () => Promise<string | null>;
     };
