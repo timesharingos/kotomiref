@@ -54,6 +54,15 @@ class RelOps{
         this.db = db
     }
 }
+class TypeRelOps{
+    mergeTypeRel(typerel){throw new TypeError("not implemented")}
+    deleteTypeRel(typerel){throw new TypeError("not implemented")}
+    queryTypeRelByName(typereltype, typerelname){throw new TypeError("not implemented")}
+    queryTypeRelById(id){throw new TypeError("not implemented")}
+    constructor(db){
+        this.db = db
+    }
+}
 class AttrOps{
     mergeAttr(attr){throw new TypeError("not implemented")}
     deleteAttr(attr){throw new TypeError("not implemented")}
@@ -66,11 +75,12 @@ class AttrOps{
 
 class AbastractDb{
     //class def
-    constructor(db, dbops, typeops, nodeops, relops, attrops){
+    constructor(db, dbops, typeops, nodeops, relops, typerelops, attrops){
         this.dbops = new dbops(db)
         this.typeops = new typeops(this.dbops)
         this.nodeops = new nodeops(this.dbops)
         this.relops = new relops(this.dbops)
+        this.typerelops = new typerelops(this.dbops)
         this.attrops = new attrops(this.dbops)
     }
 
@@ -80,5 +90,5 @@ class AbastractDb{
 }
 
 module.exports = {
-    DbOps, TypeOps, NodeOps, RelOps, AttrOps, AbastractDb
+    DbOps, TypeOps, NodeOps, RelOps, TypeRelOps, AttrOps, AbastractDb
 }

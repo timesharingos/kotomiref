@@ -1,5 +1,5 @@
 const { SqliteDbOps } = require("./dbops.cjs")
-const { SqliteTypeOps, SqliteNodeOps, SqliteRelOps, SqliteAttrOps } = require("./actualops.cjs")
+const { SqliteTypeOps, SqliteNodeOps, SqliteRelOps, SqliteTypeRelOps, SqliteAttrOps } = require("./actualops.cjs")
 const { AbastractDb } = require("../interface.cjs")
 const path = require("path")
 const fs = require("fs")
@@ -65,9 +65,10 @@ function createTables(db){
         CREATE INDEX IF NOT EXISTS idx_node_name ON node(name)
     `).run()
 
-    // Rel table: stores all relationships (both TypeRel and InstanceRel instances)
+    // Rel table: stores relationships between nodes (instances)
     // Fields from Rel.toDb(): type (typeid), id (relid), name, attr (attributes), from (fromid), to (toid)
     // attr is stored as JSON array of attribute ids
+    // fromid and toid reference node table
     db.prepare(`
         CREATE TABLE IF NOT EXISTS rel (
             id TEXT PRIMARY KEY NOT NULL,
@@ -97,6 +98,39 @@ function createTables(db){
     db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_rel_from_to ON rel(fromid, toid)
     `).run()
+
+    // TypeRel table: stores relationships between types
+    // Fields: id, type (typeid), name, attr (attributes), fromid, toid
+    // fromid and toid reference type table
+    db.prepare(`
+        CREATE TABLE IF NOT EXISTS typerel (
+            id TEXT PRIMARY KEY NOT NULL,
+            type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            attr TEXT NOT NULL,
+            fromid TEXT NOT NULL,
+            toid TEXT NOT NULL,
+            FOREIGN KEY(type) REFERENCES type(id) ON DELETE CASCADE,
+            FOREIGN KEY(fromid) REFERENCES type(id) ON DELETE CASCADE,
+            FOREIGN KEY(toid) REFERENCES type(id) ON DELETE CASCADE
+        )
+    `).run()
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_typerel_type ON typerel(type)
+    `).run()
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_typerel_from ON typerel(fromid)
+    `).run()
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_typerel_to ON typerel(toid)
+    `).run()
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_typerel_from_to ON typerel(fromid, toid)
+    `).run()
 }
 
 function init_db(){
@@ -117,7 +151,7 @@ function init_db(){
 
 class SqliteDb extends AbastractDb{
     constructor(){
-        super(init_db(), SqliteDbOps, SqliteTypeOps, SqliteNodeOps, SqliteRelOps, SqliteAttrOps)
+        super(init_db(), SqliteDbOps, SqliteTypeOps, SqliteNodeOps, SqliteRelOps, SqliteTypeRelOps, SqliteAttrOps)
     }
 }
 

@@ -1,6 +1,7 @@
 const { ipcMain, dialog, BrowserWindow, app } = require("electron")
 const { SystemConfig } = require("../config/system.cjs")
 const config = require("../config/default.cjs")
+const { init_kg } = require("../kg/init.cjs")
 
 /**
  * Register configuration IPC handlers
@@ -26,6 +27,7 @@ function registerConfigHandlers(createWindow) {
             )
             // Initialize the system with new config (including database)
             config.init(configData.dbmode, configData.filemode, configData.filedir)
+            init_kg()
             // Close config window and open main window
             const configWin = BrowserWindow.getFocusedWindow()
             if (configWin) {

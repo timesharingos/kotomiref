@@ -190,7 +190,7 @@ class EntitySubject extends kg_interface.InstanceRel {
         }
         EntitySubject.#first_create = false
         // SubConceptOf allows transitive relation
-        super("entitySubject", EvoEntity.instance.id, kg_subject.SubSubject)
+        super("entitySubject", EvoEntity.instance.id, kg_subject.SubSubject.instance.id)
     }
     static get instance(){return EntitySubject.#instance}
 }

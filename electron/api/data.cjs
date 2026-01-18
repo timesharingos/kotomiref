@@ -1,6 +1,7 @@
 const { ipcMain, dialog, app, BrowserWindow } = require("electron")
 const path = require("path")
 const fs = require("fs")
+const { init_kg } = require("../kg/init.cjs")
 
 /**
  * Register data management IPC handlers
@@ -85,6 +86,9 @@ function registerDataHandlers(createWindow) {
                     db.prepare("DELETE FROM type").run()
 
                     db.close()
+                    if(!includeConfig) {
+                        init_kg()
+                    }
                 } catch (e) {
                     db.close()
                     throw e
