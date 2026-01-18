@@ -1,8 +1,14 @@
 import type { ReactNode } from 'react'
 import { useState, useEffect } from 'react'
-import { Box, AppBar, Toolbar, Typography, IconButton, Container } from '@mui/material'
+import { Box, AppBar, Toolbar, Typography, IconButton, Container, Tabs, Tab } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
-import { useNavigate } from 'react-router'
+import HomeIcon from '@mui/icons-material/Home'
+import SearchIcon from '@mui/icons-material/Search'
+import ArticleIcon from '@mui/icons-material/Article'
+import CategoryIcon from '@mui/icons-material/Category'
+import PeopleIcon from '@mui/icons-material/People'
+import TuneIcon from '@mui/icons-material/Tune'
+import { useNavigate, useLocation } from 'react-router'
 
 interface LayoutProps {
   children: ReactNode
@@ -10,8 +16,20 @@ interface LayoutProps {
 
 function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [version, setVersion] = useState('0.0.0')
+  const [currentTab, setCurrentTab] = useState(0)
   const currentYear = new Date().getFullYear()
+
+  // Map routes to tab indices
+  const routeToTab: { [key: string]: number } = {
+    '/index': 0,
+    '/search': 1,
+    '/article': 2,
+    '/entity': 3,
+    '/signature': 4,
+    '/settings': 5,
+  }
 
   useEffect(() => {
     const loadVersion = async () => {
@@ -25,12 +43,26 @@ function Layout({ children }: LayoutProps) {
     loadVersion()
   }, [])
 
-  const handleSettingsClick = () => {
-    navigate('/config')
+  useEffect(() => {
+    // Update current tab based on route
+    const tabIndex = routeToTab[location.pathname]
+    if (tabIndex !== undefined) {
+      setCurrentTab(tabIndex)
+    }
+  }, [location.pathname])
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue)
+    const routes = ['/index', '/search', '/article', '/entity', '/signature', '/settings']
+    navigate(routes[newValue])
   }
 
   const handleLogoClick = () => {
-    navigate('/')
+    navigate('/index')
+  }
+
+  const handleConfigClick = () => {
+    navigate('/config')
   }
 
   return (
@@ -41,16 +73,31 @@ function Layout({ children }: LayoutProps) {
           <Typography
             variant="h6"
             component="div"
-            sx={{ cursor: 'pointer', userSelect: 'none' }}
+            sx={{ cursor: 'pointer', userSelect: 'none', mr: 3 }}
             onClick={handleLogoClick}
           >
             Kotomiref
           </Typography>
-          <Box sx={{ flexGrow: 1 }} />
+
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            textColor="inherit"
+            indicatorColor="secondary"
+            sx={{ flexGrow: 1 }}
+          >
+            <Tab icon={<HomeIcon />} label="Index" iconPosition="start" />
+            <Tab icon={<SearchIcon />} label="Search" iconPosition="start" />
+            <Tab icon={<ArticleIcon />} label="Article" iconPosition="start" />
+            <Tab icon={<CategoryIcon />} label="Entity" iconPosition="start" />
+            <Tab icon={<PeopleIcon />} label="Author" iconPosition="start" />
+            <Tab icon={<TuneIcon />} label="Settings" iconPosition="start" />
+          </Tabs>
+
           <IconButton
             color="inherit"
-            onClick={handleSettingsClick}
-            aria-label="settings"
+            onClick={handleConfigClick}
+            aria-label="config"
           >
             <SettingsIcon />
           </IconButton>

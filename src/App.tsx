@@ -1,19 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import Layout from './components/Layout'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
-import Button from '@mui/material/Button';
-
-function ButtonUsage() {
-  return <Button variant="contained">Hello world</Button>;
-}
-
+import IndexPage from './components/toolbar/IndexPage'
 
 function App() {
-  const [count, setCount] = useState(0)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -31,37 +20,7 @@ function App() {
     checkConfig()
   }, [navigate])
 
-  return (
-    <Layout>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-      <div>
-        <button onClick={() => window.dev.send("react")}>send</button>
-        <button onClick={async () => alert(await window.dev.invoke("react"))}>invoke</button>
-      </div>
-      <div>
-        <ButtonUsage></ButtonUsage>
-      </div>
-    </Layout>
-  )
+  return <IndexPage />
 }
 
 export default App
