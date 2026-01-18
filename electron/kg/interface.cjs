@@ -241,6 +241,7 @@ class AttributeInstance extends ToDb{
     #attrid
     #value
     constructor(typeid, value){
+        super()
         this.#typeid = typeid
         this.#value = value
         this.#attrid = `attr_${sha256(`${this.#typeid}_${Date.now()}`)}`
@@ -271,6 +272,7 @@ class Node extends ToDb{
     #attributes
     #name
     constructor(typeid, attributes, name){
+        super()
         this.#typeid = typeid
         this.#attributes = attributes
         this.#nodeid = `node_${sha256(`${this.#typeid}_${this.#name}`)}`
@@ -313,12 +315,64 @@ class Rel extends ToDb {
     #toid
 
     constructor(typeid, name, attributes, fromid, toid){
+        super()
         this.#typeid = typeid
         this.#attributes = attributes
         this.#name = name
         this.#fromid = fromid
         this.#toid = toid
         this.#relid = `rel_${sha256(`${this.#typeid}_${this.#name}`)}`
+    }
+
+    get type(){return this.#typeid}
+    get id(){return this.#relid}
+    get name(){return this.#name}
+    get attributes(){return this.#attributes}
+    set attributes(attr){this.#attributes = attr}
+    get from(){return this.#fromid}
+    get to(){return this.#toid}
+
+    addAttr(attr){this.#attributes.push(attr)}
+    removeAttr(id){
+        this.#attributes = this.#attributes.filter((attr) => attr.id != id)
+    }
+
+    toDb(){
+        return {
+            type: this.#typeid,
+            id: this.#relid,
+            name: this.#name,
+            attr: this.#attributes,
+            from: this.#fromid,
+            to: this.#toid
+        }
+    }
+    fromDb(obj){
+        this.#typeid = obj.type
+        this.#relid = obj.id
+        this.#attributes = obj.attr
+        this.#name = obj.name
+        this.#fromid = obj.from
+        this.#toid = obj.to
+    }
+}
+
+class TypeRelInstance extends ToDb {
+    #typeid
+    #relid
+    #name
+    #attributes
+    #fromid
+    #toid
+
+    constructor(typeid, name, attributes, fromid, toid){
+        super()
+        this.#typeid = typeid
+        this.#attributes = attributes
+        this.#name = name
+        this.#fromid = fromid
+        this.#toid = toid
+        this.#relid = `typerel_${sha256(`${this.#typeid}_${this.#name}_${this.#fromid}_${this.#toid}`)}`
     }
 
     get type(){return this.#typeid}
@@ -368,5 +422,6 @@ module.exports = {
     TypeRel,
     AttributeInstance,
     Node,
-    Rel
+    Rel,
+    TypeRelInstance
 }

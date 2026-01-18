@@ -11,13 +11,13 @@ function loadWindow(mainWin, env){
         mainWin.loadFile("./dist/index.html")
     } else if(env == "dev"){
         mainWin.loadURL("http://localhost:5173")
+        mainWin.webContents.openDevTools()
     } else if(env == "prod") {
         mainWin.loadFile(path.join(__dirname, "../dist/index.html"))
     } else if(app.isPackage){
         console.log("illegal type")
         app.quit()
     }
-    mainWin.webContents.openDevTools()
 }
 
 function createWindow(){

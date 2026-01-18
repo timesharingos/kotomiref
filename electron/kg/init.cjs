@@ -17,7 +17,7 @@ function collectTypes(obj) {
             types.push(value)
         } else if (typeof value === 'function' && value.instance instanceof kg_interface.TypeRel) {
             // Singleton class with TypeRel instance (class is typeof 'function')
-            typeRels.push(value.instance)
+            types.push(value.instance)
         } else if (typeof value === 'function' && value.instance instanceof kg_interface.Type) {
             // Singleton class with Type instance (class is typeof 'function')
             types.push(value.instance)
@@ -72,10 +72,18 @@ function init_kg() {
                 }
             }
 
-            // Merge all TypeRels as Rel
+            // Merge all TypeRels
             for (const key in collected) {
                 for (const typeRel of collected[key].typeRels) {
-                    db.relops.mergeRel(typeRel.toDb())
+                    // Create TypeRelInstance for the actual relationship between types
+                    const typeRelInst = new kg_interface.TypeRelInstance(
+                        typeRel.supertype,    // type: the TypeRel itself
+                        typeRel.typename,     // name: relationship name
+                        typeRel.attributes,   // attributes
+                        typeRel.from,         // from: source type id
+                        typeRel.to            // to: target type id
+                    )
+                    db.typerelops.mergeTypeRel(typeRelInst.toDb())
                 }
             }
 

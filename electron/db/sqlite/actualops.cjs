@@ -1,4 +1,4 @@
-const { TypeOps, NodeOps, RelOps, AttrOps } = require("../interface.cjs")
+const { TypeOps, NodeOps, RelOps, TypeRelOps, AttrOps } = require("../interface.cjs")
 const kg_interface = require("../../kg/interface.cjs")
 
 function reconstructType(record) {
@@ -169,14 +169,14 @@ class SqliteRelOps extends RelOps{
         // attr is an array, need to serialize to JSON
         const attrJson = JSON.stringify(rel.attr)
         const stmt = this.db.prepare(`
-            INSERT INTO rel (id, type, name, attr, "from", "to")
+            INSERT INTO rel (id, type, name, attr, fromid, toid)
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 type = excluded.type,
                 name = excluded.name,
                 attr = excluded.attr,
-                "from" = excluded."from",
-                "to" = excluded."to"
+                fromid = excluded.fromid,
+                toid = excluded.toid
         `)
         stmt.run(rel.id, rel.type, rel.name, attrJson, rel.from, rel.to)
     }
@@ -207,6 +207,60 @@ class SqliteRelOps extends RelOps{
             const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.from, result.to)
             rel.fromDb(result)
             return rel
+        }
+        return null
+    }
+}
+
+class SqliteTypeRelOps extends TypeRelOps{
+    constructor(dbops) {
+        super(dbops.db)
+    }
+
+    mergeTypeRel(typerel){
+        // typerel is a dict with: {type, id, name, attr, from, to}
+        // attr is an array, need to serialize to JSON
+        const attrJson = JSON.stringify(typerel.attr)
+        const stmt = this.db.prepare(`
+            INSERT INTO typerel (id, type, name, attr, fromid, toid)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                type = excluded.type,
+                name = excluded.name,
+                attr = excluded.attr,
+                fromid = excluded.fromid,
+                toid = excluded.toid
+        `)
+        stmt.run(typerel.id, typerel.type, typerel.name, attrJson, typerel.from, typerel.to)
+    }
+
+    deleteTypeRel(typerel){
+        const id = typeof typerel === 'string' ? typerel : typerel.id
+        const stmt = this.db.prepare('DELETE FROM typerel WHERE id = ?')
+        stmt.run(id)
+    }
+
+    queryTypeRelByName(typereltype, typerelname){
+        const stmt = this.db.prepare('SELECT * FROM typerel WHERE type = ? AND name = ?')
+        const result = stmt.get(typereltype, typerelname)
+        if(result){
+            result.attr = JSON.parse(result.attr)
+            // Create a TypeRel object from the stored data
+            // Note: We need to get the TypeRel type definition first
+            const typeRelType = new kg_interface.TypeRel(result.name, result.fromid, result.toid, result.attr)
+            return { ...result, typeRelType }
+        }
+        return null
+    }
+
+    queryTypeRelById(id){
+        const stmt = this.db.prepare('SELECT * FROM typerel WHERE id = ?')
+        const result = stmt.get(id)
+        if(result){
+            result.attr = JSON.parse(result.attr)
+            // Create a TypeRel object from the stored data
+            const typeRelType = new kg_interface.TypeRel(result.name, result.fromid, result.toid, result.attr)
+            return { ...result, typeRelType }
         }
         return null
     }
@@ -261,5 +315,5 @@ class SqliteAttrOps extends AttrOps{
 }
 
 module.exports = {
-    SqliteTypeOps, SqliteNodeOps, SqliteRelOps, SqliteAttrOps
+    SqliteTypeOps, SqliteNodeOps, SqliteRelOps, SqliteTypeRelOps, SqliteAttrOps
 }

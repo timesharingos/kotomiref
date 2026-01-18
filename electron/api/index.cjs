@@ -1,5 +1,6 @@
 const { registerDevHandlers } = require("./dev.cjs")
 const { registerConfigHandlers } = require("./config.cjs")
+const { registerDataHandlers } = require("./data.cjs")
 
 /**
  * Register all IPC handlers
@@ -8,6 +9,7 @@ const { registerConfigHandlers } = require("./config.cjs")
 function registerAllHandlers(createWindow) {
     registerDevHandlers()
     registerConfigHandlers(createWindow)
+    registerDataHandlers(createWindow)
 }
 
 module.exports = {
