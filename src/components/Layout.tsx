@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Box, AppBar, Toolbar, Typography, IconButton, Container, Tabs, Tab } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
 import HomeIcon from '@mui/icons-material/Home'
@@ -18,18 +18,23 @@ function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [version, setVersion] = useState('0.0.0')
-  const [currentTab, setCurrentTab] = useState(0)
   const currentYear = new Date().getFullYear()
 
   // Map routes to tab indices
-  const routeToTab: { [key: string]: number } = {
+  const routeToTab: { [key: string]: number } = useMemo(() => ({
     '/index': 0,
     '/search': 1,
     '/article': 2,
     '/entity': 3,
     '/signature': 4,
     '/settings': 5,
-  }
+  }), [])
+
+  // Derive current tab from location instead of storing in state
+  const currentTab = useMemo(() => {
+    const tabIndex = routeToTab[location.pathname]
+    return tabIndex !== undefined ? tabIndex : 0
+  }, [location.pathname, routeToTab])
 
   useEffect(() => {
     const loadVersion = async () => {
@@ -43,16 +48,7 @@ function Layout({ children }: LayoutProps) {
     loadVersion()
   }, [])
 
-  useEffect(() => {
-    // Update current tab based on route
-    const tabIndex = routeToTab[location.pathname]
-    if (tabIndex !== undefined) {
-      setCurrentTab(tabIndex)
-    }
-  }, [location.pathname])
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setCurrentTab(newValue)
     const routes = ['/index', '/search', '/article', '/entity', '/signature', '/settings']
     navigate(routes[newValue])
   }

@@ -86,13 +86,14 @@ function DangerousOperationsGroup() {
         })
         handleCloseDialog()
       } else {
-        setSnackbar({ 
-          open: true, 
-          message: `${operationNames[currentOperation]} failed`, 
-          severity: 'error' 
+        setSnackbar({
+          open: true,
+          message: `${operationNames[currentOperation]} failed`,
+          severity: 'error'
         })
       }
-    } catch (e) {
+    } catch (error) {
+      console.error('Operation error:', error)
       setSnackbar({ open: true, message: 'An error occurred', severity: 'error' })
     }
   }
