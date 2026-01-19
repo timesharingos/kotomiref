@@ -32,11 +32,13 @@ import { useConfirmDialog } from '../../common/ConfirmDialog'
 interface MainDomain {
   id: string
   name: string
+  description?: string
 }
 
 interface SubDomain {
   id: string
   name: string
+  description?: string
   mainDomainId: string
 }
 
@@ -155,18 +157,20 @@ function DomainTab() {
     setSelectedSubDomain(null)
   }, [])
 
-  const handleDialogSave = useCallback(async (data: { name: string }) => {
+  const handleDialogSave = useCallback(async (data: { name: string; description?: string }) => {
     try {
       let result
       if (dialogMode === 'add') {
         result = await window.domain.addSub({
           name: data.name,
+          desc: data.description || '',
           mainDomainId: selectedMainDomainId
         })
       } else if (selectedSubDomain) {
         result = await window.domain.updateSub({
           id: selectedSubDomain.id,
           name: data.name,
+          desc: data.description || '',
           mainDomainId: selectedSubDomain.mainDomainId
         })
       }
@@ -236,18 +240,22 @@ function DomainTab() {
     setSelectedMainDomain(null)
   }, [])
 
-  const handleMainDomainDialogSave = useCallback(async (data: { name: string }) => {
+  const handleMainDomainDialogSave = useCallback(async (data: { name: string; description?: string }) => {
     try {
       let result
       if (mainDomainDialogMode === 'add') {
-        result = await window.domain.addMain({ name: data.name })
+        result = await window.domain.addMain({
+          name: data.name,
+          desc: data.description || ''
+        })
         if (result.success && result.id) {
           setSelectedMainDomainId(result.id)
         }
       } else if (selectedMainDomain) {
         result = await window.domain.updateMain({
           id: selectedMainDomain.id,
-          name: data.name
+          name: data.name,
+          desc: data.description || ''
         })
       }
 
@@ -398,6 +406,7 @@ function DomainTab() {
                 />
               </TableCell>
               <TableCell>Sub-domain Name</TableCell>
+              <TableCell>Description</TableCell>
               <TableCell>Main Domain</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -405,7 +414,7 @@ function DomainTab() {
           <TableBody>
             {filteredSubDomains.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   {selectedMainDomainId
                     ? 'No sub-domains found in this main domain'
                     : 'Please select a main domain or view all'}
@@ -427,6 +436,11 @@ function DomainTab() {
                       />
                     </TableCell>
                     <TableCell>{subDomain.name}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {subDomain.description || '-'}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
                         {mainDomain?.name ?? 'Unknown'}

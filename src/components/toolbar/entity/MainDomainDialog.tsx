@@ -11,6 +11,7 @@ import {
 interface MainDomain {
   id: string
   name: string
+  description?: string
 }
 
 interface MainDomainDialogProps {
@@ -18,7 +19,7 @@ interface MainDomainDialogProps {
   mode: 'add' | 'edit'
   domain: MainDomain | null
   onClose: () => void
-  onSave: (data: { name: string }) => void
+  onSave: (data: { name: string; description?: string }) => void
 }
 
 function MainDomainDialog({
@@ -30,6 +31,7 @@ function MainDomainDialog({
 }: MainDomainDialogProps) {
   // Initialize state directly from props (works with key-based reset)
   const [name, setName] = useState(mode === 'edit' && domain ? domain.name : '')
+  const [description, setDescription] = useState(mode === 'edit' && domain ? domain.description || '' : '')
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   // Focus management only
@@ -48,7 +50,7 @@ function MainDomainDialog({
       alert('Please enter a main domain name')
       return
     }
-    onSave({ name: trimmedName })
+    onSave({ name: trimmedName, description: description.trim() })
   }
 
   return (
@@ -64,6 +66,15 @@ function MainDomainDialog({
           fullWidth
           required
           inputRef={nameInputRef}
+          sx={{ mt: 2 }}
+        />
+        <TextField
+          label="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          fullWidth
+          multiline
+          rows={3}
           sx={{ mt: 2 }}
         />
       </DialogContent>

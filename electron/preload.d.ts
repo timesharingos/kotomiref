@@ -34,11 +34,13 @@ interface AuthorAffiliation {
 interface MainDomain {
   id: string;
   name: string;
+  description?: string;
 }
 
 interface SubDomain {
   id: string;
   name: string;
+  description?: string;
   mainDomainId: string | null;
 }
 
@@ -86,11 +88,11 @@ declare global {
       getAllMain: () => Promise<MainDomain[]>;
       getAllSub: () => Promise<SubDomain[]>;
       getSubRelations: () => Promise<SubDomainRelation[]>;
-      addMain: (data: { name: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
-      updateMain: (data: { id: string; name: string }) => Promise<{ success: boolean; error?: string }>;
+      addMain: (data: { name: string; desc?: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
+      updateMain: (data: { id: string; name: string; desc?: string }) => Promise<{ success: boolean; error?: string }>;
       deleteMain: (id: string) => Promise<{ success: boolean; deletedSubCount?: number; error?: string }>;
-      addSub: (data: { name: string; mainDomainId: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
-      updateSub: (data: { id: string; name: string; mainDomainId: string }) => Promise<{ success: boolean; error?: string }>;
+      addSub: (data: { name: string; desc?: string; mainDomainId: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
+      updateSub: (data: { id: string; name: string; desc?: string; mainDomainId: string }) => Promise<{ success: boolean; error?: string }>;
       deleteSub: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }

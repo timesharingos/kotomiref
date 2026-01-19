@@ -14,10 +14,20 @@ function registerDomainHandlers() {
                 const subjectTypeInst = subjectType.Subject.instance
                 const nodes = db.nodeops.queryNodesByType(subjectTypeInst.id)
 
-                return nodes.map(node => ({
-                    id: node.id,
-                    name: node.name
-                }))
+                return nodes.map(node => {
+                    // node.attributes is an array of attribute IDs, need to fetch actual AttributeInstance objects
+                    const nameAttrId = node.attributes[0] // First attribute is subjectName
+                    const descAttrId = node.attributes[1] // Second attribute is subjectDesc
+
+                    const nameAttr = nameAttrId ? db.attrops.queryAttrById(nameAttrId) : null
+                    const descAttr = descAttrId ? db.attrops.queryAttrById(descAttrId) : null
+
+                    return {
+                        id: node.id,
+                        name: nameAttr ? nameAttr.value : node.name,
+                        description: descAttr ? descAttr.value : ''
+                    }
+                })
             })
         } catch (e) {
             console.error("Failed to get main domains:", e)
@@ -32,11 +42,21 @@ function registerDomainHandlers() {
                 const subSubjectTypeInst = subjectType.SubSubject.instance
                 const nodes = db.nodeops.queryNodesByType(subSubjectTypeInst.id)
 
-                return nodes.map(node => ({
-                    id: node.id,
-                    name: node.name,
-                    mainDomainId: null // Will be populated from relations
-                }))
+                return nodes.map(node => {
+                    // node.attributes is an array of attribute IDs, need to fetch actual AttributeInstance objects
+                    const nameAttrId = node.attributes[0] // First attribute is subjectName
+                    const descAttrId = node.attributes[1] // Second attribute is subjectDesc
+
+                    const nameAttr = nameAttrId ? db.attrops.queryAttrById(nameAttrId) : null
+                    const descAttr = descAttrId ? db.attrops.queryAttrById(descAttrId) : null
+
+                    return {
+                        id: node.id,
+                        name: nameAttr ? nameAttr.value : node.name,
+                        description: descAttr ? descAttr.value : '',
+                        mainDomainId: null // Will be populated from relations
+                    }
+                })
             })
         } catch (e) {
             console.error("Failed to get sub domains:", e)
@@ -65,12 +85,32 @@ function registerDomainHandlers() {
     // Add main domain
     ipcMain.handle("domain:addMain", async (_ev, data) => {
         try {
-            const { name } = data
+            const { name, desc } = data
             return invokeDb((db) => {
                 db.dbops.begin()
                 try {
                     const subjectTypeInst = subjectType.Subject.instance
-                    const node = new kg_interface.Node(subjectTypeInst.id, [], name)
+
+                    // Create attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectName.instance.id,
+                        name || ""
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectDesc.instance.id,
+                        desc || "" // Optional, empty string if not provided
+                    )
+
+                    // Store attributes in database first
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Create node with attribute IDs (not the objects themselves)
+                    const node = new kg_interface.Node(
+                        subjectTypeInst.id,
+                        [nameAttr.id, descAttr.id], // Pass IDs, not objects
+                        name
+                    )
                     db.nodeops.mergeNode(node.toDb())
 
                     db.dbops.commit()
@@ -89,7 +129,7 @@ function registerDomainHandlers() {
     // Update main domain
     ipcMain.handle("domain:updateMain", async (_ev, data) => {
         try {
-            const { id, name } = data
+            const { id, name, desc } = data
             return invokeDb((db) => {
                 db.dbops.begin()
                 try {
@@ -98,9 +138,39 @@ function registerDomainHandlers() {
                         throw new Error("Main domain not found")
                     }
 
+                    // Get existing description if desc not provided
+                    let existingDesc = ""
+                    if (existingNode.attributes[1]) {
+                        const existingDescAttr = db.attrops.queryAttrById(existingNode.attributes[1])
+                        existingDesc = existingDescAttr ? existingDescAttr.value : ""
+                    }
+
+                    // Create new attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectName.instance.id,
+                        name || ""
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectDesc.instance.id,
+                        desc !== undefined ? desc : existingDesc
+                    )
+
+                    // Delete old attributes
+                    if (existingNode.attributes[0]) {
+                        db.attrops.deleteAttr(existingNode.attributes[0])
+                    }
+                    if (existingNode.attributes[1]) {
+                        db.attrops.deleteAttr(existingNode.attributes[1])
+                    }
+
+                    // Store new attributes
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Update node with new attribute IDs
                     const updatedNode = new kg_interface.Node(
                         existingNode.type,
-                        existingNode.attributes,
+                        [nameAttr.id, descAttr.id],
                         name
                     )
                     const nodeDb = updatedNode.toDb()
@@ -135,12 +205,26 @@ function registerDomainHandlers() {
                     // Delete sub domain relations
                     db.relops.deleteRelsByToId(subSubjectRelType.id, id)
 
-                    // Delete sub domain nodes
+                    // Delete sub domain nodes and their attributes
                     for (const subId of subDomainIds) {
+                        const subNode = db.nodeops.queryNodeById(subId)
+                        if (subNode) {
+                            // Delete attributes
+                            for (const attrId of subNode.attributes) {
+                                db.attrops.deleteAttr(attrId)
+                            }
+                        }
                         db.nodeops.deleteNode(subId)
                     }
 
-                    // Delete main domain node
+                    // Delete main domain node and its attributes
+                    const mainNode = db.nodeops.queryNodeById(id)
+                    if (mainNode) {
+                        // Delete attributes
+                        for (const attrId of mainNode.attributes) {
+                            db.attrops.deleteAttr(attrId)
+                        }
+                    }
                     db.nodeops.deleteNode(id)
 
                     db.dbops.commit()
@@ -159,12 +243,32 @@ function registerDomainHandlers() {
     // Add sub domain
     ipcMain.handle("domain:addSub", async (_ev, data) => {
         try {
-            const { name, mainDomainId } = data
+            const { name, desc, mainDomainId } = data
             return invokeDb((db) => {
                 db.dbops.begin()
                 try {
                     const subSubjectTypeInst = subjectType.SubSubject.instance
-                    const node = new kg_interface.Node(subSubjectTypeInst.id, [], name)
+
+                    // Create attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectName.instance.id,
+                        name || ""
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectDesc.instance.id,
+                        desc || "" // Optional, empty string if not provided
+                    )
+
+                    // Store attributes in database first
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Create node with attribute IDs
+                    const node = new kg_interface.Node(
+                        subSubjectTypeInst.id,
+                        [nameAttr.id, descAttr.id],
+                        name
+                    )
                     db.nodeops.mergeNode(node.toDb())
 
                     // Create relation to main domain
@@ -194,7 +298,7 @@ function registerDomainHandlers() {
     // Update sub domain
     ipcMain.handle("domain:updateSub", async (_ev, data) => {
         try {
-            const { id, name, mainDomainId } = data
+            const { id, name, desc, mainDomainId } = data
             return invokeDb((db) => {
                 db.dbops.begin()
                 try {
@@ -203,9 +307,39 @@ function registerDomainHandlers() {
                         throw new Error("Sub domain not found")
                     }
 
+                    // Get existing description if desc not provided
+                    let existingDesc = ""
+                    if (existingNode.attributes[1]) {
+                        const existingDescAttr = db.attrops.queryAttrById(existingNode.attributes[1])
+                        existingDesc = existingDescAttr ? existingDescAttr.value : ""
+                    }
+
+                    // Create new attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectName.instance.id,
+                        name || ""
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        subjectType.AttributeSubjectDesc.instance.id,
+                        desc !== undefined ? desc : existingDesc
+                    )
+
+                    // Delete old attributes
+                    if (existingNode.attributes[0]) {
+                        db.attrops.deleteAttr(existingNode.attributes[0])
+                    }
+                    if (existingNode.attributes[1]) {
+                        db.attrops.deleteAttr(existingNode.attributes[1])
+                    }
+
+                    // Store new attributes
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Update node with new attribute IDs
                     const updatedNode = new kg_interface.Node(
                         existingNode.type,
-                        existingNode.attributes,
+                        [nameAttr.id, descAttr.id],
                         name
                     )
                     const nodeDb = updatedNode.toDb()
@@ -248,7 +382,14 @@ function registerDomainHandlers() {
                     const subSubjectRelType = subjectType.SubSubjectRel.instance
                     db.relops.deleteRelsByFromId(subSubjectRelType.id, id)
 
-                    // Delete node
+                    // Delete node and its attributes
+                    const node = db.nodeops.queryNodeById(id)
+                    if (node) {
+                        // Delete attributes
+                        for (const attrId of node.attributes) {
+                            db.attrops.deleteAttr(attrId)
+                        }
+                    }
                     db.nodeops.deleteNode(id)
 
                     db.dbops.commit()
