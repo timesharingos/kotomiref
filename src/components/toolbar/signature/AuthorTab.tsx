@@ -44,22 +44,23 @@ function AuthorTab() {
   const loadData = async () => {
     try {
       // Load authors and their affiliations
-      const [authorsData, authorAffiliations, affiliationsData] = await Promise.all([
+      await Promise.all([
         window.author.getAll(),
         window.author.getAffiliations(),
         window.affiliation.getAll()
       ])
+      .then(([authorsData, authorAffiliations, affiliationsData]) => {
+        // Merge affiliation data into authors
+        const authorsWithAffiliations = authorsData.map(author => {
+          const affIds = authorAffiliations
+            .filter(rel => rel.authorId === author.id)
+            .map(rel => rel.affiliationId)
+          return { ...author, affiliations: affIds }
+        })
 
-      // Merge affiliation data into authors
-      const authorsWithAffiliations = authorsData.map(author => {
-        const affIds = authorAffiliations
-          .filter(rel => rel.authorId === author.id)
-          .map(rel => rel.affiliationId)
-        return { ...author, affiliations: affIds }
+        setAuthors(authorsWithAffiliations)
+        setAffiliations(affiliationsData.map(a => ({ id: a.id, name: a.name })))
       })
-
-      setAuthors(authorsWithAffiliations)
-      setAffiliations(affiliationsData.map(a => ({ id: a.id, name: a.name })))
     } catch (e) {
       console.error('Failed to load data:', e)
     }
