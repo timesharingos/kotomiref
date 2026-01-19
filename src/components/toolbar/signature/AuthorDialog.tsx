@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -40,17 +40,15 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
     'UC Berkeley'
   ])
 
-  useEffect(() => {
-    if (open) {
-      if (author && mode === 'edit') {
-        setName(author.name)
-        setSelectedAffiliations(author.affiliations)
-      } else {
-        setName('')
-        setSelectedAffiliations([])
-      }
+  if (open) {
+    if (author && mode === 'edit') {
+      setName(author.name)
+      setSelectedAffiliations(author.affiliations)
+    } else {
+      setName('')
+      setSelectedAffiliations([])
     }
-  }, [open, author, mode])
+  }
 
   const handleSave = () => {
     if (!name.trim()) {

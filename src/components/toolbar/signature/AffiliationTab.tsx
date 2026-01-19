@@ -38,10 +38,10 @@ function AffiliationTab() {
 
   const loadAffiliations = async () => {
     try {
-      const [affs, hierarchy] = await Promise.all([
+      await Promise.all([
         window.affiliation.getAll(),
         window.affiliation.getHierarchy()
-      ])
+      ]).then(([affs, hierarchy]) => {
 
       // Merge hierarchy data into affiliations
       const affiliationsWithParents = affs.map(aff => {
@@ -53,6 +53,7 @@ function AffiliationTab() {
       })
 
       setAffiliations(affiliationsWithParents)
+    })
     } catch (e) {
       console.error('Failed to load affiliations:', e)
     }
