@@ -42,3 +42,14 @@ contextBridge.exposeInMainWorld(
     }
 )
 
+contextBridge.exposeInMainWorld(
+    'author',
+    {
+        getAll: () => ipcRenderer.invoke("author:getAll"),
+        getAffiliations: () => ipcRenderer.invoke("author:getAffiliations"),
+        add: (data) => ipcRenderer.invoke("author:add", data),
+        update: (data) => ipcRenderer.invoke("author:update", data),
+        delete: (id) => ipcRenderer.invoke("author:delete", id)
+    }
+)
+

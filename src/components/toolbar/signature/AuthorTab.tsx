@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Button,
@@ -27,13 +27,47 @@ interface Author {
   affiliations: string[] // affiliation IDs
 }
 
+interface AffiliationInfo {
+  id: string
+  name: string
+}
+
 function AuthorTab() {
-  const [authors] = useState<Author[]>([])
+  const [authors, setAuthors] = useState<Author[]>([])
+  const [affiliations, setAffiliations] = useState<AffiliationInfo[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const loadData = async () => {
+    try {
+      // Load authors and their affiliations
+      const [authorsData, authorAffiliations, affiliationsData] = await Promise.all([
+        window.author.getAll(),
+        window.author.getAffiliations(),
+        window.affiliation.getAll()
+      ])
+
+      // Merge affiliation data into authors
+      const authorsWithAffiliations = authorsData.map(author => {
+        const affIds = authorAffiliations
+          .filter(rel => rel.authorId === author.id)
+          .map(rel => rel.affiliationId)
+        return { ...author, affiliations: affIds }
+      })
+
+      setAuthors(authorsWithAffiliations)
+      setAffiliations(affiliationsData.map(a => ({ id: a.id, name: a.name })))
+    } catch (e) {
+      console.error('Failed to load data:', e)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const handleAdd = () => {
     setDialogMode('add')
@@ -47,22 +81,38 @@ function AuthorTab() {
     setDialogOpen(true)
   }
 
-  const handleDelete = (author: Author) => {
+  const handleDelete = async (author: Author) => {
     if (window.confirm(`Are you sure you want to delete author "${author.name}"?`)) {
-      // TODO: Implement delete logic
-      console.log('Delete author:', author)
+      try {
+        const result = await window.author.delete(author.id)
+        if (result.success) {
+          await loadData()
+        } else {
+          alert(`Failed to delete: ${result.error}`)
+        }
+      } catch (e) {
+        console.error('Delete failed:', e)
+        alert('An error occurred while deleting')
+      }
     }
   }
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     if (selectedIds.size === 0) {
       alert('Please select authors to delete')
       return
     }
     if (window.confirm(`Are you sure you want to delete ${selectedIds.size} author(s)?`)) {
-      // TODO: Implement batch delete logic
-      console.log('Batch delete authors:', Array.from(selectedIds))
-      setSelectedIds(new Set())
+      try {
+        for (const id of Array.from(selectedIds)) {
+          await window.author.delete(id)
+        }
+        setSelectedIds(new Set())
+        await loadData()
+      } catch (e) {
+        console.error('Batch delete failed:', e)
+        alert('An error occurred during batch delete')
+      }
     }
   }
 
@@ -71,15 +121,28 @@ function AuthorTab() {
     setSelectedAuthor(null)
   }
 
-  const handleDialogSave = (authorData: { name: string; affiliations: string[] }) => {
-    if (dialogMode === 'add') {
-      // TODO: Implement add logic
-      console.log('Add author:', authorData)
-    } else {
-      // TODO: Implement edit logic
-      console.log('Edit author:', authorData)
+  const handleDialogSave = async (authorData: { name: string; affiliations: string[] }) => {
+    try {
+      let result
+      if (dialogMode === 'add') {
+        result = await window.author.add(authorData)
+      } else if (selectedAuthor) {
+        result = await window.author.update({
+          id: selectedAuthor.id,
+          ...authorData
+        })
+      }
+
+      if (result?.success) {
+        await loadData()
+        handleDialogClose()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Save failed:', e)
+      alert('An error occurred while saving')
     }
-    handleDialogClose()
   }
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,9 +248,12 @@ function AuthorTab() {
                   <TableCell>{author.name}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {author.affiliations.map((affId) => (
-                        <Chip key={affId} label={affId} size="small" />
-                      ))}
+                      {author.affiliations.map((affId) => {
+                        const aff = affiliations.find(a => a.id === affId)
+                        return (
+                          <Chip key={affId} label={aff?.name ?? affId} size="small" />
+                        )
+                      })}
                     </Box>
                   </TableCell>
                   <TableCell align="right">
@@ -220,6 +286,7 @@ function AuthorTab() {
         open={dialogOpen}
         mode={dialogMode}
         author={selectedAuthor}
+        availableAffiliations={affiliations}
         onClose={handleDialogClose}
         onSave={handleDialogSave}
       />

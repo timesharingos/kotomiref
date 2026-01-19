@@ -20,6 +20,17 @@ interface AffiliationHierarchy {
   parentId: string;
 }
 
+interface Author {
+  id: string;
+  name: string;
+  affiliations: string[];
+}
+
+interface AuthorAffiliation {
+  authorId: string;
+  affiliationId: string;
+}
+
 declare global {
   interface Window {
     dev: {
@@ -47,6 +58,13 @@ declare global {
       add: (data: { name: string; parentId: string | null }) => Promise<{ success: boolean; id?: string; error?: string }>;
       update: (data: { id: string; name: string; parentId: string | null }) => Promise<{ success: boolean; error?: string }>;
       delete: (id: string) => Promise<{ success: boolean; deletedCount?: number; error?: string }>;
+    };
+    author: {
+      getAll: () => Promise<Author[]>;
+      getAffiliations: () => Promise<AuthorAffiliation[]>;
+      add: (data: { name: string; affiliations: string[] }) => Promise<{ success: boolean; id?: string; error?: string }>;
+      update: (data: { id: string; name: string; affiliations: string[] }) => Promise<{ success: boolean; error?: string }>;
+      delete: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

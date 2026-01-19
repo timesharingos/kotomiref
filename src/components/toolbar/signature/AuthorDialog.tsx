@@ -21,27 +21,26 @@ interface Author {
   affiliations: string[]
 }
 
+interface AffiliationInfo {
+  id: string
+  name: string
+}
+
 interface AuthorDialogProps {
   open: boolean
   mode: 'add' | 'edit'
   author: Author | null
+  availableAffiliations: AffiliationInfo[]
   onClose: () => void
   onSave: (data: { name: string; affiliations: string[] }) => void
 }
 
-function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps) {
+function AuthorDialog({ open, mode, author, availableAffiliations, onClose, onSave }: AuthorDialogProps) {
   // Initialize state directly from props (works with key-based reset)
   const [name, setName] = useState(mode === 'edit' && author ? author.name : '')
   const [selectedAffiliations, setSelectedAffiliations] = useState<string[]>(
     mode === 'edit' && author ? author.affiliations : []
   )
-  const [availableAffiliations] = useState<string[]>([
-    // TODO: Load from database
-    'MIT',
-    'Stanford University',
-    'Harvard University',
-    'UC Berkeley'
-  ])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   // Focus management only
@@ -62,14 +61,14 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
     onSave({ name: name.trim(), affiliations: selectedAffiliations })
   }
 
-  const handleAddAffiliation = (affiliation: string | null) => {
-    if (affiliation && !selectedAffiliations.includes(affiliation)) {
-      setSelectedAffiliations([...selectedAffiliations, affiliation])
+  const handleAddAffiliation = (affiliationId: string | null) => {
+    if (affiliationId && !selectedAffiliations.includes(affiliationId)) {
+      setSelectedAffiliations([...selectedAffiliations, affiliationId])
     }
   }
 
-  const handleRemoveAffiliation = (affiliation: string) => {
-    setSelectedAffiliations(selectedAffiliations.filter(a => a !== affiliation))
+  const handleRemoveAffiliation = (affiliationId: string) => {
+    setSelectedAffiliations(selectedAffiliations.filter(a => a !== affiliationId))
   }
 
   const handleClearAffiliations = () => {
@@ -77,6 +76,16 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
       setSelectedAffiliations([])
     }
   }
+
+  // Get affiliation name by ID
+  const getAffiliationName = (id: string) => {
+    return availableAffiliations.find(a => a.id === id)?.name ?? id
+  }
+
+  // Get unselected affiliations for autocomplete
+  const unselectedAffiliations = availableAffiliations.filter(
+    a => !selectedAffiliations.includes(a.id)
+  )
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -115,8 +124,9 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
 
             {/* Add Affiliation */}
             <Autocomplete
-              options={availableAffiliations.filter(a => !selectedAffiliations.includes(a))}
-              onChange={(_event, value) => handleAddAffiliation(value)}
+              options={unselectedAffiliations}
+              getOptionLabel={(option) => option.name}
+              onChange={(_event, value) => handleAddAffiliation(value?.id ?? null)}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -129,11 +139,11 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
 
             {/* Selected Affiliations */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-              {selectedAffiliations.map((affiliation) => (
+              {selectedAffiliations.map((affiliationId) => (
                 <Chip
-                  key={affiliation}
-                  label={affiliation}
-                  onDelete={() => handleRemoveAffiliation(affiliation)}
+                  key={affiliationId}
+                  label={getAffiliationName(affiliationId)}
+                  onDelete={() => handleRemoveAffiliation(affiliationId)}
                   deleteIcon={
                     <IconButton size="small">
                       <DeleteIcon fontSize="small" />
