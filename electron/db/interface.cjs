@@ -41,6 +41,7 @@ class NodeOps{
     deleteNode(node){throw new TypeError("not implemented")}
     queryNodeByName(nodetype, nodename){throw new TypeError("not implemented")}
     queryNodeById(id){throw new TypeError("not implemented")}
+    queryNodesByType(nodetype){throw new TypeError("not implemented")}
     constructor(db){
         this.db = db
     }
@@ -50,6 +51,11 @@ class RelOps{
     deleteRel(rel){throw new TypeError("not implemented")}
     queryRelByName(reltype, relname){throw new TypeError("not implemented")}
     queryRelById(id){throw new TypeError("not implemented")}
+    queryRelsByType(reltype){throw new TypeError("not implemented")}
+    queryRelsByFromId(reltype, fromid){throw new TypeError("not implemented")}
+    queryRelsByToId(reltype, toid){throw new TypeError("not implemented")}
+    deleteRelsByFromId(reltype, fromid){throw new TypeError("not implemented")}
+    deleteRelsByToId(reltype, toid){throw new TypeError("not implemented")}
     constructor(db){
         this.db = db
     }

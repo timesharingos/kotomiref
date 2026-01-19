@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -39,19 +39,29 @@ function AffiliationDialog({
 }: AffiliationDialogProps) {
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Initialize state when dialog opens or affiliation changes
   useEffect(() => {
-    if (affiliation && mode === 'edit') {
-      setName(affiliation.name)
-      setParentId(affiliation.parentId)
-    } else {
-      setName('')
-      setParentId(null)
+    if (open) {
+      if (affiliation && mode === 'edit') {
+        setName(affiliation.name)
+        setParentId(affiliation.parentId)
+      } else {
+        setName('')
+        setParentId(null)
+      }
+
+      // Focus the name input after dialog opens
+      setTimeout(() => {
+        nameInputRef.current?.focus()
+      }, 100)
     }
-  }, [affiliation, mode, open])
+  }, [open, affiliation, mode])
 
   const handleSave = () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
       alert('Please enter affiliation name')
       return
     }
@@ -70,7 +80,7 @@ function AffiliationDialog({
       }
     }
 
-    onSave({ name: name.trim(), parentId })
+    onSave({ name: trimmedName, parentId })
   }
 
   const isDescendant = (potentialDescendantId: string, ancestorId: string): boolean => {
@@ -111,7 +121,7 @@ function AffiliationDialog({
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
-            autoFocus
+            inputRef={nameInputRef}
           />
 
           {/* Parent Affiliation */}

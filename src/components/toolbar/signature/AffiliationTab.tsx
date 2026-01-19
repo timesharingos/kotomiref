@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Button,
@@ -28,13 +28,39 @@ interface Affiliation {
 }
 
 function AffiliationTab() {
-  const [affiliations] = useState<Affiliation[]>([])
+  const [affiliations, setAffiliations] = useState<Affiliation[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedAffiliation, setSelectedAffiliation] = useState<Affiliation | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const loadAffiliations = async () => {
+    try {
+      const [affs, hierarchy] = await Promise.all([
+        window.affiliation.getAll(),
+        window.affiliation.getHierarchy()
+      ])
+
+      // Merge hierarchy data into affiliations
+      const affiliationsWithParents = affs.map(aff => {
+        const parentRel = hierarchy.find(h => h.childId === aff.id)
+        return {
+          ...aff,
+          parentId: parentRel ? parentRel.parentId : null
+        }
+      })
+
+      setAffiliations(affiliationsWithParents)
+    } catch (e) {
+      console.error('Failed to load affiliations:', e)
+    }
+  }
+
+  useEffect(() => {
+    loadAffiliations()
+  }, [])
 
   const handleAdd = () => {
     setDialogMode('add')
@@ -48,7 +74,7 @@ function AffiliationTab() {
     setDialogOpen(true)
   }
 
-  const handleDelete = (affiliation: Affiliation) => {
+  const handleDelete = async (affiliation: Affiliation) => {
     const children = getChildren(affiliation.id)
     const totalCount = 1 + countAllDescendants(affiliation.id)
 
@@ -56,12 +82,21 @@ function AffiliationTab() {
       `Are you sure you want to delete "${affiliation.name}"?\n` +
       `This will also delete ${children.length} direct child(ren) and ${totalCount - 1} total descendant(s).`
     )) {
-      // TODO: Implement delete logic
-      console.log('Delete affiliation and descendants:', affiliation)
+      try {
+        const result = await window.affiliation.delete(affiliation.id)
+        if (result.success) {
+          await loadAffiliations()
+        } else {
+          alert(`Failed to delete: ${result.error}`)
+        }
+      } catch (e) {
+        console.error('Delete failed:', e)
+        alert('An error occurred while deleting')
+      }
     }
   }
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     if (selectedIds.size === 0) {
       alert('Please select affiliations to delete')
       return
@@ -75,9 +110,16 @@ function AffiliationTab() {
       `Are you sure you want to delete ${selectedIds.size} affiliation(s)?\n` +
       `This will also delete all their descendants (${totalCount} total).`
     )) {
-      // TODO: Implement batch delete logic
-      console.log('Batch delete affiliations:', Array.from(selectedIds))
-      setSelectedIds(new Set())
+      try {
+        for (const id of Array.from(selectedIds)) {
+          await window.affiliation.delete(id)
+        }
+        setSelectedIds(new Set())
+        await loadAffiliations()
+      } catch (e) {
+        console.error('Batch delete failed:', e)
+        alert('An error occurred during batch delete')
+      }
     }
   }
 
@@ -86,15 +128,28 @@ function AffiliationTab() {
     setSelectedAffiliation(null)
   }
 
-  const handleDialogSave = (data: { name: string; parentId: string | null }) => {
-    if (dialogMode === 'add') {
-      // TODO: Implement add logic
-      console.log('Add affiliation:', data)
-    } else {
-      // TODO: Implement edit logic
-      console.log('Edit affiliation:', data)
+  const handleDialogSave = async (data: { name: string; parentId: string | null }) => {
+    try {
+      let result
+      if (dialogMode === 'add') {
+        result = await window.affiliation.add(data)
+      } else if (selectedAffiliation) {
+        result = await window.affiliation.update({
+          id: selectedAffiliation.id,
+          ...data
+        })
+      }
+
+      if (result?.success) {
+        await loadAffiliations()
+        handleDialogClose()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Save failed:', e)
+      alert('An error occurred while saving')
     }
-    handleDialogClose()
   }
 
   const handleToggleExpand = (id: string) => {

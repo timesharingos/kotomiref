@@ -41,14 +41,16 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
   ])
 
   useEffect(() => {
-    if (author && mode === 'edit') {
-      setName(author.name)
-      setSelectedAffiliations(author.affiliations)
-    } else {
-      setName('')
-      setSelectedAffiliations([])
+    if (open) {
+      if (author && mode === 'edit') {
+        setName(author.name)
+        setSelectedAffiliations(author.affiliations)
+      } else {
+        setName('')
+        setSelectedAffiliations([])
+      }
     }
-  }, [author, mode, open])
+  }, [open, author, mode])
 
   const handleSave = () => {
     if (!name.trim()) {

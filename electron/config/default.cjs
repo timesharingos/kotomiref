@@ -12,7 +12,8 @@ function init(dbmode = "sqlite", filemode = "readonly", filedir = ""){
         db = new db_mapping[dbmode]()
         config = new SystemConfig(dbmode, filemode, filedir, true, process.env.npm_package_version || "0.0.0", process.env.npm_package_version || "0.0.0")
         SystemConfig.writeConfig(config)
-    }
+    } else
+        db = new db_mapping[config.dbmode]()
 }
 
 function getConfig(){
