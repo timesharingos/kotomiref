@@ -27,7 +27,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import DomainDialog from './DomainDialog'
 import MainDomainDialog from './MainDomainDialog'
 import { useAsyncData } from '../../../hooks/useAsyncData'
-import { useConfirmDialog } from '../../common/ConfirmDialog'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 
 interface MainDomain {
   id: string
