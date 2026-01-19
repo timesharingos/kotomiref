@@ -151,11 +151,22 @@ class SqliteNodeOps extends NodeOps{
         const result = stmt.get(id)
         if(result){
             result.attr = JSON.parse(result.attr)
-            const node = new kg_interface.Node(result.type, result.attr)
+            const node = new kg_interface.Node(result.type, result.attr, result.name)
             node.fromDb(result)
             return node
         }
         return null
+    }
+
+    queryNodesByType(nodetype){
+        const stmt = this.db.prepare('SELECT * FROM node WHERE type = ?')
+        const results = stmt.all(nodetype)
+        return results.map(result => {
+            result.attr = JSON.parse(result.attr)
+            const node = new kg_interface.Node(result.type, result.attr, result.name)
+            node.fromDb(result)
+            return node
+        })
     }
 }
 
@@ -192,7 +203,10 @@ class SqliteRelOps extends RelOps{
         const result = stmt.get(reltype, relname)
         if(result){
             result.attr = JSON.parse(result.attr)
-            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.from, result.to)
+            // Map database fields to Rel object fields
+            result.from = result.fromid
+            result.to = result.toid
+            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.fromid, result.toid)
             rel.fromDb(result)
             return rel
         }
@@ -204,11 +218,66 @@ class SqliteRelOps extends RelOps{
         const result = stmt.get(id)
         if(result){
             result.attr = JSON.parse(result.attr)
-            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.from, result.to)
+            // Map database fields to Rel object fields
+            result.from = result.fromid
+            result.to = result.toid
+            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.fromid, result.toid)
             rel.fromDb(result)
             return rel
         }
         return null
+    }
+
+    queryRelsByType(reltype){
+        const stmt = this.db.prepare('SELECT * FROM rel WHERE type = ?')
+        const results = stmt.all(reltype)
+        return results.map(result => {
+            result.attr = JSON.parse(result.attr)
+            // Map database fields to Rel object fields
+            result.from = result.fromid
+            result.to = result.toid
+            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.fromid, result.toid)
+            rel.fromDb(result)
+            return rel
+        })
+    }
+
+    queryRelsByFromId(reltype, fromid){
+        const stmt = this.db.prepare('SELECT * FROM rel WHERE type = ? AND fromid = ?')
+        const results = stmt.all(reltype, fromid)
+        return results.map(result => {
+            result.attr = JSON.parse(result.attr)
+            // Map database fields to Rel object fields
+            result.from = result.fromid
+            result.to = result.toid
+            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.fromid, result.toid)
+            rel.fromDb(result)
+            return rel
+        })
+    }
+
+    queryRelsByToId(reltype, toid){
+        const stmt = this.db.prepare('SELECT * FROM rel WHERE type = ? AND toid = ?')
+        const results = stmt.all(reltype, toid)
+        return results.map(result => {
+            result.attr = JSON.parse(result.attr)
+            // Map database fields to Rel object fields
+            result.from = result.fromid
+            result.to = result.toid
+            const rel = new kg_interface.Rel(result.type, result.name, result.attr, result.fromid, result.toid)
+            rel.fromDb(result)
+            return rel
+        })
+    }
+
+    deleteRelsByFromId(reltype, fromid){
+        const stmt = this.db.prepare('DELETE FROM rel WHERE type = ? AND fromid = ?')
+        stmt.run(reltype, fromid)
+    }
+
+    deleteRelsByToId(reltype, toid){
+        const stmt = this.db.prepare('DELETE FROM rel WHERE type = ? AND toid = ?')
+        stmt.run(reltype, toid)
     }
 }
 

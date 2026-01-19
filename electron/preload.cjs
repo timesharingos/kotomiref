@@ -16,7 +16,8 @@ contextBridge.exposeInMainWorld(
         saveConfig: (config) => ipcRenderer.invoke("config:save", config),
         updateConfig: (config) => ipcRenderer.invoke("config:update", config),
         getConfig: () => ipcRenderer.invoke("config:get"),
-        selectDirectory: () => ipcRenderer.invoke("config:selectDirectory")
+        selectDirectory: () => ipcRenderer.invoke("config:selectDirectory"),
+        initOnly: () => ipcRenderer.invoke("config:initOnly")
     }
 )
 
@@ -29,3 +30,26 @@ contextBridge.exposeInMainWorld(
         selectDirectory: () => ipcRenderer.invoke("data:selectDirectory")
     }
 )
+
+contextBridge.exposeInMainWorld(
+    'affiliation',
+    {
+        getAll: () => ipcRenderer.invoke("affiliation:getAll"),
+        getHierarchy: () => ipcRenderer.invoke("affiliation:getHierarchy"),
+        add: (data) => ipcRenderer.invoke("affiliation:add", data),
+        update: (data) => ipcRenderer.invoke("affiliation:update", data),
+        delete: (id) => ipcRenderer.invoke("affiliation:delete", id)
+    }
+)
+
+contextBridge.exposeInMainWorld(
+    'author',
+    {
+        getAll: () => ipcRenderer.invoke("author:getAll"),
+        getAffiliations: () => ipcRenderer.invoke("author:getAffiliations"),
+        add: (data) => ipcRenderer.invoke("author:add", data),
+        update: (data) => ipcRenderer.invoke("author:update", data),
+        delete: (id) => ipcRenderer.invoke("author:delete", id)
+    }
+)
+

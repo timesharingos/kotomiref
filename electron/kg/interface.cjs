@@ -275,8 +275,8 @@ class Node extends ToDb{
         super()
         this.#typeid = typeid
         this.#attributes = attributes
-        this.#nodeid = `node_${sha256(`${this.#typeid}_${this.#name}`)}`
         this.#name = name
+        this.#nodeid = `node_${sha256(`${this.#typeid}_${this.#name}`)}`
     }
 
     get type(){return this.#typeid}

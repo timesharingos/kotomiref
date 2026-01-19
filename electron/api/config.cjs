@@ -76,6 +76,10 @@ function registerConfigHandlers(createWindow) {
         }
         return result.filePaths[0]
     })
+
+    ipcMain.handle("config:initOnly", () => {
+        config.init()
+    })
 }
 
 module.exports = {

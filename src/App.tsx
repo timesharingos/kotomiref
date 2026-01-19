@@ -20,6 +20,20 @@ function App() {
     checkConfig()
   }, [navigate])
 
+  useEffect(() => {
+    const checkConfig = async () => {
+      try {
+        const config = await window.config.getConfig()
+        if (config && config.initialized) {
+          window.config.initOnly()
+        }
+      } catch (e) {
+        console.error('Failed to check config:', e)
+      }
+    }
+    checkConfig()
+  }, [])
+
   return <IndexPage />
 }
 
