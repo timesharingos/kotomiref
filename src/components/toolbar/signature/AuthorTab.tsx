@@ -136,8 +136,10 @@ function AuthorTab() {
           placeholder="Search authors..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          slotProps={{
+            input: {
+              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+            }
           }}
           sx={{ width: 300 }}
         />
@@ -214,6 +216,7 @@ function AuthorTab() {
 
       {/* Author Dialog */}
       <AuthorDialog
+        key={dialogOpen ? `${dialogMode}-${selectedAuthor?.id ?? 'new'}` : 'closed'}
         open={dialogOpen}
         mode={dialogMode}
         author={selectedAuthor}

@@ -1,4 +1,4 @@
-import { useState} from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -37,19 +37,22 @@ function AffiliationDialog({
   onClose,
   onSave
 }: AffiliationDialogProps) {
-  const [name, setName] = useState('')
-  const [parentId, setParentId] = useState<string | null>(null)
+  // Initialize state directly from props (works with key-based reset)
+  const [name, setName] = useState(mode === 'edit' && affiliation ? affiliation.name : '')
+  const [parentId, setParentId] = useState<string | null>(
+    mode === 'edit' && affiliation ? affiliation.parentId : null
+  )
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
-
-  if (open) {
-    if (affiliation && mode === 'edit') {
-      setName(affiliation.name)
-      setParentId(affiliation.parentId)
-    } else {
-      setName('')
-      setParentId(null)
+  // Focus management only
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        nameInputRef.current?.focus()
+      }, 100)
+      return () => clearTimeout(timer)
     }
-  }
+  }, [open])
 
   const handleSave = () => {
     const trimmedName = name.trim()
@@ -113,7 +116,7 @@ function AffiliationDialog({
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
-            autoFocus
+            inputRef={nameInputRef}
           />
 
           {/* Parent Affiliation */}

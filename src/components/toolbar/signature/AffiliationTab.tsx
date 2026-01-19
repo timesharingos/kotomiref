@@ -316,6 +316,7 @@ function AffiliationTab() {
 
       {/* Affiliation Dialog */}
       <AffiliationDialog
+        key={dialogOpen ? `${dialogMode}-${selectedAffiliation?.id ?? 'new'}` : 'closed'}
         open={dialogOpen}
         mode={dialogMode}
         affiliation={selectedAffiliation}

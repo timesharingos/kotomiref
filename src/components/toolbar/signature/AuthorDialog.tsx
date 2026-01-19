@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -30,8 +30,11 @@ interface AuthorDialogProps {
 }
 
 function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps) {
-  const [name, setName] = useState('')
-  const [selectedAffiliations, setSelectedAffiliations] = useState<string[]>([])
+  // Initialize state directly from props (works with key-based reset)
+  const [name, setName] = useState(mode === 'edit' && author ? author.name : '')
+  const [selectedAffiliations, setSelectedAffiliations] = useState<string[]>(
+    mode === 'edit' && author ? author.affiliations : []
+  )
   const [availableAffiliations] = useState<string[]>([
     // TODO: Load from database
     'MIT',
@@ -39,16 +42,17 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
     'Harvard University',
     'UC Berkeley'
   ])
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
-  if (open) {
-    if (author && mode === 'edit') {
-      setName(author.name)
-      setSelectedAffiliations(author.affiliations)
-    } else {
-      setName('')
-      setSelectedAffiliations([])
+  // Focus management only
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        nameInputRef.current?.focus()
+      }, 100)
+      return () => clearTimeout(timer)
     }
-  }
+  }, [open])
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -88,7 +92,7 @@ function AuthorDialog({ open, mode, author, onClose, onSave }: AuthorDialogProps
             onChange={(e) => setName(e.target.value)}
             fullWidth
             required
-            autoFocus
+            inputRef={nameInputRef}
           />
 
           {/* Affiliations Section */}
