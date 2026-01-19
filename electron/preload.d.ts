@@ -31,6 +31,22 @@ interface AuthorAffiliation {
   affiliationId: string;
 }
 
+interface MainDomain {
+  id: string;
+  name: string;
+}
+
+interface SubDomain {
+  id: string;
+  name: string;
+  mainDomainId: string | null;
+}
+
+interface SubDomainRelation {
+  subDomainId: string;
+  mainDomainId: string;
+}
+
 declare global {
   interface Window {
     dev: {
@@ -65,6 +81,17 @@ declare global {
       add: (data: { name: string; affiliations: string[] }) => Promise<{ success: boolean; id?: string; error?: string }>;
       update: (data: { id: string; name: string; affiliations: string[] }) => Promise<{ success: boolean; error?: string }>;
       delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+    };
+    domain: {
+      getAllMain: () => Promise<MainDomain[]>;
+      getAllSub: () => Promise<SubDomain[]>;
+      getSubRelations: () => Promise<SubDomainRelation[]>;
+      addMain: (data: { name: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
+      updateMain: (data: { id: string; name: string }) => Promise<{ success: boolean; error?: string }>;
+      deleteMain: (id: string) => Promise<{ success: boolean; deletedSubCount?: number; error?: string }>;
+      addSub: (data: { name: string; mainDomainId: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
+      updateSub: (data: { id: string; name: string; mainDomainId: string }) => Promise<{ success: boolean; error?: string }>;
+      deleteSub: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

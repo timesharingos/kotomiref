@@ -53,3 +53,18 @@ contextBridge.exposeInMainWorld(
     }
 )
 
+contextBridge.exposeInMainWorld(
+    'domain',
+    {
+        getAllMain: () => ipcRenderer.invoke("domain:getAllMain"),
+        getAllSub: () => ipcRenderer.invoke("domain:getAllSub"),
+        getSubRelations: () => ipcRenderer.invoke("domain:getSubRelations"),
+        addMain: (data) => ipcRenderer.invoke("domain:addMain", data),
+        updateMain: (data) => ipcRenderer.invoke("domain:updateMain", data),
+        deleteMain: (id) => ipcRenderer.invoke("domain:deleteMain", id),
+        addSub: (data) => ipcRenderer.invoke("domain:addSub", data),
+        updateSub: (data) => ipcRenderer.invoke("domain:updateSub", data),
+        deleteSub: (id) => ipcRenderer.invoke("domain:deleteSub", id)
+    }
+)
+

@@ -26,6 +26,8 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import DomainDialog from './DomainDialog'
 import MainDomainDialog from './MainDomainDialog'
+import { useAsyncData } from '../../../hooks/useAsyncData'
+import { useConfirmDialog } from '../../common/ConfirmDialog'
 
 interface MainDomain {
   id: string
@@ -38,24 +40,35 @@ interface SubDomain {
   mainDomainId: string
 }
 
-// TODO: Replace with database integration
-const MOCK_MAIN_DOMAINS: MainDomain[] = [
-  { id: 'main-1', name: 'Computer Science' },
-  { id: 'main-2', name: 'Mathematics' },
-  { id: 'main-3', name: 'Physics' }
-]
+interface DomainData {
+  mainDomains: MainDomain[]
+  subDomains: SubDomain[]
+}
 
-const MOCK_SUB_DOMAINS: SubDomain[] = [
-  { id: 'sub-1', name: 'Machine Learning', mainDomainId: 'main-1' },
-  { id: 'sub-2', name: 'Computer Vision', mainDomainId: 'main-1' },
-  { id: 'sub-3', name: 'Natural Language Processing', mainDomainId: 'main-1' },
-  { id: 'sub-4', name: 'Algebra', mainDomainId: 'main-2' },
-  { id: 'sub-5', name: 'Calculus', mainDomainId: 'main-2' }
-]
+async function fetchDomainData(): Promise<DomainData> {
+  const [mainDomains, subDomainsRaw, relations] = await Promise.all([
+    window.domain.getAllMain(),
+    window.domain.getAllSub(),
+    window.domain.getSubRelations()
+  ])
+
+  // Merge relation data into sub domains
+  const subDomains = subDomainsRaw.map(sub => {
+    const rel = relations.find(r => r.subDomainId === sub.id)
+    return {
+      ...sub,
+      mainDomainId: rel ? rel.mainDomainId : ''
+    }
+  })
+
+  return { mainDomains, subDomains }
+}
 
 function DomainTab() {
-  const [mainDomains, setMainDomains] = useState<MainDomain[]>(MOCK_MAIN_DOMAINS)
-  const [subDomains, setSubDomains] = useState<SubDomain[]>(MOCK_SUB_DOMAINS)
+  const { data, reload } = useAsyncData(fetchDomainData, { mainDomains: [], subDomains: [] })
+  const { mainDomains, subDomains } = data
+  const { ConfirmDialogComponent, confirm } = useConfirmDialog()
+
   const [selectedMainDomainId, setSelectedMainDomainId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -71,7 +84,7 @@ function DomainTab() {
   const [selectedMainDomain, setSelectedMainDomain] = useState<MainDomain | null>(null)
 
   // Filter sub-domains by selected main domain and search query
-  const filteredSubDomains = subDomains.filter(sub => {
+  const filteredSubDomains = subDomains.filter((sub: SubDomain) => {
     const matchesMainDomain = !selectedMainDomainId || sub.mainDomainId === selectedMainDomainId
     const matchesSearch = sub.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesMainDomain && matchesSearch
@@ -94,43 +107,81 @@ function DomainTab() {
     setDialogOpen(true)
   }, [])
 
-  const handleDeleteSubDomain = useCallback((subDomain: SubDomain) => {
-    if (window.confirm(`Are you sure you want to delete sub-domain "${subDomain.name}"?`)) {
-      setSubDomains(prev => prev.filter(s => s.id !== subDomain.id))
+  const handleDeleteSubDomain = useCallback(async (subDomain: SubDomain) => {
+    const confirmed = await confirm(
+      'Delete Sub-domain',
+      `Are you sure you want to delete sub-domain "${subDomain.name}"?`
+    )
+    if (confirmed) {
+      try {
+        const result = await window.domain.deleteSub(subDomain.id)
+        if (result.success) {
+          reload()
+        } else {
+          alert(`Failed to delete: ${result.error}`)
+        }
+      } catch (e) {
+        console.error('Delete failed:', e)
+        alert('An error occurred while deleting')
+      }
     }
-  }, [])
+  }, [reload, confirm])
 
-  const handleBatchDeleteSubDomains = useCallback(() => {
+  const handleBatchDeleteSubDomains = useCallback(async () => {
     if (selectedIds.size === 0) {
       alert('Please select sub-domains to delete')
       return
     }
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.size} sub-domain(s)?`)) {
-      setSubDomains(prev => prev.filter(s => !selectedIds.has(s.id)))
-      setSelectedIds(new Set())
+    const confirmed = await confirm(
+      'Delete Sub-domains',
+      `Are you sure you want to delete ${selectedIds.size} sub-domain(s)?`
+    )
+    if (confirmed) {
+      try {
+        for (const id of Array.from(selectedIds)) {
+          await window.domain.deleteSub(id)
+        }
+        setSelectedIds(new Set())
+        reload()
+      } catch (e) {
+        console.error('Batch delete failed:', e)
+        alert('An error occurred during batch delete')
+      }
     }
-  }, [selectedIds])
+  }, [selectedIds, reload, confirm])
 
   const handleDialogClose = useCallback(() => {
     setDialogOpen(false)
     setSelectedSubDomain(null)
   }, [])
 
-  const handleDialogSave = useCallback((data: { name: string }) => {
-    if (dialogMode === 'add') {
-      const newSubDomain: SubDomain = {
-        id: `sub-${Date.now()}`,
-        name: data.name,
-        mainDomainId: selectedMainDomainId
+  const handleDialogSave = useCallback(async (data: { name: string }) => {
+    try {
+      let result
+      if (dialogMode === 'add') {
+        result = await window.domain.addSub({
+          name: data.name,
+          mainDomainId: selectedMainDomainId
+        })
+      } else if (selectedSubDomain) {
+        result = await window.domain.updateSub({
+          id: selectedSubDomain.id,
+          name: data.name,
+          mainDomainId: selectedSubDomain.mainDomainId
+        })
       }
-      setSubDomains(prev => [...prev, newSubDomain])
-    } else if (selectedSubDomain) {
-      setSubDomains(prev => prev.map(s =>
-        s.id === selectedSubDomain.id ? { ...s, name: data.name } : s
-      ))
+
+      if (result?.success) {
+        reload()
+        handleDialogClose()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Save failed:', e)
+      alert('An error occurred while saving')
     }
-    handleDialogClose()
-  }, [dialogMode, selectedMainDomainId, selectedSubDomain, handleDialogClose])
+  }, [dialogMode, selectedMainDomainId, selectedSubDomain, reload, handleDialogClose])
 
   // Main domain handlers
   const handleAddMainDomain = useCallback(() => {
@@ -144,7 +195,7 @@ function DomainTab() {
       alert('Please select a main domain first')
       return
     }
-    const mainDomain = mainDomains.find(m => m.id === selectedMainDomainId)
+    const mainDomain = mainDomains.find((m: MainDomain) => m.id === selectedMainDomainId)
     if (mainDomain) {
       setMainDomainDialogMode('edit')
       setSelectedMainDomain(mainDomain)
@@ -152,49 +203,70 @@ function DomainTab() {
     }
   }, [selectedMainDomainId, mainDomains])
 
-  const handleDeleteMainDomain = useCallback(() => {
+  const handleDeleteMainDomain = useCallback(async () => {
     if (!selectedMainDomainId) {
       alert('Please select a main domain first')
       return
     }
-    const mainDomain = mainDomains.find(m => m.id === selectedMainDomainId)
-    const subCount = subDomains.filter(s => s.mainDomainId === selectedMainDomainId).length
+    const mainDomain = mainDomains.find((m: MainDomain) => m.id === selectedMainDomainId)
+    const subCount = subDomains.filter((s: SubDomain) => s.mainDomainId === selectedMainDomainId).length
 
-    if (window.confirm(
-      `Are you sure you want to delete main domain "${mainDomain?.name}"?\n` +
-      `This will also delete ${subCount} sub-domain(s).`
-    )) {
-      setSubDomains(prev => prev.filter(s => s.mainDomainId !== selectedMainDomainId))
-      setMainDomains(prev => prev.filter(m => m.id !== selectedMainDomainId))
-      setSelectedMainDomainId('')
+    const confirmed = await confirm(
+      'Delete Main Domain',
+      `Are you sure you want to delete main domain "${mainDomain?.name}"?\nThis will also delete ${subCount} sub-domain(s).`
+    )
+    if (confirmed) {
+      try {
+        const result = await window.domain.deleteMain(selectedMainDomainId)
+        if (result.success) {
+          setSelectedMainDomainId('')
+          reload()
+        } else {
+          alert(`Failed to delete: ${result.error}`)
+        }
+      } catch (e) {
+        console.error('Delete failed:', e)
+        alert('An error occurred while deleting')
+      }
     }
-  }, [selectedMainDomainId, mainDomains, subDomains])
+  }, [selectedMainDomainId, mainDomains, subDomains, reload, confirm])
 
   const handleMainDomainDialogClose = useCallback(() => {
     setMainDomainDialogOpen(false)
     setSelectedMainDomain(null)
   }, [])
 
-  const handleMainDomainDialogSave = useCallback((data: { name: string }) => {
-    if (mainDomainDialogMode === 'add') {
-      const newMainDomain: MainDomain = {
-        id: `main-${Date.now()}`,
-        name: data.name
+  const handleMainDomainDialogSave = useCallback(async (data: { name: string }) => {
+    try {
+      let result
+      if (mainDomainDialogMode === 'add') {
+        result = await window.domain.addMain({ name: data.name })
+        if (result.success && result.id) {
+          setSelectedMainDomainId(result.id)
+        }
+      } else if (selectedMainDomain) {
+        result = await window.domain.updateMain({
+          id: selectedMainDomain.id,
+          name: data.name
+        })
       }
-      setMainDomains(prev => [...prev, newMainDomain])
-      setSelectedMainDomainId(newMainDomain.id)
-    } else if (selectedMainDomain) {
-      setMainDomains(prev => prev.map(m =>
-        m.id === selectedMainDomain.id ? { ...m, name: data.name } : m
-      ))
+
+      if (result?.success) {
+        reload()
+        handleMainDomainDialogClose()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Save failed:', e)
+      alert('An error occurred while saving')
     }
-    handleMainDomainDialogClose()
-  }, [mainDomainDialogMode, selectedMainDomain, handleMainDomainDialogClose])
+  }, [mainDomainDialogMode, selectedMainDomain, reload, handleMainDomainDialogClose])
 
   // Selection handlers
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      setSelectedIds(new Set(filteredSubDomains.map(s => s.id)))
+      setSelectedIds(new Set(filteredSubDomains.map((s: SubDomain) => s.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -228,11 +300,15 @@ function DomainTab() {
                 setSelectedMainDomainId(e.target.value)
                 setSelectedIds(new Set())
               }}
+              MenuProps={{
+                disablePortal: true,
+                disableAutoFocusItem: true
+              }}
             >
               <MenuItem value="">
                 <em>All Main Domains</em>
               </MenuItem>
-              {mainDomains.map((domain) => (
+              {mainDomains.map((domain: MainDomain) => (
                 <MenuItem key={domain.id} value={domain.id}>
                   {domain.name}
                 </MenuItem>
@@ -336,8 +412,8 @@ function DomainTab() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredSubDomains.map((subDomain) => {
-                const mainDomain = mainDomains.find(m => m.id === subDomain.mainDomainId)
+              filteredSubDomains.map((subDomain: SubDomain) => {
+                const mainDomain = mainDomains.find((m: MainDomain) => m.id === subDomain.mainDomainId)
                 return (
                   <TableRow
                     key={subDomain.id}
@@ -401,6 +477,9 @@ function DomainTab() {
         onClose={handleMainDomainDialogClose}
         onSave={handleMainDomainDialogSave}
       />
+
+      {/* Confirm Dialog */}
+      {ConfirmDialogComponent}
     </Box>
   )
 }
