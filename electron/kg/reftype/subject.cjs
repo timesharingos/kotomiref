@@ -14,12 +14,24 @@ class AttributeSubjectName extends kg_interface.Attribute {
     }
     static get instance(){return AttributeSubjectName.#instance}
 }
+class AttributeSubjectDesc extends kg_interface.Attribute {
+    static #first_create = true
+    static #instance = new AttributeSubjectDesc()
+    constructor(){
+        if(!AttributeSubjectDesc.#first_create){
+            throw new TypeError("AttributeSubjectDesc is not constructable, use AttributeSubjectDesc.instance instead.")
+        }
+        AttributeSubjectDesc.#first_create = false
+        super(AttrReq.optional.value, "subjectDesc", primitive.StringType.instance.id)
+    }
+    static get instance(){return AttributeSubjectDesc.#instance}
+}
 
 class Subject extends kg_interface.Concept {
     static #first_create = true
     static #instance = new Subject()
     constructor(){
-        super([AttributeSubjectName.instance.id], "subject")
+        super([AttributeSubjectName.instance.id, AttributeSubjectDesc.instance.id], "subject")
         if(!Subject.#first_create){
             throw new TypeError("Subject is not constructable, use Subject.instance instead.")
         }
@@ -36,7 +48,7 @@ class SubSubject extends kg_interface.Concept {
             throw new TypeError("SubSubject is not constructable, use SubSubject.instance instead.")
         }
         SubSubject.#first_create = false
-        super([AttributeSubjectName.instance.id], "subSubject")
+        super([AttributeSubjectName.instance.id, AttributeSubjectDesc.instance.id], "subSubject")
     }
     static get instance(){return SubSubject.#instance}
 }
@@ -56,6 +68,7 @@ class SubSubjectRel extends kg_interface.InstanceRel {
 
 module.exports = {
     AttributeSubjectName,
+    AttributeSubjectDesc,
     Subject,
     SubSubject,
     SubSubjectRel
