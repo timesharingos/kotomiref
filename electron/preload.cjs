@@ -68,3 +68,13 @@ contextBridge.exposeInMainWorld(
     }
 )
 
+contextBridge.exposeInMainWorld(
+    'entity',
+    {
+        getAllByType: (entityType) => ipcRenderer.invoke("entity:getAllByType", entityType),
+        getAll: () => ipcRenderer.invoke("entity:getAll"),
+        addObject: (data) => ipcRenderer.invoke("entity:addObject", data),
+        updateObject: (data) => ipcRenderer.invoke("entity:updateObject", data),
+        deleteObject: (id) => ipcRenderer.invoke("entity:deleteObject", id)
+    }
+)

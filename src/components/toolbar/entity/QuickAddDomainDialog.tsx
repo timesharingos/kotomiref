@@ -11,7 +11,11 @@ import {
   Select,
   MenuItem,
   Box,
-  Typography
+  Typography,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  FormLabel
 } from '@mui/material'
 
 interface MainDomain {
@@ -23,7 +27,12 @@ interface QuickAddDomainDialogProps {
   open: boolean
   mainDomains: MainDomain[]
   onClose: () => void
-  onSave: (data: { name: string; description?: string; mainDomainId: string }) => Promise<{ success: boolean; id?: string; error?: string }>
+  onSave: (data: {
+    type: 'main' | 'sub'
+    name: string
+    description?: string
+    mainDomainId?: string
+  }) => Promise<{ success: boolean; id?: string; error?: string }>
 }
 
 function QuickAddDomainDialog({
@@ -32,6 +41,7 @@ function QuickAddDomainDialog({
   onClose,
   onSave
 }: QuickAddDomainDialogProps) {
+  const [domainType, setDomainType] = useState<'main' | 'sub'>('sub')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [mainDomainId, setMainDomainId] = useState('')
@@ -42,6 +52,7 @@ function QuickAddDomainDialog({
   useEffect(() => {
     if (open) {
       // Reset form
+      setDomainType('sub')
       setName('')
       setDescription('')
       setMainDomainId('')
@@ -60,7 +71,7 @@ function QuickAddDomainDialog({
       alert('Please enter a domain name')
       return
     }
-    if (!mainDomainId) {
+    if (domainType === 'sub' && !mainDomainId) {
       alert('Please select a main domain')
       return
     }
@@ -68,9 +79,10 @@ function QuickAddDomainDialog({
     setSaving(true)
     try {
       const result = await onSave({
+        type: domainType,
         name: trimmedName,
         description: description.trim(),
-        mainDomainId
+        mainDomainId: domainType === 'sub' ? mainDomainId : undefined
       })
 
       if (result.success) {
@@ -91,6 +103,19 @@ function QuickAddDomainDialog({
       <DialogTitle>Quick Add Domain</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          {/* Domain Type Selection */}
+          <FormControl component="fieldset">
+            <FormLabel component="legend">Domain Type</FormLabel>
+            <RadioGroup
+              row
+              value={domainType}
+              onChange={(e) => setDomainType(e.target.value as 'main' | 'sub')}
+            >
+              <FormControlLabel value="main" control={<Radio />} label="Main Domain" />
+              <FormControlLabel value="sub" control={<Radio />} label="Sub Domain" />
+            </RadioGroup>
+          </FormControl>
+
           <TextField
             label="Domain Name"
             value={name}
@@ -109,23 +134,28 @@ function QuickAddDomainDialog({
             rows={2}
           />
 
-          <FormControl fullWidth required>
-            <InputLabel>Main Domain</InputLabel>
-            <Select
-              value={mainDomainId}
-              label="Main Domain"
-              onChange={(e) => setMainDomainId(e.target.value)}
-            >
-              {mainDomains.map((domain) => (
-                <MenuItem key={domain.id} value={domain.id}>
-                  {domain.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {/* Main Domain Selection - only show for Sub Domain */}
+          {domainType === 'sub' && (
+            <FormControl fullWidth required>
+              <InputLabel>Main Domain</InputLabel>
+              <Select
+                value={mainDomainId}
+                label="Main Domain"
+                onChange={(e) => setMainDomainId(e.target.value)}
+              >
+                {mainDomains.map((domain) => (
+                  <MenuItem key={domain.id} value={domain.id}>
+                    {domain.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
           <Typography variant="caption" color="text.secondary">
-            This will create a new sub-domain under the selected main domain.
+            {domainType === 'main'
+              ? 'This will create a new main domain.'
+              : 'This will create a new sub-domain under the selected main domain.'}
           </Typography>
         </Box>
       </DialogContent>

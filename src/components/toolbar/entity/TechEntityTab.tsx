@@ -130,32 +130,31 @@ function TechEntityTab() {
   // Load data
   const loadData = useCallback(async () => {
     try {
-      // TODO: Replace with actual API calls
-      // For now, just load domains for the Object dialog
-      if (selectedType === 'object') {
-        const [mainDomainsData, subDomainsData, relationsData] = await Promise.all([
-          window.domain.getAllMain(),
-          window.domain.getAllSub(),
-          window.domain.getSubRelations()
-        ])
+      // Load domains for the Object dialog
+      const [mainDomainsData, subDomainsData, relationsData] = await Promise.all([
+        window.domain.getAllMain(),
+        window.domain.getAllSub(),
+        window.domain.getSubRelations()
+      ])
 
-        setMainDomains(mainDomainsData)
+      setMainDomains(mainDomainsData)
 
-        const subDomainsWithMain = subDomainsData.map(sub => {
-          const rel = relationsData.find(r => r.subDomainId === sub.id)
-          return {
-            ...sub,
-            mainDomainId: rel ? rel.mainDomainId : ''
-          }
-        })
-        setSubDomains(subDomainsWithMain)
-      }
+      const subDomainsWithMain = subDomainsData.map(sub => {
+        const rel = relationsData.find(r => r.subDomainId === sub.id)
+        return {
+          ...sub,
+          mainDomainId: rel ? rel.mainDomainId : ''
+        }
+      })
+      setSubDomains(subDomainsWithMain)
 
-      // TODO: Load entities of current type
-      setEntities([])
+      // Load entities of current type
+      const entitiesData = await window.entity.getAllByType(selectedType)
+      setEntities(entitiesData)
 
-      // TODO: Load all entities for relationship selection
-      setAllEntities([])
+      // Load all entities for relationship selection
+      const allEntitiesData = await window.entity.getAll()
+      setAllEntities(allEntitiesData)
     } catch (e) {
       console.error('Failed to load data:', e)
     }
@@ -219,8 +218,25 @@ function TechEntityTab() {
       `Are you sure you want to delete "${entity.name || 'this entity'}"?`
     )
     if (confirmed) {
-      // TODO: Implement delete functionality
-      console.log('Delete entity:', entity)
+      try {
+        let result
+        if (selectedType === 'object') {
+          result = await window.entity.deleteObject(entity.id)
+        } else {
+          // TODO: Implement for other types
+          console.log('Delete entity:', entity)
+          return
+        }
+
+        if (result.success) {
+          await loadData()
+        } else {
+          alert(`Failed to delete: ${result.error}`)
+        }
+      } catch (e) {
+        console.error('Delete failed:', e)
+        alert('An error occurred while deleting')
+      }
     }
   }
 
@@ -232,8 +248,21 @@ function TechEntityTab() {
       `Are you sure you want to delete ${selectedIds.size} entit${selectedIds.size > 1 ? 'ies' : 'y'}?`
     )
     if (confirmed) {
-      // TODO: Implement batch delete functionality
-      console.log('Batch delete entities:', Array.from(selectedIds))
+      try {
+        for (const id of Array.from(selectedIds)) {
+          if (selectedType === 'object') {
+            await window.entity.deleteObject(id)
+          } else {
+            // TODO: Implement for other types
+            console.log('Delete entity:', id)
+          }
+        }
+        setSelectedIds(new Set())
+        await loadData()
+      } catch (e) {
+        console.error('Batch delete failed:', e)
+        alert('An error occurred during batch delete')
+      }
     }
   }
 
@@ -252,10 +281,19 @@ function TechEntityTab() {
     relationIds: string[]
   }) => {
     try {
-      // TODO: Implement save functionality
-      console.log('Save object:', data)
-      handleObjectDialogClose()
-      await loadData()
+      let result
+      if (objectDialogMode === 'add') {
+        result = await window.entity.addObject(data)
+      } else if (data.id) {
+        result = await window.entity.updateObject(data)
+      }
+
+      if (result?.success) {
+        handleObjectDialogClose()
+        await loadData()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
     } catch (e) {
       console.error('Failed to save object:', e)
       alert('An error occurred while saving')
@@ -267,16 +305,30 @@ function TechEntityTab() {
   }
 
   const handleQuickAddDomainSave = async (data: {
+    type: 'main' | 'sub'
     name: string
     description?: string
-    mainDomainId: string
+    mainDomainId?: string
   }) => {
     try {
-      const result = await window.domain.addSub({
-        name: data.name,
-        desc: data.description || '',
-        mainDomainId: data.mainDomainId
-      })
+      let result
+      if (data.type === 'main') {
+        // Add Main Domain
+        result = await window.domain.addMain({
+          name: data.name,
+          desc: data.description || ''
+        })
+      } else {
+        // Add Sub Domain
+        if (!data.mainDomainId) {
+          return { success: false, error: 'Main domain is required for sub domain' }
+        }
+        result = await window.domain.addSub({
+          name: data.name,
+          desc: data.description || '',
+          mainDomainId: data.mainDomainId
+        })
+      }
 
       if (result.success) {
         // Reload domains
@@ -484,6 +536,7 @@ function TechEntityTab() {
             parentIds: selectedObject.parentIds || [],
             relationIds: selectedObject.relationIds || []
           } : null}
+          mainDomains={mainDomains}
           subDomains={subDomains}
           allEntities={allEntities}
           onClose={handleObjectDialogClose}

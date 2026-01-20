@@ -18,10 +18,22 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 
+interface MainDomain {
+  id: string
+  name: string
+}
+
 interface SubDomain {
   id: string
   name: string
   mainDomainId: string
+}
+
+interface DomainItem {
+  id: string
+  name: string
+  type: 'main' | 'sub'
+  mainDomainName?: string
 }
 
 interface EntityItem {
@@ -35,7 +47,7 @@ interface ObjectData {
   id?: string
   name: string
   description: string
-  subjectId: string // Required: SubSubject ID
+  subjectId: string // Required: Main Domain or Sub Domain ID
   aliasIds: string[] // Optional: Multiple Entity IDs
   parentIds: string[] // Optional: Multiple Entity IDs (treating as multiple for now)
   relationIds: string[] // Optional: Multiple Entity IDs
@@ -45,6 +57,7 @@ interface ObjectDialogProps {
   open: boolean
   mode: 'add' | 'edit'
   object: ObjectData | null
+  mainDomains: MainDomain[]
   subDomains: SubDomain[]
   allEntities: EntityItem[]
   onClose: () => void
@@ -56,6 +69,7 @@ function ObjectDialog({
   open,
   mode,
   object,
+  mainDomains,
   subDomains,
   allEntities,
   onClose,
@@ -70,6 +84,24 @@ function ObjectDialog({
   const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && object ? object.relationIds : [])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Combine main domains and sub domains for selection
+  const allDomains: DomainItem[] = [
+    ...mainDomains.map(d => ({
+      id: d.id,
+      name: d.name,
+      type: 'main' as const
+    })),
+    ...subDomains.map(d => {
+      const mainDomain = mainDomains.find(m => m.id === d.mainDomainId)
+      return {
+        id: d.id,
+        name: d.name,
+        type: 'sub' as const,
+        mainDomainName: mainDomain?.name
+      }
+    })
+  ]
 
   useEffect(() => {
     if (open) {
@@ -146,11 +178,32 @@ function ObjectDialog({
                 label="Select Domain"
                 onChange={(e) => setSubjectId(e.target.value)}
               >
-                {subDomains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id}>
+                {/* Main Domains */}
+                {mainDomains.length > 0 && (
+                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    Main Domains
+                  </MenuItem>
+                )}
+                {mainDomains.map((domain) => (
+                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
                     {domain.name}
                   </MenuItem>
                 ))}
+
+                {/* Sub Domains */}
+                {subDomains.length > 0 && (
+                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
+                    Sub Domains
+                  </MenuItem>
+                )}
+                {subDomains.map((domain) => {
+                  const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
+                  return (
+                    <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                      {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
+                    </MenuItem>
+                  )
+                })}
               </Select>
             </FormControl>
           </Box>

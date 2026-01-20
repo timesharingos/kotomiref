@@ -49,6 +49,40 @@ interface SubDomainRelation {
   mainDomainId: string;
 }
 
+interface EntityItem {
+  id: string;
+  name?: string;
+  description?: string;
+  metric?: string;
+  metricResultString?: string;
+  metricResultNumber?: number;
+  subjectId?: string;
+  subjectName?: string;
+  aliasIds?: string[];
+  aliasNames?: string[];
+  parentIds?: string[];
+  parentNames?: string[];
+  relationIds?: string[];
+  relationNames?: string[];
+}
+
+interface AllEntityItem {
+  id: string;
+  name: string;
+  type: string;
+  typeName: string;
+}
+
+interface ObjectData {
+  id?: string;
+  name: string;
+  description: string;
+  subjectId: string;
+  aliasIds: string[];
+  parentIds: string[];
+  relationIds: string[];
+}
+
 declare global {
   interface Window {
     dev: {
@@ -94,6 +128,13 @@ declare global {
       addSub: (data: { name: string; desc?: string; mainDomainId: string }) => Promise<{ success: boolean; id?: string; error?: string }>;
       updateSub: (data: { id: string; name: string; desc?: string; mainDomainId: string }) => Promise<{ success: boolean; error?: string }>;
       deleteSub: (id: string) => Promise<{ success: boolean; error?: string }>;
+    };
+    entity: {
+      getAllByType: (entityType: string) => Promise<EntityItem[]>;
+      getAll: () => Promise<AllEntityItem[]>;
+      addObject: (data: ObjectData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
+      updateObject: (data: ObjectData) => Promise<{ success: boolean; error?: string }>;
+      deleteObject: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
