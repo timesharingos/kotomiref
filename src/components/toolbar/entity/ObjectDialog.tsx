@@ -29,13 +29,6 @@ interface SubDomain {
   mainDomainId: string
 }
 
-interface DomainItem {
-  id: string
-  name: string
-  type: 'main' | 'sub'
-  mainDomainName?: string
-}
-
 interface EntityItem {
   id: string
   name: string
@@ -86,22 +79,6 @@ function ObjectDialog({
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   // Combine main domains and sub domains for selection
-  const allDomains: DomainItem[] = [
-    ...mainDomains.map(d => ({
-      id: d.id,
-      name: d.name,
-      type: 'main' as const
-    })),
-    ...subDomains.map(d => {
-      const mainDomain = mainDomains.find(m => m.id === d.mainDomainId)
-      return {
-        id: d.id,
-        name: d.name,
-        type: 'sub' as const,
-        mainDomainName: mainDomain?.name
-      }
-    })
-  ]
 
   useEffect(() => {
     if (open) {

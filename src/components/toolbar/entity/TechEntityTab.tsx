@@ -132,11 +132,11 @@ function TechEntityTab() {
   const loadData = useCallback(async () => {
     try {
       // Load domains for the Object dialog
-      const [mainDomainsData, subDomainsData, relationsData] = await Promise.all([
+      await Promise.all([
         window.domain.getAllMain(),
         window.domain.getAllSub(),
         window.domain.getSubRelations()
-      ])
+      ]).then(async ([mainDomainsData, subDomainsData, relationsData]) => {
 
       setMainDomains(mainDomainsData)
 
@@ -156,6 +156,7 @@ function TechEntityTab() {
       // Load all entities for relationship selection
       const allEntitiesData = await window.entity.getAll()
       setAllEntities(allEntitiesData)
+    })
     } catch (e) {
       console.error('Failed to load data:', e)
     }
