@@ -110,6 +110,7 @@ function TechEntityTab() {
   const [selectedType, setSelectedType] = useState<EntityType>('object')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedDomainId, setSelectedDomainId] = useState<string>('') // '' means all domains
 
   // Data states
   const [entities, setEntities] = useState<EntityItem[]>([])
@@ -166,10 +167,29 @@ function TechEntityTab() {
 
   const filteredEntities = entities.filter(entity => {
     const searchLower = searchQuery.toLowerCase()
-    return (
+    const matchesSearch = (
       entity.name?.toLowerCase().includes(searchLower) ||
       entity.description?.toLowerCase().includes(searchLower)
     )
+
+    // Filter by domain if selected
+    if (selectedDomainId) {
+      // Check if entity's subject matches the selected domain
+      // Or if selected domain is a main domain, check if entity's subject is a sub domain of it
+      const matchesDomain = entity.subjectId === selectedDomainId
+
+      // If selected domain is a main domain, also include entities with sub domains of this main domain
+      const selectedMainDomain = mainDomains.find(d => d.id === selectedDomainId)
+      if (selectedMainDomain) {
+        const subDomainsOfMain = subDomains.filter(sd => sd.mainDomainId === selectedDomainId)
+        const subDomainIds = subDomainsOfMain.map(sd => sd.id)
+        return matchesSearch && (matchesDomain || subDomainIds.includes(entity.subjectId || ''))
+      }
+
+      return matchesSearch && matchesDomain
+    }
+
+    return matchesSearch
   })
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -397,25 +417,71 @@ function TechEntityTab() {
     <Box>
       {/* Entity Type Selection */}
       <Paper sx={{ p: 2, mb: 2 }}>
-        <FormControl sx={{ minWidth: 300 }}>
-          <InputLabel id="entity-type-label">Entity Type</InputLabel>
-          <Select
-            labelId="entity-type-label"
-            value={selectedType}
-            label="Entity Type"
-            onChange={(e) => {
-              setSelectedType(e.target.value as EntityType)
-              setSelectedIds(new Set())
-              setSearchQuery('')
-            }}
-          >
-            {ENTITY_TYPES.map((type) => (
-              <MenuItem key={type.value} value={type.value}>
-                {type.label}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControl sx={{ minWidth: 300 }}>
+            <InputLabel id="entity-type-label">Entity Type</InputLabel>
+            <Select
+              labelId="entity-type-label"
+              value={selectedType}
+              label="Entity Type"
+              onChange={(e) => {
+                setSelectedType(e.target.value as EntityType)
+                setSelectedIds(new Set())
+                setSearchQuery('')
+              }}
+            >
+              {ENTITY_TYPES.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: 300 }}>
+            <InputLabel id="domain-filter-label">Filter by Domain</InputLabel>
+            <Select
+              labelId="domain-filter-label"
+              value={selectedDomainId}
+              label="Filter by Domain"
+              onChange={(e) => {
+                setSelectedDomainId(e.target.value)
+                setSelectedIds(new Set())
+              }}
+            >
+              <MenuItem value="">
+                <em>All Domains</em>
               </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+
+              {/* Main Domains */}
+              {mainDomains.length > 0 && (
+                <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                  Main Domains
+                </MenuItem>
+              )}
+              {mainDomains.map((domain) => (
+                <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                  {domain.name}
+                </MenuItem>
+              ))}
+
+              {/* Sub Domains */}
+              {subDomains.length > 0 && (
+                <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
+                  Sub Domains
+                </MenuItem>
+              )}
+              {subDomains.map((domain) => {
+                const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
+                return (
+                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                    {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
+                  </MenuItem>
+                )
+              })}
+            </Select>
+          </FormControl>
+        </Box>
       </Paper>
 
       {/* Toolbar */}
