@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Box,
   FormControl,
@@ -17,12 +17,16 @@ import {
   TableRow,
   Checkbox,
   IconButton,
-  Typography
+  Typography,
+  Chip
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
+import ObjectDialog from './ObjectDialog'
+import QuickAddDomainDialog from './QuickAddDomainDialog'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 
 // Entity type definitions
 type EntityType = 'object' | 'algo' | 'improvement' | 'contrib' | 'problem' | 'definition'
@@ -37,36 +41,36 @@ const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'object',
     label: 'Research Object',
-    columns: ['Name', 'Description']
+    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
   },
   {
     value: 'algo',
     label: 'Algorithm',
-    columns: ['Name', 'Description']
+    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
   },
   {
     value: 'improvement',
     label: 'Improvement',
-    columns: ['Name', 'Description', 'Metric', 'Result (String)', 'Result (Number)']
+    columns: ['Name', 'Description', 'Metric', 'Result (String)', 'Result (Number)', 'Domain']
   },
   {
     value: 'contrib',
     label: 'Contribution',
-    columns: ['Description']
+    columns: ['Description', 'Domain']
   },
   {
     value: 'problem',
     label: 'Problem',
-    columns: ['Name', 'Description']
+    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
   },
   {
     value: 'definition',
     label: 'Scenario',
-    columns: ['Name', 'Description']
+    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
   }
 ]
 
-// Mock data interface - will be replaced with actual data
+// Entity data interface
 interface EntityItem {
   id: string
   name?: string
@@ -74,6 +78,32 @@ interface EntityItem {
   metric?: string
   metricResultString?: string
   metricResultNumber?: number
+  subjectId?: string
+  subjectName?: string
+  aliasIds?: string[]
+  aliasNames?: string[]
+  parentIds?: string[]
+  parentNames?: string[]
+  relationIds?: string[]
+  relationNames?: string[]
+}
+
+interface SubDomain {
+  id: string
+  name: string
+  mainDomainId: string
+}
+
+interface MainDomain {
+  id: string
+  name: string
+}
+
+interface AllEntityItem {
+  id: string
+  name: string
+  type: string
+  typeName: string
 }
 
 function TechEntityTab() {
@@ -81,10 +111,59 @@ function TechEntityTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  // Mock data - will be replaced with actual API calls
-  const [entities] = useState<EntityItem[]>([])
+  // Data states
+  const [entities, setEntities] = useState<EntityItem[]>([])
+  const [subDomains, setSubDomains] = useState<SubDomain[]>([])
+  const [mainDomains, setMainDomains] = useState<MainDomain[]>([])
+  const [allEntities, setAllEntities] = useState<AllEntityItem[]>([])
+
+  // Dialog states
+  const [objectDialogOpen, setObjectDialogOpen] = useState(false)
+  const [objectDialogMode, setObjectDialogMode] = useState<'add' | 'edit'>('add')
+  const [selectedObject, setSelectedObject] = useState<EntityItem | null>(null)
+  const [quickAddDomainOpen, setQuickAddDomainOpen] = useState(false)
+
+  const { ConfirmDialogComponent, confirm } = useConfirmDialog()
 
   const currentTypeInfo = ENTITY_TYPES.find(t => t.value === selectedType)!
+
+  // Load data
+  const loadData = useCallback(async () => {
+    try {
+      // TODO: Replace with actual API calls
+      // For now, just load domains for the Object dialog
+      if (selectedType === 'object') {
+        const [mainDomainsData, subDomainsData, relationsData] = await Promise.all([
+          window.domain.getAllMain(),
+          window.domain.getAllSub(),
+          window.domain.getSubRelations()
+        ])
+
+        setMainDomains(mainDomainsData)
+
+        const subDomainsWithMain = subDomainsData.map(sub => {
+          const rel = relationsData.find(r => r.subDomainId === sub.id)
+          return {
+            ...sub,
+            mainDomainId: rel ? rel.mainDomainId : ''
+          }
+        })
+        setSubDomains(subDomainsWithMain)
+      }
+
+      // TODO: Load entities of current type
+      setEntities([])
+
+      // TODO: Load all entities for relationship selection
+      setAllEntities([])
+    } catch (e) {
+      console.error('Failed to load data:', e)
+    }
+  }, [selectedType])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const filteredEntities = entities.filter(entity => {
     const searchLower = searchQuery.toLowerCase()
@@ -113,23 +192,103 @@ function TechEntityTab() {
   }
 
   const handleAdd = () => {
-    // TODO: Implement add functionality
-    console.log('Add entity of type:', selectedType)
+    if (selectedType === 'object') {
+      setObjectDialogMode('add')
+      setSelectedObject(null)
+      setObjectDialogOpen(true)
+    } else {
+      // TODO: Implement for other types
+      console.log('Add entity of type:', selectedType)
+    }
   }
 
   const handleEdit = (entity: EntityItem) => {
-    // TODO: Implement edit functionality
-    console.log('Edit entity:', entity)
+    if (selectedType === 'object') {
+      setObjectDialogMode('edit')
+      setSelectedObject(entity)
+      setObjectDialogOpen(true)
+    } else {
+      // TODO: Implement for other types
+      console.log('Edit entity:', entity)
+    }
   }
 
-  const handleDelete = (entity: EntityItem) => {
-    // TODO: Implement delete functionality
-    console.log('Delete entity:', entity)
+  const handleDelete = async (entity: EntityItem) => {
+    const confirmed = await confirm(
+      'Delete Entity',
+      `Are you sure you want to delete "${entity.name || 'this entity'}"?`
+    )
+    if (confirmed) {
+      // TODO: Implement delete functionality
+      console.log('Delete entity:', entity)
+    }
   }
 
-  const handleBatchDelete = () => {
-    // TODO: Implement batch delete functionality
-    console.log('Batch delete entities:', Array.from(selectedIds))
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    const confirmed = await confirm(
+      'Delete Entities',
+      `Are you sure you want to delete ${selectedIds.size} entit${selectedIds.size > 1 ? 'ies' : 'y'}?`
+    )
+    if (confirmed) {
+      // TODO: Implement batch delete functionality
+      console.log('Batch delete entities:', Array.from(selectedIds))
+    }
+  }
+
+  const handleObjectDialogClose = () => {
+    setObjectDialogOpen(false)
+    setSelectedObject(null)
+  }
+
+  const handleObjectDialogSave = async (data: {
+    id?: string
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+  }) => {
+    try {
+      // TODO: Implement save functionality
+      console.log('Save object:', data)
+      handleObjectDialogClose()
+      await loadData()
+    } catch (e) {
+      console.error('Failed to save object:', e)
+      alert('An error occurred while saving')
+    }
+  }
+
+  const handleQuickAddDomain = () => {
+    setQuickAddDomainOpen(true)
+  }
+
+  const handleQuickAddDomainSave = async (data: {
+    name: string
+    description?: string
+    mainDomainId: string
+  }) => {
+    try {
+      const result = await window.domain.addSub({
+        name: data.name,
+        desc: data.description || '',
+        mainDomainId: data.mainDomainId
+      })
+
+      if (result.success) {
+        // Reload domains
+        await loadData()
+        return { success: true, id: result.id }
+      } else {
+        return { success: false, error: result.error }
+      }
+    } catch (e) {
+      console.error('Failed to add domain:', e)
+      return { success: false, error: 'An error occurred' }
+    }
   }
 
   const isAllSelected = filteredEntities.length > 0 && selectedIds.size === filteredEntities.length
@@ -145,6 +304,32 @@ function TechEntityTab() {
             {entity.description || '-'}
           </Typography>
         )
+      case 'Domain':
+        return entity.subjectName || '-'
+      case 'Alias':
+        return entity.aliasNames && entity.aliasNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.aliasNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Parent':
+        return entity.parentNames && entity.parentNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.parentNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Relations':
+        return entity.relationNames && entity.relationNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.relationNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" />
+            ))}
+          </Box>
+        ) : '-'
       case 'Metric':
         return entity.metric || '-'
       case 'Result (String)':
@@ -283,6 +468,40 @@ function TechEntityTab() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Object Dialog */}
+      {selectedType === 'object' && (
+        <ObjectDialog
+          key={objectDialogOpen ? `${objectDialogMode}-${selectedObject?.id ?? 'new'}` : 'closed'}
+          open={objectDialogOpen}
+          mode={objectDialogMode}
+          object={selectedObject ? {
+            id: selectedObject.id,
+            name: selectedObject.name || '',
+            description: selectedObject.description || '',
+            subjectId: selectedObject.subjectId || '',
+            aliasIds: selectedObject.aliasIds || [],
+            parentIds: selectedObject.parentIds || [],
+            relationIds: selectedObject.relationIds || []
+          } : null}
+          subDomains={subDomains}
+          allEntities={allEntities}
+          onClose={handleObjectDialogClose}
+          onSave={handleObjectDialogSave}
+          onQuickAddDomain={handleQuickAddDomain}
+        />
+      )}
+
+      {/* Quick Add Domain Dialog */}
+      <QuickAddDomainDialog
+        open={quickAddDomainOpen}
+        mainDomains={mainDomains}
+        onClose={() => setQuickAddDomainOpen(false)}
+        onSave={handleQuickAddDomainSave}
+      />
+
+      {/* Confirm Dialog */}
+      {ConfirmDialogComponent}
     </Box>
   )
 }
