@@ -16,11 +16,17 @@ function registerAffiliationHandlers() {
                 // Query all affiliation nodes
                 const nodes = db.nodeops.queryNodesByType(affiliationType.id)
 
-                return nodes.map(node => ({
-                    id: node.id,
-                    name: node.name,
-                    parentId: null // Will be populated from hierarchy
-                }))
+                return nodes.map(node => {
+                    // node.attributes is an array of attribute IDs, need to fetch actual AttributeInstance objects
+                    const nameAttrId = node.attributes[0] // First attribute is AuthorName (used for both Author and Affiliation)
+                    const nameAttr = nameAttrId ? db.attrops.queryAttrById(nameAttrId) : null
+
+                    return {
+                        id: node.id,
+                        name: nameAttr ? nameAttr.value : node.name,
+                        parentId: null // Will be populated from hierarchy
+                    }
+                })
             })
         } catch (e) {
             console.error("Failed to get affiliations:", e)
@@ -57,9 +63,21 @@ function registerAffiliationHandlers() {
                 try {
                     const affiliationType = signatureType.Affiliation.instance
 
-                    // Create affiliation node with unique name (add timestamp)
-                    const node = new kg_interface.Node(affiliationType.id, [], name)
+                    // Create attribute instance for affiliation name
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        signatureType.AttributeSigName.instance.id,
+                        name || ""
+                    )
 
+                    // Store attribute in database first
+                    db.attrops.mergeAttr(nameAttr.toDb())
+
+                    // Create affiliation node with attribute ID
+                    const node = new kg_interface.Node(
+                        affiliationType.id,
+                        [nameAttr.id], // Pass attribute ID, not object
+                        name
+                    )
                     db.nodeops.mergeNode(node.toDb())
 
                     // Create parent-child relation if parentId exists
@@ -101,10 +119,24 @@ function registerAffiliationHandlers() {
                         throw new Error("Affiliation not found")
                     }
 
-                    // Update node with new name
+                    // Create new attribute instance
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        signatureType.AttributeSigName.instance.id,
+                        name || ""
+                    )
+
+                    // Delete old attribute
+                    if (existingNode.attributes[0]) {
+                        db.attrops.deleteAttr(existingNode.attributes[0])
+                    }
+
+                    // Store new attribute
+                    db.attrops.mergeAttr(nameAttr.toDb())
+
+                    // Update node with new attribute ID
                     const updatedNode = new kg_interface.Node(
                         existingNode.type,
-                        existingNode.attributes,
+                        [nameAttr.id],
                         name
                     )
                     const nodeDb = updatedNode.toDb()
@@ -121,7 +153,7 @@ function registerAffiliationHandlers() {
                     if (parentId) {
                         const rel = new kg_interface.Rel(
                             affiliationBelongToType.id,
-                            `${name}_belongTo`,
+                            `${id}_belongTo_${parentId}`,
                             [],
                             id,
                             parentId
@@ -176,8 +208,15 @@ function registerAffiliationHandlers() {
                         db.relops.deleteRelsByToId(affiliationBelongToType.id, affId)
                     }
 
-                    // Delete all nodes
+                    // Delete all nodes and their attributes
                     for (const affId of allIds) {
+                        const node = db.nodeops.queryNodeById(affId)
+                        if (node) {
+                            // Delete attributes
+                            for (const attrId of node.attributes) {
+                                db.attrops.deleteAttr(attrId)
+                            }
+                        }
                         db.nodeops.deleteNode(affId)
                     }
 
