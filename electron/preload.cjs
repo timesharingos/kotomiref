@@ -75,6 +75,9 @@ contextBridge.exposeInMainWorld(
         getAll: () => ipcRenderer.invoke("entity:getAll"),
         addObject: (data) => ipcRenderer.invoke("entity:addObject", data),
         updateObject: (data) => ipcRenderer.invoke("entity:updateObject", data),
-        deleteObject: (id) => ipcRenderer.invoke("entity:deleteObject", id)
+        deleteObject: (id) => ipcRenderer.invoke("entity:deleteObject", id),
+        addAlgo: (data) => ipcRenderer.invoke("entity:addAlgo", data),
+        updateAlgo: (data) => ipcRenderer.invoke("entity:updateAlgo", data),
+        deleteAlgo: (id) => ipcRenderer.invoke("entity:deleteAlgo", id)
     }
 )

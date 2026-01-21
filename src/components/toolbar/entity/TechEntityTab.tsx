@@ -18,13 +18,21 @@ import {
   Checkbox,
   IconButton,
   Typography,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormGroup,
+  FormControlLabel
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
+import ViewColumnIcon from '@mui/icons-material/ViewColumn'
 import ObjectDialog from './ObjectDialog'
+import AlgoDialog from './AlgoDialog'
 import QuickAddDomainDialog from './QuickAddDomainDialog'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 
@@ -37,6 +45,12 @@ interface EntityTypeInfo {
   columns: string[]
 }
 
+interface ColumnConfig {
+  id: string
+  label: string
+  defaultVisible: boolean
+}
+
 const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'object',
@@ -46,7 +60,7 @@ const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'algo',
     label: 'Algorithm',
-    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
+    columns: ['Name', 'Description', 'Target', 'Expectation', 'Transformation', 'Domain', 'Alias', 'Parent', 'Relations']
   },
   {
     value: 'improvement',
@@ -70,6 +84,16 @@ const ENTITY_TYPES: EntityTypeInfo[] = [
   }
 ]
 
+// Default visible columns for each entity type
+const DEFAULT_VISIBLE_COLUMNS: Record<EntityType, string[]> = {
+  object: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations'],
+  algo: ['Name', 'Description', 'Target', 'Expectation', 'Transformation'], // Default: core algo columns
+  improvement: ['Name', 'Description', 'Metric', 'Result (String)', 'Result (Number)', 'Domain'],
+  contrib: ['Description', 'Domain'],
+  problem: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations'],
+  definition: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
+}
+
 // Entity data interface
 interface EntityItem {
   id: string
@@ -86,6 +110,13 @@ interface EntityItem {
   parentNames?: string[]
   relationIds?: string[]
   relationNames?: string[]
+  // Algo-specific fields
+  targetIds?: string[]
+  targetNames?: string[]
+  expectationIds?: string[]
+  expectationNames?: string[]
+  transformationIds?: string[]
+  transformationNames?: string[]
 }
 
 interface SubDomain {
@@ -111,6 +142,7 @@ function TechEntityTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectedDomainId, setSelectedDomainId] = useState<string>('') // '' means all domains
+  const [visibleColumns, setVisibleColumns] = useState<Record<EntityType, string[]>>(DEFAULT_VISIBLE_COLUMNS)
 
   // Data states
   const [entities, setEntities] = useState<EntityItem[]>([])
@@ -122,11 +154,29 @@ function TechEntityTab() {
   const [objectDialogOpen, setObjectDialogOpen] = useState(false)
   const [objectDialogMode, setObjectDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedObject, setSelectedObject] = useState<EntityItem | null>(null)
+  const [algoDialogOpen, setAlgoDialogOpen] = useState(false)
+  const [algoDialogMode, setAlgoDialogMode] = useState<'add' | 'edit'>('add')
+  const [selectedAlgo, setSelectedAlgo] = useState<EntityItem | null>(null)
   const [quickAddDomainOpen, setQuickAddDomainOpen] = useState(false)
+  const [columnConfigOpen, setColumnConfigOpen] = useState(false)
 
   const { ConfirmDialogComponent, confirm } = useConfirmDialog()
 
   const currentTypeInfo = ENTITY_TYPES.find(t => t.value === selectedType)!
+  const currentVisibleColumns = visibleColumns[selectedType]
+
+  const handleToggleColumn = (column: string) => {
+    setVisibleColumns(prev => {
+      const current = prev[selectedType]
+      const newColumns = current.includes(column)
+        ? current.filter(c => c !== column)
+        : [...current, column]
+      return {
+        ...prev,
+        [selectedType]: newColumns
+      }
+    })
+  }
 
   // Load data
   const loadData = useCallback(async () => {
@@ -216,6 +266,10 @@ function TechEntityTab() {
       setObjectDialogMode('add')
       setSelectedObject(null)
       setObjectDialogOpen(true)
+    } else if (selectedType === 'algo') {
+      setAlgoDialogMode('add')
+      setSelectedAlgo(null)
+      setAlgoDialogOpen(true)
     } else {
       // TODO: Implement for other types
       console.log('Add entity of type:', selectedType)
@@ -227,6 +281,10 @@ function TechEntityTab() {
       setObjectDialogMode('edit')
       setSelectedObject(entity)
       setObjectDialogOpen(true)
+    } else if (selectedType === 'algo') {
+      setAlgoDialogMode('edit')
+      setSelectedAlgo(entity)
+      setAlgoDialogOpen(true)
     } else {
       // TODO: Implement for other types
       console.log('Edit entity:', entity)
@@ -243,6 +301,8 @@ function TechEntityTab() {
         let result
         if (selectedType === 'object') {
           result = await window.entity.deleteObject(entity.id)
+        } else if (selectedType === 'algo') {
+          result = await window.entity.deleteAlgo(entity.id)
         } else {
           // TODO: Implement for other types
           console.log('Delete entity:', entity)
@@ -273,6 +333,8 @@ function TechEntityTab() {
         for (const id of Array.from(selectedIds)) {
           if (selectedType === 'object') {
             await window.entity.deleteObject(id)
+          } else if (selectedType === 'algo') {
+            await window.entity.deleteAlgo(id)
           } else {
             // TODO: Implement for other types
             console.log('Delete entity:', id)
@@ -317,6 +379,43 @@ function TechEntityTab() {
       }
     } catch (e) {
       console.error('Failed to save object:', e)
+      alert('An error occurred while saving')
+    }
+  }
+
+  const handleAlgoDialogClose = () => {
+    setAlgoDialogOpen(false)
+    setSelectedAlgo(null)
+  }
+
+  const handleAlgoDialogSave = async (data: {
+    id?: string
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    targetIds: string[]
+    expectationIds: string[]
+    transformationIds: string[]
+  }) => {
+    try {
+      let result
+      if (algoDialogMode === 'add') {
+        result = await window.entity.addAlgo(data)
+      } else if (data.id) {
+        result = await window.entity.updateAlgo(data)
+      }
+
+      if (result?.success) {
+        handleAlgoDialogClose()
+        await loadData()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Failed to save algo:', e)
       alert('An error occurred while saving')
     }
   }
@@ -400,6 +499,30 @@ function TechEntityTab() {
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {entity.relationNames.map((name, idx) => (
               <Chip key={idx} label={name} size="small" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Target':
+        return entity.targetNames && entity.targetNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.targetNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="primary" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Expectation':
+        return entity.expectationNames && entity.expectationNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.expectationNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="success" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Transformation':
+        return entity.transformationNames && entity.transformationNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.transformationNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="secondary" />
             ))}
           </Box>
         ) : '-'
@@ -505,6 +628,14 @@ function TechEntityTab() {
           Delete Selected ({selectedIds.size})
         </Button>
 
+        <Button
+          variant="outlined"
+          startIcon={<ViewColumnIcon />}
+          onClick={() => setColumnConfigOpen(true)}
+        >
+          Columns
+        </Button>
+
         <Box sx={{ flexGrow: 1 }} />
 
         <TextField
@@ -533,7 +664,7 @@ function TechEntityTab() {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              {currentTypeInfo.columns.map((column) => (
+              {currentVisibleColumns.map((column) => (
                 <TableCell key={column}>{column}</TableCell>
               ))}
               <TableCell align="right">Actions</TableCell>
@@ -542,7 +673,7 @@ function TechEntityTab() {
           <TableBody>
             {filteredEntities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={currentTypeInfo.columns.length + 2} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={currentVisibleColumns.length + 2} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   No {currentTypeInfo.label} found
                 </TableCell>
               </TableRow>
@@ -559,7 +690,7 @@ function TechEntityTab() {
                       onChange={() => handleSelectOne(entity.id)}
                     />
                   </TableCell>
-                  {currentTypeInfo.columns.map((column) => (
+                  {currentVisibleColumns.map((column) => (
                     <TableCell key={column}>
                       {renderTableCell(entity, column)}
                     </TableCell>
@@ -612,6 +743,33 @@ function TechEntityTab() {
         />
       )}
 
+      {/* Algo Dialog */}
+      {selectedType === 'algo' && (
+        <AlgoDialog
+          key={algoDialogOpen ? `${algoDialogMode}-${selectedAlgo?.id ?? 'new'}` : 'closed'}
+          open={algoDialogOpen}
+          mode={algoDialogMode}
+          algo={selectedAlgo ? {
+            id: selectedAlgo.id,
+            name: selectedAlgo.name || '',
+            description: selectedAlgo.description || '',
+            subjectId: selectedAlgo.subjectId || '',
+            aliasIds: selectedAlgo.aliasIds || [],
+            parentIds: selectedAlgo.parentIds || [],
+            relationIds: selectedAlgo.relationIds || [],
+            targetIds: selectedAlgo.targetIds || [],
+            expectationIds: selectedAlgo.expectationIds || [],
+            transformationIds: selectedAlgo.transformationIds || []
+          } : null}
+          mainDomains={mainDomains}
+          subDomains={subDomains}
+          allEntities={allEntities}
+          onClose={handleAlgoDialogClose}
+          onSave={handleAlgoDialogSave}
+          onQuickAddDomain={handleQuickAddDomain}
+        />
+      )}
+
       {/* Quick Add Domain Dialog */}
       <QuickAddDomainDialog
         open={quickAddDomainOpen}
@@ -619,6 +777,54 @@ function TechEntityTab() {
         onClose={() => setQuickAddDomainOpen(false)}
         onSave={handleQuickAddDomainSave}
       />
+
+      {/* Column Configuration Dialog */}
+      <Dialog
+        open={columnConfigOpen}
+        onClose={() => setColumnConfigOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Configure Columns for {currentTypeInfo.label}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select which columns to display in the table. At least one column must be selected.
+          </Typography>
+          <FormGroup>
+            {currentTypeInfo.columns.map((column) => (
+              <FormControlLabel
+                key={column}
+                control={
+                  <Checkbox
+                    checked={currentVisibleColumns.includes(column)}
+                    onChange={() => handleToggleColumn(column)}
+                    disabled={currentVisibleColumns.length === 1 && currentVisibleColumns.includes(column)}
+                  />
+                }
+                label={column}
+              />
+            ))}
+          </FormGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setColumnConfigOpen(false)}>
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              setVisibleColumns(prev => ({
+                ...prev,
+                [selectedType]: DEFAULT_VISIBLE_COLUMNS[selectedType]
+              }))
+            }}
+            variant="outlined"
+          >
+            Reset to Default
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Confirm Dialog */}
       {ConfirmDialogComponent}
