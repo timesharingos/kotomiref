@@ -45,12 +45,6 @@ interface EntityTypeInfo {
   columns: string[]
 }
 
-interface ColumnConfig {
-  id: string
-  label: string
-  defaultVisible: boolean
-}
-
 const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'object',
