@@ -11,7 +11,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
   IconButton,
   Typography,
   Autocomplete,
@@ -233,16 +232,11 @@ function ImprovementDialog({
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
               )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.id}
-                    label={`${option.name} (${option.typeName})`}
-                    size="small"
-                  />
-                ))
-              }
+              slotProps={{
+                chip: {
+                  size: "small"
+                }
+              }}
             />
           </Box>
 
@@ -262,16 +256,11 @@ function ImprovementDialog({
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
               )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.id}
-                    label={`${option.name} (${option.typeName})`}
-                    size="small"
-                  />
-                ))
-              }
+              slotProps={{
+                chip: {
+                  size: "small"
+                }
+              }}
             />
           </Box>
 
@@ -291,16 +280,11 @@ function ImprovementDialog({
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
               )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.id}
-                    label={`${option.name} (${option.typeName})`}
-                    size="small"
-                  />
-                ))
-              }
+              slotProps={{
+                chip: {
+                  size: "small"
+                }
+              }}
             />
           </Box>
 
@@ -361,17 +345,12 @@ function ImprovementDialog({
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select original technology entities" />
               )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.id}
-                    label={`${option.name} (${option.typeName})`}
-                    size="small"
-                    color="default"
-                  />
-                ))
-              }
+              slotProps={{
+                chip: {
+                  size: "small",
+                  color: "default"
+                }
+              }}
             />
           </Box>
 
@@ -391,17 +370,12 @@ function ImprovementDialog({
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select improved technology entities" />
               )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.id}
-                    label={`${option.name} (${option.typeName})`}
-                    size="small"
-                    color="success"
-                  />
-                ))
-              }
+              slotProps={{
+                chip: {
+                  size: "small",
+                  color: "success"
+                }
+              }}
             />
           </Box>
         </Box>
