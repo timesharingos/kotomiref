@@ -70,6 +70,10 @@ interface EntityItem {
   expectationNames?: string[];
   transformationIds?: string[];
   transformationNames?: string[];
+  originIds?: string[];
+  originNames?: string[];
+  advanceIds?: string[];
+  advanceNames?: string[];
 }
 
 interface AllEntityItem {
@@ -100,6 +104,21 @@ interface AlgoData {
   targetIds: string[];
   expectationIds: string[];
   transformationIds: string[];
+}
+
+interface ImprovementData {
+  id?: string;
+  name: string;
+  description: string;
+  subjectId: string;
+  metric?: string;
+  metricResultString?: string;
+  metricResultNumber?: number;
+  aliasIds: string[];
+  parentIds: string[];
+  relationIds: string[];
+  originIds: string[];
+  advanceIds: string[];
 }
 
 declare global {
@@ -157,6 +176,9 @@ declare global {
       addAlgo: (data: AlgoData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
       updateAlgo: (data: AlgoData) => Promise<{ success: boolean; error?: string }>;
       deleteAlgo: (id: string) => Promise<{ success: boolean; error?: string }>;
+      addImprovement: (data: ImprovementData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
+      updateImprovement: (data: ImprovementData) => Promise<{ success: boolean; error?: string }>;
+      deleteImprovement: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
