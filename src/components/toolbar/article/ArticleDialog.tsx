@@ -28,6 +28,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
@@ -48,11 +50,26 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   const [formData, setFormData] = useState({
     id: '',
     artTitle: '',
-    artPath: '', 
+    artPath: '',
     artPrimaryRefEntry: null as number | null,
     file: null as File | null,
     references: [] as any[],
     entityTags: [] as any[]
+  })
+
+  // Current reference being edited
+  const [currentReference, setCurrentReference] = useState({
+    refNo: 0,
+    refIndex: '',
+    refTitle: '',
+    refYear: null as number | null,
+    refPublication: '',
+    refVolume: null as number | null,
+    refIssue: null as number | null,
+    refStartPage: null as number | null,
+    refEndPage: null as number | null,
+    refDoi: '',
+    refAbs: ''
   })
 
   const [allEntities, setAllEntities] = useState<any[]>([])
@@ -248,7 +265,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
 
       if (!validExtensions.includes(fileExtension)) {
-        alert('Invalid file type. Supported formats: md, txt, doc(x), pdf, and images (jpg, png, gif)')
+        toast.error('Invalid file type. Supported formats: md, txt, doc(x), pdf, and images (jpg, png, gif)')
         return
       }
 
@@ -281,17 +298,143 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     }
   }
 
+  // Reference handlers
+  const handleAddReference = () => {
+    // Validate required fields
+    if (!currentReference.refPublication.trim()) {
+      toast.error('Publication is required')
+      return
+    }
+    if (!currentReference.refAbs.trim()) {
+      toast.error('Abstract is required')
+      return
+    }
+    if (currentReference.refEndPage === null) {
+      toast.error('End page is required')
+      return
+    }
+
+    // Validate positive integers
+    if (currentReference.refYear !== null && (currentReference.refYear <= 0 || !Number.isInteger(currentReference.refYear))) {
+      toast.error('Year must be a positive integer')
+      return
+    }
+    if (currentReference.refVolume !== null && (currentReference.refVolume <= 0 || !Number.isInteger(currentReference.refVolume))) {
+      toast.error('Volume must be a positive integer')
+      return
+    }
+    if (currentReference.refIssue !== null && (currentReference.refIssue <= 0 || !Number.isInteger(currentReference.refIssue))) {
+      toast.error('Issue must be a positive integer')
+      return
+    }
+    if (currentReference.refStartPage !== null && (currentReference.refStartPage <= 0 || !Number.isInteger(currentReference.refStartPage))) {
+      toast.error('Start page must be a positive integer')
+      return
+    }
+    if (currentReference.refEndPage <= 0 || !Number.isInteger(currentReference.refEndPage)) {
+      toast.error('End page must be a positive integer')
+      return
+    }
+
+    // Set default startPage to 1 if not provided
+    const startPage = currentReference.refStartPage || 1
+
+    // Validate endPage >= startPage
+    if (currentReference.refEndPage < startPage) {
+      toast.error('End page must be greater than or equal to start page')
+      return
+    }
+
+    // Set default title to article title if not provided
+    const refTitle = currentReference.refTitle.trim() || formData.artTitle
+
+    // Add reference to list
+    const newReference = {
+      ...currentReference,
+      refNo: formData.references.length,
+      refStartPage: startPage,
+      refTitle: refTitle
+    }
+
+    const updatedReferences = [...formData.references, newReference]
+
+    // Auto-set primary if this is the first reference
+    const updatedPrimary = updatedReferences.length === 1 ? 0 : formData.artPrimaryRefEntry
+
+    setFormData({
+      ...formData,
+      references: updatedReferences,
+      artPrimaryRefEntry: updatedPrimary
+    })
+
+    // Reset current reference
+    setCurrentReference({
+      refNo: 0,
+      refIndex: '',
+      refTitle: '',
+      refYear: null,
+      refPublication: '',
+      refVolume: null,
+      refIssue: null,
+      refStartPage: null,
+      refEndPage: null,
+      refDoi: '',
+      refAbs: ''
+    })
+
+    toast.success('Reference added successfully')
+  }
+
+  const handleRemoveReference = (refNo: number) => {
+    const updatedReferences = formData.references
+      .filter(ref => ref.refNo !== refNo)
+      .map((ref, index) => ({ ...ref, refNo: index })) // Re-number references
+
+    // Update primary if needed
+    let updatedPrimary = formData.artPrimaryRefEntry
+    if (updatedReferences.length === 0) {
+      updatedPrimary = null
+    } else if (updatedReferences.length === 1) {
+      updatedPrimary = 0
+    } else if (formData.artPrimaryRefEntry === refNo) {
+      updatedPrimary = 0 // Reset to first if primary was removed
+    } else if (formData.artPrimaryRefEntry !== null && formData.artPrimaryRefEntry > refNo) {
+      updatedPrimary = formData.artPrimaryRefEntry - 1 // Adjust if after removed
+    }
+
+    setFormData({
+      ...formData,
+      references: updatedReferences,
+      artPrimaryRefEntry: updatedPrimary
+    })
+  }
+
+  const handleSetPrimary = (refNo: number) => {
+    setFormData({
+      ...formData,
+      artPrimaryRefEntry: refNo
+    })
+  }
+
   // Step navigation
   const handleNext = () => {
     // Validate current step before proceeding
     if (activeStep === 0) {
       // Validate basic info: only title and file are required
       if (!formData.artTitle.trim()) {
-        alert('Article title is required')
+        toast.error('Article title is required')
         return
       }
       if (!formData.file && !formData.artPath) {
-        alert('Please upload an article file')
+        toast.error('Please upload an article file')
+        return
+      }
+    }
+
+    if (activeStep === 1) {
+      // Validate references: at least one reference is required
+      if (formData.references.length === 0) {
+        toast.error('At least one reference is required')
         return
       }
     }
@@ -739,33 +882,219 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   // Step 2: References
   const renderReferencesStep = () => {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          References
-        </Typography>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          Add references cited in this article. You can add them manually or import from a file.
-        </Typography>
-
-        {/* TODO: Add reference management UI */}
-        <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            References
+          </Typography>
           <Typography variant="body2" color="text.secondary">
-            Reference management UI will be implemented here.
+            Add references cited in this article. At least one reference is required.
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Features: Add reference, Import from BibTeX, Edit, Delete
-          </Typography>
-        </Paper>
+        </Box>
 
-        {/* Placeholder for references list */}
+        {/* Added References List */}
         {formData.references.length > 0 && (
-          <Box>
+          <Paper sx={{ p: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
               Added References ({formData.references.length})
             </Typography>
-            {/* TODO: Display references list */}
-          </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              {formData.references.map((ref) => (
+                <Paper
+                  key={ref.refNo}
+                  sx={{
+                    p: 2,
+                    bgcolor: ref.refNo === formData.artPrimaryRefEntry ? '#1976d2' : '#424242',
+                    border: ref.refNo === formData.artPrimaryRefEntry ? '2px solid' : '1px solid',
+                    borderColor: ref.refNo === formData.artPrimaryRefEntry ? '#2196f3' : '#616161',
+                    color: '#ffffff'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Chip
+                          label={`#${ref.refNo}`}
+                          size="small"
+                          color={ref.refNo === formData.artPrimaryRefEntry ? 'primary' : 'default'}
+                        />
+                        {ref.refNo === formData.artPrimaryRefEntry && (
+                          <Chip label="Primary" size="small" color="primary" variant="outlined" />
+                        )}
+                        {ref.refIndex && (
+                          <Chip label={ref.refIndex} size="small" variant="outlined" />
+                        )}
+                      </Box>
+
+                      {ref.refTitle && (
+                        <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                          {ref.refTitle}
+                        </Typography>
+                      )}
+
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        <strong>Publication:</strong> {ref.refPublication}
+                        {ref.refYear && ` (${ref.refYear})`}
+                        {ref.refVolume && `, Vol. ${ref.refVolume}`}
+                        {ref.refIssue && `, Issue ${ref.refIssue}`}
+                        {(ref.refStartPage || ref.refEndPage) && `, pp. ${ref.refStartPage || '?'}-${ref.refEndPage}`}
+                      </Typography>
+
+                      {ref.refDoi && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          <strong>DOI:</strong> {ref.refDoi}
+                        </Typography>
+                      )}
+
+                      {ref.refAbs && (
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                          <strong>Abstract:</strong> {ref.refAbs.substring(0, 150)}
+                          {ref.refAbs.length > 150 && '...'}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                      {formData.references.length > 1 && ref.refNo !== formData.artPrimaryRefEntry && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleSetPrimary(ref.refNo)}
+                        >
+                          Set Primary
+                        </Button>
+                      )}
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => handleRemoveReference(ref.refNo)}
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          </Paper>
         )}
+
+        {/* Add New Reference Form */}
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Add New Reference
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {/* Row 1: Index and Title */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Platform Index"
+                placeholder="e.g., arxiv 2501.34521"
+                value={currentReference.refIndex}
+                onChange={(e) => setCurrentReference({ ...currentReference, refIndex: e.target.value })}
+                fullWidth
+                helperText="Optional: Platform-specific identifier"
+              />
+              <TextField
+                label="Title"
+                value={currentReference.refTitle}
+                onChange={(e) => setCurrentReference({ ...currentReference, refTitle: e.target.value })}
+                fullWidth
+                helperText="Optional"
+              />
+            </Box>
+
+            {/* Row 2: Publication and Year */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Publication *"
+                value={currentReference.refPublication}
+                onChange={(e) => setCurrentReference({ ...currentReference, refPublication: e.target.value })}
+                fullWidth
+                required
+                helperText="Required: Journal, conference, etc."
+              />
+              <TextField
+                label="Year"
+                type="number"
+                value={currentReference.refYear || ''}
+                onChange={(e) => setCurrentReference({ ...currentReference, refYear: e.target.value ? parseInt(e.target.value) : null })}
+                sx={{ width: '150px' }}
+                helperText="Optional"
+              />
+            </Box>
+
+            {/* Row 3: Volume, Issue, Pages */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Volume"
+                type="number"
+                value={currentReference.refVolume || ''}
+                onChange={(e) => setCurrentReference({ ...currentReference, refVolume: e.target.value ? parseInt(e.target.value) : null })}
+                sx={{ width: '120px' }}
+                helperText="Optional"
+              />
+              <TextField
+                label="Issue"
+                type="number"
+                value={currentReference.refIssue || ''}
+                onChange={(e) => setCurrentReference({ ...currentReference, refIssue: e.target.value ? parseInt(e.target.value) : null })}
+                sx={{ width: '120px' }}
+                helperText="Optional"
+              />
+              <TextField
+                label="Start Page"
+                type="number"
+                value={currentReference.refStartPage || ''}
+                onChange={(e) => setCurrentReference({ ...currentReference, refStartPage: e.target.value ? parseInt(e.target.value) : null })}
+                sx={{ width: '150px' }}
+                helperText="Optional"
+              />
+              <TextField
+                label="End Page *"
+                type="number"
+                value={currentReference.refEndPage || ''}
+                onChange={(e) => setCurrentReference({ ...currentReference, refEndPage: e.target.value ? parseInt(e.target.value) : null })}
+                sx={{ width: '150px' }}
+                required
+                helperText="Required"
+              />
+            </Box>
+
+            {/* Row 4: DOI */}
+            <TextField
+              label="DOI"
+              placeholder="e.g., 10.1234/example.2024.001"
+              value={currentReference.refDoi}
+              onChange={(e) => setCurrentReference({ ...currentReference, refDoi: e.target.value })}
+              fullWidth
+              helperText="Optional: Digital Object Identifier"
+            />
+
+            {/* Row 5: Abstract */}
+            <TextField
+              label="Abstract *"
+              value={currentReference.refAbs}
+              onChange={(e) => setCurrentReference({ ...currentReference, refAbs: e.target.value })}
+              fullWidth
+              multiline
+              rows={4}
+              required
+              helperText="Required: Brief summary of the reference"
+            />
+
+            {/* Add Button */}
+            <Button
+              variant="contained"
+              onClick={handleAddReference}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Add Reference
+            </Button>
+          </Box>
+        </Paper>
+
       </Box>
     )
   }
@@ -1293,6 +1622,18 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <DialogTitle>
         {mode === 'add' ? 'Add Article' : 'Edit Article'}
       </DialogTitle>
