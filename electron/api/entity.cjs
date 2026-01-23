@@ -180,6 +180,36 @@ function registerEntityHandlers() {
                                 return evoNode ? evoNode.name : rel.to
                             })
                         }
+
+                        // Get Definition-specific relations if entity type is definition
+                        if (entityType === 'definition') {
+                            // Get Refine relations (Definition -> Problem)
+                            const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
+                            const refineRels = db.relops.queryRelsByFromId(refineRelType.id, node.id)
+                            result.refineIds = refineRels.map(rel => rel.to)
+                            result.refineNames = refineRels.map(rel => {
+                                const refineNode = db.nodeops.queryNodeById(rel.to)
+                                return refineNode ? refineNode.name : rel.to
+                            })
+
+                            // Get Scenario relations (Definition -> Entity)
+                            const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
+                            const scenarioRels = db.relops.queryRelsByFromId(scenarioRelType.id, node.id)
+                            result.scenarioIds = scenarioRels.map(rel => rel.to)
+                            result.scenarioNames = scenarioRels.map(rel => {
+                                const scenarioNode = db.nodeops.queryNodeById(rel.to)
+                                return scenarioNode ? scenarioNode.name : rel.to
+                            })
+
+                            // Get Evo relations (Definition -> Definition)
+                            const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+                            const evoRels = db.relops.queryRelsByFromId(evoRelType.id, node.id)
+                            result.evoIds = evoRels.map(rel => rel.to)
+                            result.evoNames = evoRels.map(rel => {
+                                const evoNode = db.nodeops.queryNodeById(rel.to)
+                                return evoNode ? evoNode.name : rel.to
+                            })
+                        }
                     }
 
                     return result
@@ -242,6 +272,18 @@ function registerEntityHandlers() {
                         name: node.name,
                         type: 'problem',
                         typeName: 'Problem'
+                    })
+                })
+
+                // Get all Definition entities
+                const definitionType = evolutionType.evoConcepts.EvoDefinition.instance
+                const definitionNodes = db.nodeops.queryNodesByType(definitionType.id)
+                definitionNodes.forEach(node => {
+                    allEntities.push({
+                        id: node.id,
+                        name: node.name,
+                        type: 'definition',
+                        typeName: 'Scenario'
                     })
                 })
 
@@ -1861,6 +1903,437 @@ function registerEntityHandlers() {
             })
         } catch (e) {
             console.error("Failed to delete problem:", e)
+            return { success: false, error: e.message }
+        }
+    })
+
+    // Add entity (Definition type)
+    ipcMain.handle("entity:addDefinition", async (_ev, data) => {
+        try {
+            const { name, description, subjectId, aliasIds, parentIds, relationIds, refineIds, scenarioIds, evoIds } = data
+            return invokeDb((db) => {
+                db.dbops.begin()
+                try {
+                    // 1. Create EvoDefinition node with attributes
+                    const definitionType = evolutionType.evoConcepts.EvoDefinition.instance
+
+                    // Create attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoName.instance.id,
+                        name || ""
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoDesc.instance.id,
+                        description || ""
+                    )
+
+                    // Store attributes
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Create Definition node
+                    const definitionNode = new kg_interface.Node(
+                        definitionType.id,
+                        [nameAttr.id, descAttr.id],
+                        name
+                    )
+                    db.nodeops.mergeNode(definitionNode.toDb())
+
+                    // 2. Create corresponding EvoEntity node with same name
+                    const entityType = evolutionType.evoConcepts.EvoEntity.instance
+                    const entityNode = new kg_interface.Node(
+                        entityType.id,
+                        [], // Entity has no attributes
+                        name
+                    )
+                    db.nodeops.mergeNode(entityNode.toDb())
+
+                    // 3. Create Entity relations (same as Object, Algo, Improvement, Problem)
+                    if (subjectId) {
+                        const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                        const subjectRel = new kg_interface.Rel(
+                            subjectRelType.id,
+                            `${entityNode.id}_subject_${subjectId}`,
+                            [],
+                            entityNode.id,
+                            subjectId
+                        )
+                        db.relops.mergeRel(subjectRel.toDb())
+                    }
+
+                    if (aliasIds && aliasIds.length > 0) {
+                        const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                        for (const aliasId of aliasIds) {
+                            const aliasRel = new kg_interface.Rel(
+                                aliasRelType.id,
+                                `${entityNode.id}_alias_${aliasId}`,
+                                [],
+                                entityNode.id,
+                                aliasId
+                            )
+                            db.relops.mergeRel(aliasRel.toDb())
+                        }
+                    }
+
+                    if (parentIds && parentIds.length > 0) {
+                        const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                        for (const parentId of parentIds) {
+                            const parentRel = new kg_interface.Rel(
+                                parentRelType.id,
+                                `${entityNode.id}_parent_${parentId}`,
+                                [],
+                                entityNode.id,
+                                parentId
+                            )
+                            db.relops.mergeRel(parentRel.toDb())
+                        }
+                    }
+
+                    if (relationIds && relationIds.length > 0) {
+                        const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+                        for (const relationId of relationIds) {
+                            const relationRel = new kg_interface.Rel(
+                                relationRelType.id,
+                                `${entityNode.id}_relation_${relationId}`,
+                                [],
+                                entityNode.id,
+                                relationId
+                            )
+                            db.relops.mergeRel(relationRel.toDb())
+                        }
+                    }
+
+                    // 4. Create Definition-specific relations
+                    if (refineIds && refineIds.length > 0) {
+                        const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
+                        for (const refineId of refineIds) {
+                            const refineRel = new kg_interface.Rel(
+                                refineRelType.id,
+                                `${definitionNode.id}_refine_${refineId}`,
+                                [],
+                                definitionNode.id,
+                                refineId
+                            )
+                            db.relops.mergeRel(refineRel.toDb())
+                        }
+                    }
+
+                    if (scenarioIds && scenarioIds.length > 0) {
+                        const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
+                        for (const scenarioId of scenarioIds) {
+                            const scenarioRel = new kg_interface.Rel(
+                                scenarioRelType.id,
+                                `${definitionNode.id}_scenario_${scenarioId}`,
+                                [],
+                                definitionNode.id,
+                                scenarioId
+                            )
+                            db.relops.mergeRel(scenarioRel.toDb())
+                        }
+                    }
+
+                    if (evoIds && evoIds.length > 0) {
+                        const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+                        for (const evoId of evoIds) {
+                            const evoRel = new kg_interface.Rel(
+                                evoRelType.id,
+                                `${definitionNode.id}_evo_${evoId}`,
+                                [],
+                                definitionNode.id,
+                                evoId
+                            )
+                            db.relops.mergeRel(evoRel.toDb())
+                        }
+                    }
+
+                    db.dbops.commit()
+                    return { success: true, id: definitionNode.id, entityId: entityNode.id }
+                } catch (e) {
+                    db.dbops.rollback()
+                    throw e
+                }
+            })
+        } catch (e) {
+            console.error("Failed to add definition:", e)
+            return { success: false, error: e.message }
+        }
+    })
+
+    // Update entity (Definition type)
+    ipcMain.handle("entity:updateDefinition", async (_ev, data) => {
+        try {
+            const { id, name, description, subjectId, aliasIds, parentIds, relationIds, refineIds, scenarioIds, evoIds } = data
+            return invokeDb((db) => {
+                db.dbops.begin()
+                try {
+                    // 1. Update EvoDefinition node
+                    const existingDefinitionNode = db.nodeops.queryNodeById(id)
+                    if (!existingDefinitionNode) {
+                        throw new Error("Definition not found")
+                    }
+
+                    // Create new attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoName.instance.id,
+                        name || ""
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoDesc.instance.id,
+                        description || ""
+                    )
+
+                    // Delete old attributes
+                    if (existingDefinitionNode.attributes[0]) {
+                        db.attrops.deleteAttr(existingDefinitionNode.attributes[0])
+                    }
+                    if (existingDefinitionNode.attributes[1]) {
+                        db.attrops.deleteAttr(existingDefinitionNode.attributes[1])
+                    }
+
+                    // Store new attributes
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Update Definition node
+                    const updatedDefinitionNode = new kg_interface.Node(
+                        existingDefinitionNode.type,
+                        [nameAttr.id, descAttr.id],
+                        name
+                    )
+                    const definitionNodeDb = updatedDefinitionNode.toDb()
+                    definitionNodeDb.id = id
+                    db.nodeops.mergeNode(definitionNodeDb)
+
+                    // 2. Update corresponding EvoEntity node
+                    const entityType = evolutionType.evoConcepts.EvoEntity.instance
+                    const oldEntityNode = db.nodeops.queryNodeByName(entityType.id, existingDefinitionNode.name)
+
+                    if (oldEntityNode) {
+                        let entityNodeId
+
+                        if (existingDefinitionNode.name !== name) {
+                            // Delete old Entity node and its relations
+                            const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                            const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                            const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                            const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+
+                            db.relops.deleteRelsByFromId(subjectRelType.id, oldEntityNode.id)
+                            db.relops.deleteRelsByFromId(aliasRelType.id, oldEntityNode.id)
+                            db.relops.deleteRelsByFromId(parentRelType.id, oldEntityNode.id)
+                            db.relops.deleteRelsByFromId(relationRelType.id, oldEntityNode.id)
+                            db.nodeops.deleteNode(oldEntityNode.id)
+
+                            // Create new Entity node
+                            const newEntityNode = new kg_interface.Node(
+                                entityType.id,
+                                [],
+                                name
+                            )
+                            db.nodeops.mergeNode(newEntityNode.toDb())
+                            entityNodeId = newEntityNode.id
+                        } else {
+                            // Name unchanged, use existing entity node
+                            entityNodeId = oldEntityNode.id
+
+                            // Delete old Entity relations
+                            const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                            const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                            const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                            const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+
+                            db.relops.deleteRelsByFromId(subjectRelType.id, entityNodeId)
+                            db.relops.deleteRelsByFromId(aliasRelType.id, entityNodeId)
+                            db.relops.deleteRelsByFromId(parentRelType.id, entityNodeId)
+                            db.relops.deleteRelsByFromId(relationRelType.id, entityNodeId)
+                        }
+
+                        // Delete old Definition-specific relations (from EvoDefinition node)
+                        const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
+                        const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
+                        const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+                        db.relops.deleteRelsByFromId(refineRelType.id, id)
+                        db.relops.deleteRelsByFromId(scenarioRelType.id, id)
+                        db.relops.deleteRelsByFromId(evoRelType.id, id)
+
+                        // 3. Create new Entity relations
+                        if (subjectId) {
+                            const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                            const subjectRel = new kg_interface.Rel(
+                                subjectRelType.id,
+                                `${entityNodeId}_subject_${subjectId}`,
+                                [],
+                                entityNodeId,
+                                subjectId
+                            )
+                            db.relops.mergeRel(subjectRel.toDb())
+                        }
+
+                        if (aliasIds && aliasIds.length > 0) {
+                            const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                            for (const aliasId of aliasIds) {
+                                const aliasRel = new kg_interface.Rel(
+                                    aliasRelType.id,
+                                    `${entityNodeId}_alias_${aliasId}`,
+                                    [],
+                                    entityNodeId,
+                                    aliasId
+                                )
+                                db.relops.mergeRel(aliasRel.toDb())
+                            }
+                        }
+
+                        if (parentIds && parentIds.length > 0) {
+                            const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                            for (const parentId of parentIds) {
+                                const parentRel = new kg_interface.Rel(
+                                    parentRelType.id,
+                                    `${entityNodeId}_parent_${parentId}`,
+                                    [],
+                                    entityNodeId,
+                                    parentId
+                                )
+                                db.relops.mergeRel(parentRel.toDb())
+                            }
+                        }
+
+                        if (relationIds && relationIds.length > 0) {
+                            const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+                            for (const relationId of relationIds) {
+                                const relationRel = new kg_interface.Rel(
+                                    relationRelType.id,
+                                    `${entityNodeId}_relation_${relationId}`,
+                                    [],
+                                    entityNodeId,
+                                    relationId
+                                )
+                                db.relops.mergeRel(relationRel.toDb())
+                            }
+                        }
+
+                        // 4. Create Definition-specific relations
+                        if (refineIds && refineIds.length > 0) {
+                            const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
+                            for (const refineId of refineIds) {
+                                const refineRel = new kg_interface.Rel(
+                                    refineRelType.id,
+                                    `${id}_refine_${refineId}`,
+                                    [],
+                                    id,
+                                    refineId
+                                )
+                                db.relops.mergeRel(refineRel.toDb())
+                            }
+                        }
+
+                        if (scenarioIds && scenarioIds.length > 0) {
+                            const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
+                            for (const scenarioId of scenarioIds) {
+                                const scenarioRel = new kg_interface.Rel(
+                                    scenarioRelType.id,
+                                    `${id}_scenario_${scenarioId}`,
+                                    [],
+                                    id,
+                                    scenarioId
+                                )
+                                db.relops.mergeRel(scenarioRel.toDb())
+                            }
+                        }
+
+                        if (evoIds && evoIds.length > 0) {
+                            const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+                            for (const evoId of evoIds) {
+                                const evoRel = new kg_interface.Rel(
+                                    evoRelType.id,
+                                    `${id}_evo_${evoId}`,
+                                    [],
+                                    id,
+                                    evoId
+                                )
+                                db.relops.mergeRel(evoRel.toDb())
+                            }
+                        }
+                    }
+
+                    db.dbops.commit()
+                    return { success: true }
+                } catch (e) {
+                    db.dbops.rollback()
+                    throw e
+                }
+            })
+        } catch (e) {
+            console.error("Failed to update definition:", e)
+            return { success: false, error: e.message }
+        }
+    })
+
+    // Delete entity (Definition type)
+    ipcMain.handle("entity:deleteDefinition", async (_ev, id) => {
+        try {
+            return invokeDb((db) => {
+                db.dbops.begin()
+                try {
+                    // 1. Get Definition node
+                    const definitionNode = db.nodeops.queryNodeById(id)
+                    if (!definitionNode) {
+                        throw new Error("Definition not found")
+                    }
+
+                    // 2. Delete corresponding Entity node and its relations
+                    const entityType = evolutionType.evoConcepts.EvoEntity.instance
+                    const entityNode = db.nodeops.queryNodeByName(entityType.id, definitionNode.name)
+
+                    if (entityNode) {
+                        // Delete all Entity relations
+                        const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                        const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                        const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                        const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+
+                        db.relops.deleteRelsByFromId(subjectRelType.id, entityNode.id)
+                        db.relops.deleteRelsByFromId(aliasRelType.id, entityNode.id)
+                        db.relops.deleteRelsByFromId(parentRelType.id, entityNode.id)
+                        db.relops.deleteRelsByFromId(relationRelType.id, entityNode.id)
+
+                        // Also delete relations where this entity is the target
+                        db.relops.deleteRelsByToId(aliasRelType.id, entityNode.id)
+                        db.relops.deleteRelsByToId(parentRelType.id, entityNode.id)
+                        db.relops.deleteRelsByToId(relationRelType.id, entityNode.id)
+
+                        // Delete Entity node
+                        db.nodeops.deleteNode(entityNode.id)
+                    }
+
+                    // Delete Definition-specific relations (from EvoDefinition node)
+                    const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
+                    const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
+                    const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+
+                    db.relops.deleteRelsByFromId(refineRelType.id, id)
+                    db.relops.deleteRelsByFromId(scenarioRelType.id, id)
+                    db.relops.deleteRelsByFromId(evoRelType.id, id)
+
+                    // Also delete relations where this definition is the target
+                    db.relops.deleteRelsByToId(refineRelType.id, id)
+                    db.relops.deleteRelsByToId(scenarioRelType.id, id)
+                    db.relops.deleteRelsByToId(evoRelType.id, id)
+
+                    // 3. Delete Definition node and its attributes
+                    for (const attrId of definitionNode.attributes) {
+                        db.attrops.deleteAttr(attrId)
+                    }
+                    db.nodeops.deleteNode(id)
+
+                    db.dbops.commit()
+                    return { success: true }
+                } catch (e) {
+                    db.dbops.rollback()
+                    throw e
+                }
+            })
+        } catch (e) {
+            console.error("Failed to delete definition:", e)
             return { success: false, error: e.message }
         }
     })

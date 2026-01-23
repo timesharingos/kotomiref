@@ -35,6 +35,7 @@ import ObjectDialog from './ObjectDialog'
 import AlgoDialog from './AlgoDialog'
 import ImprovementDialog from './ImprovementDialog'
 import ProblemDialog from './ProblemDialog'
+import DefinitionDialog from './DefinitionDialog'
 import QuickAddDomainDialog from './QuickAddDomainDialog'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 
@@ -76,7 +77,7 @@ const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'definition',
     label: 'Scenario',
-    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
+    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Refine', 'Scenario', 'Evolution']
   }
 ]
 
@@ -87,7 +88,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<EntityType, string[]> = {
   improvement: ['Name', 'Description', 'Metric', 'Result (String)', 'Result (Number)', 'Origin', 'Advance'], // Default: core improvement columns
   contrib: ['Description', 'Domain'],
   problem: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Domain (Problem)', 'Evolution'],
-  definition: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
+  definition: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Refine', 'Scenario', 'Evolution']
 }
 
 // Entity data interface
@@ -123,6 +124,11 @@ interface EntityItem {
   domainNames?: string[]
   evoIds?: string[]
   evoNames?: string[]
+  // Definition-specific fields
+  refineIds?: string[]
+  refineNames?: string[]
+  scenarioIds?: string[]
+  scenarioNames?: string[]
 }
 
 interface SubDomain {
@@ -169,6 +175,9 @@ function TechEntityTab() {
   const [problemDialogOpen, setProblemDialogOpen] = useState(false)
   const [problemDialogMode, setProblemDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedProblem, setSelectedProblem] = useState<EntityItem | null>(null)
+  const [definitionDialogOpen, setDefinitionDialogOpen] = useState(false)
+  const [definitionDialogMode, setDefinitionDialogMode] = useState<'add' | 'edit'>('add')
+  const [selectedDefinition, setSelectedDefinition] = useState<EntityItem | null>(null)
   const [quickAddDomainOpen, setQuickAddDomainOpen] = useState(false)
   const [columnConfigOpen, setColumnConfigOpen] = useState(false)
 
@@ -290,6 +299,10 @@ function TechEntityTab() {
       setProblemDialogMode('add')
       setSelectedProblem(null)
       setProblemDialogOpen(true)
+    } else if (selectedType === 'definition') {
+      setDefinitionDialogMode('add')
+      setSelectedDefinition(null)
+      setDefinitionDialogOpen(true)
     } else {
       // TODO: Implement for other types
       console.log('Add entity of type:', selectedType)
@@ -313,6 +326,10 @@ function TechEntityTab() {
       setProblemDialogMode('edit')
       setSelectedProblem(entity)
       setProblemDialogOpen(true)
+    } else if (selectedType === 'definition') {
+      setDefinitionDialogMode('edit')
+      setSelectedDefinition(entity)
+      setDefinitionDialogOpen(true)
     } else {
       // TODO: Implement for other types
       console.log('Edit entity:', entity)
@@ -335,6 +352,8 @@ function TechEntityTab() {
           result = await window.entity.deleteImprovement(entity.id)
         } else if (selectedType === 'problem') {
           result = await window.entity.deleteProblem(entity.id)
+        } else if (selectedType === 'definition') {
+          result = await window.entity.deleteDefinition(entity.id)
         } else {
           // TODO: Implement for other types
           console.log('Delete entity:', entity)
@@ -371,6 +390,8 @@ function TechEntityTab() {
             await window.entity.deleteImprovement(id)
           } else if (selectedType === 'problem') {
             await window.entity.deleteProblem(id)
+          } else if (selectedType === 'definition') {
+            await window.entity.deleteDefinition(id)
           } else {
             // TODO: Implement for other types
             console.log('Delete entity:', id)
@@ -531,6 +552,43 @@ function TechEntityTab() {
     }
   }
 
+  const handleDefinitionDialogClose = () => {
+    setDefinitionDialogOpen(false)
+    setSelectedDefinition(null)
+  }
+
+  const handleDefinitionDialogSave = async (data: {
+    id?: string
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    refineIds: string[]
+    scenarioIds: string[]
+    evoIds: string[]
+  }) => {
+    try {
+      let result
+      if (definitionDialogMode === 'add') {
+        result = await window.entity.addDefinition(data)
+      } else if (data.id) {
+        result = await window.entity.updateDefinition(data)
+      }
+
+      if (result?.success) {
+        handleDefinitionDialogClose()
+        await loadData()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Failed to save definition:', e)
+      alert('An error occurred while saving')
+    }
+  }
+
   const handleQuickAddDomain = () => {
     setQuickAddDomainOpen(true)
   }
@@ -672,6 +730,22 @@ function TechEntityTab() {
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {entity.evoNames.map((name, idx) => (
               <Chip key={idx} label={name} size="small" color="warning" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Refine':
+        return entity.refineNames && entity.refineNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.refineNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="info" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Scenario':
+        return entity.scenarioNames && entity.scenarioNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.scenarioNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="success" />
             ))}
           </Box>
         ) : '-'
@@ -964,6 +1038,33 @@ function TechEntityTab() {
           allEntities={allEntities}
           onClose={handleProblemDialogClose}
           onSave={handleProblemDialogSave}
+          onQuickAddDomain={handleQuickAddDomain}
+        />
+      )}
+
+      {/* Definition Dialog */}
+      {selectedType === 'definition' && (
+        <DefinitionDialog
+          key={definitionDialogOpen ? `${definitionDialogMode}-${selectedDefinition?.id ?? 'new'}` : 'closed'}
+          open={definitionDialogOpen}
+          mode={definitionDialogMode}
+          definition={selectedDefinition ? {
+            id: selectedDefinition.id,
+            name: selectedDefinition.name || '',
+            description: selectedDefinition.description || '',
+            subjectId: selectedDefinition.subjectId || '',
+            aliasIds: selectedDefinition.aliasIds || [],
+            parentIds: selectedDefinition.parentIds || [],
+            relationIds: selectedDefinition.relationIds || [],
+            refineIds: selectedDefinition.refineIds || [],
+            scenarioIds: selectedDefinition.scenarioIds || [],
+            evoIds: selectedDefinition.evoIds || []
+          } : null}
+          mainDomains={mainDomains}
+          subDomains={subDomains}
+          allEntities={allEntities}
+          onClose={handleDefinitionDialogClose}
+          onSave={handleDefinitionDialogSave}
           onQuickAddDomain={handleQuickAddDomain}
         />
       )}
