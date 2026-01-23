@@ -34,6 +34,7 @@ import ViewColumnIcon from '@mui/icons-material/ViewColumn'
 import ObjectDialog from './ObjectDialog'
 import AlgoDialog from './AlgoDialog'
 import ImprovementDialog from './ImprovementDialog'
+import ProblemDialog from './ProblemDialog'
 import QuickAddDomainDialog from './QuickAddDomainDialog'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 
@@ -70,7 +71,7 @@ const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'problem',
     label: 'Problem',
-    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
+    columns: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Domain (Problem)', 'Evolution']
   },
   {
     value: 'definition',
@@ -85,7 +86,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<EntityType, string[]> = {
   algo: ['Name', 'Description', 'Target', 'Expectation', 'Transformation'], // Default: core algo columns
   improvement: ['Name', 'Description', 'Metric', 'Result (String)', 'Result (Number)', 'Origin', 'Advance'], // Default: core improvement columns
   contrib: ['Description', 'Domain'],
-  problem: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations'],
+  problem: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Domain (Problem)', 'Evolution'],
   definition: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations']
 }
 
@@ -117,6 +118,11 @@ interface EntityItem {
   originNames?: string[]
   advanceIds?: string[]
   advanceNames?: string[]
+  // Problem-specific fields
+  domainIds?: string[]
+  domainNames?: string[]
+  evoIds?: string[]
+  evoNames?: string[]
 }
 
 interface SubDomain {
@@ -160,6 +166,9 @@ function TechEntityTab() {
   const [improvementDialogOpen, setImprovementDialogOpen] = useState(false)
   const [improvementDialogMode, setImprovementDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedImprovement, setSelectedImprovement] = useState<EntityItem | null>(null)
+  const [problemDialogOpen, setProblemDialogOpen] = useState(false)
+  const [problemDialogMode, setProblemDialogMode] = useState<'add' | 'edit'>('add')
+  const [selectedProblem, setSelectedProblem] = useState<EntityItem | null>(null)
   const [quickAddDomainOpen, setQuickAddDomainOpen] = useState(false)
   const [columnConfigOpen, setColumnConfigOpen] = useState(false)
 
@@ -277,6 +286,10 @@ function TechEntityTab() {
       setImprovementDialogMode('add')
       setSelectedImprovement(null)
       setImprovementDialogOpen(true)
+    } else if (selectedType === 'problem') {
+      setProblemDialogMode('add')
+      setSelectedProblem(null)
+      setProblemDialogOpen(true)
     } else {
       // TODO: Implement for other types
       console.log('Add entity of type:', selectedType)
@@ -296,6 +309,10 @@ function TechEntityTab() {
       setImprovementDialogMode('edit')
       setSelectedImprovement(entity)
       setImprovementDialogOpen(true)
+    } else if (selectedType === 'problem') {
+      setProblemDialogMode('edit')
+      setSelectedProblem(entity)
+      setProblemDialogOpen(true)
     } else {
       // TODO: Implement for other types
       console.log('Edit entity:', entity)
@@ -316,6 +333,8 @@ function TechEntityTab() {
           result = await window.entity.deleteAlgo(entity.id)
         } else if (selectedType === 'improvement') {
           result = await window.entity.deleteImprovement(entity.id)
+        } else if (selectedType === 'problem') {
+          result = await window.entity.deleteProblem(entity.id)
         } else {
           // TODO: Implement for other types
           console.log('Delete entity:', entity)
@@ -350,6 +369,8 @@ function TechEntityTab() {
             await window.entity.deleteAlgo(id)
           } else if (selectedType === 'improvement') {
             await window.entity.deleteImprovement(id)
+          } else if (selectedType === 'problem') {
+            await window.entity.deleteProblem(id)
           } else {
             // TODO: Implement for other types
             console.log('Delete entity:', id)
@@ -470,6 +491,42 @@ function TechEntityTab() {
       }
     } catch (e) {
       console.error('Failed to save improvement:', e)
+      alert('An error occurred while saving')
+    }
+  }
+
+  const handleProblemDialogClose = () => {
+    setProblemDialogOpen(false)
+    setSelectedProblem(null)
+  }
+
+  const handleProblemDialogSave = async (data: {
+    id?: string
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    domainIds: string[]
+    evoIds: string[]
+  }) => {
+    try {
+      let result
+      if (problemDialogMode === 'add') {
+        result = await window.entity.addProblem(data)
+      } else if (data.id) {
+        result = await window.entity.updateProblem(data)
+      }
+
+      if (result?.success) {
+        handleProblemDialogClose()
+        await loadData()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Failed to save problem:', e)
       alert('An error occurred while saving')
     }
   }
@@ -599,6 +656,22 @@ function TechEntityTab() {
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {entity.advanceNames.map((name, idx) => (
               <Chip key={idx} label={name} size="small" color="success" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Domain (Problem)':
+        return entity.domainNames && entity.domainNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.domainNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="info" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Evolution':
+        return entity.evoNames && entity.evoNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.evoNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="warning" />
             ))}
           </Box>
         ) : '-'
@@ -865,6 +938,32 @@ function TechEntityTab() {
           allEntities={allEntities}
           onClose={handleImprovementDialogClose}
           onSave={handleImprovementDialogSave}
+          onQuickAddDomain={handleQuickAddDomain}
+        />
+      )}
+
+      {/* Problem Dialog */}
+      {selectedType === 'problem' && (
+        <ProblemDialog
+          key={problemDialogOpen ? `${problemDialogMode}-${selectedProblem?.id ?? 'new'}` : 'closed'}
+          open={problemDialogOpen}
+          mode={problemDialogMode}
+          problem={selectedProblem ? {
+            id: selectedProblem.id,
+            name: selectedProblem.name || '',
+            description: selectedProblem.description || '',
+            subjectId: selectedProblem.subjectId || '',
+            aliasIds: selectedProblem.aliasIds || [],
+            parentIds: selectedProblem.parentIds || [],
+            relationIds: selectedProblem.relationIds || [],
+            domainIds: selectedProblem.domainIds || [],
+            evoIds: selectedProblem.evoIds || []
+          } : null}
+          mainDomains={mainDomains}
+          subDomains={subDomains}
+          allEntities={allEntities}
+          onClose={handleProblemDialogClose}
+          onSave={handleProblemDialogSave}
           onQuickAddDomain={handleQuickAddDomain}
         />
       )}

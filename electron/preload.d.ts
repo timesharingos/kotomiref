@@ -74,6 +74,10 @@ interface EntityItem {
   originNames?: string[];
   advanceIds?: string[];
   advanceNames?: string[];
+  domainIds?: string[];
+  domainNames?: string[];
+  evoIds?: string[];
+  evoNames?: string[];
 }
 
 interface AllEntityItem {
@@ -119,6 +123,17 @@ interface ImprovementData {
   relationIds: string[];
   originIds: string[];
   advanceIds: string[];
+}
+
+interface ProblemData {
+  id?: string;
+  name: string;
+  description: string;
+  subjectId: string;
+  aliasIds: string[];
+  parentIds: string[];
+  relationIds: string[];
+  domainIds: string[];
 }
 
 declare global {
@@ -179,6 +194,9 @@ declare global {
       addImprovement: (data: ImprovementData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
       updateImprovement: (data: ImprovementData) => Promise<{ success: boolean; error?: string }>;
       deleteImprovement: (id: string) => Promise<{ success: boolean; error?: string }>;
+      addProblem: (data: ProblemData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
+      updateProblem: (data: ProblemData) => Promise<{ success: boolean; error?: string }>;
+      deleteProblem: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

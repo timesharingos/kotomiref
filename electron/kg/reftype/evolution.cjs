@@ -381,8 +381,20 @@ class ProblemDomain extends kg_interface.InstanceRel {
     }
     static get instance(){return ProblemDomain.#instance}
 }
+class ProblemEvo extends kg_interface.InstanceRel {
+    static #first_create = true
+    static #instance = new ProblemEvo()
+    constructor(){
+        if(!ProblemEvo.#first_create){
+            throw new TypeError("ProblemEvo is not constructable, use ProblemEvo.instance instead.")
+        }
+        ProblemEvo.#first_create = false
+        super("problemEvo", EvoProblem.instance.id, EvoProblem.instance.id)
+    }
+    static get instance(){return ProblemEvo.#instance}
+}
 
-const evoProblemInstanceRel = { ProblemDomain }
+const evoProblemInstanceRel = { ProblemDomain, ProblemEvo }
 
 // definition
 // refine/scenario

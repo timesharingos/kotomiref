@@ -14,7 +14,7 @@ test('collectCommon', () => {
 
 test('collectEvolution', () => {
     const { types, typeRels } = collectTypes(refType.evolutionType) 
-    expect(types.length).toBe(28)
+    expect(types.length).toBe(29)
     expect(typeRels.length).toBe(6)
     expect(typeRels.every((rel) => rel instanceof predefine.constraints.SubConceptOf)).toBeTruthy()
 })
