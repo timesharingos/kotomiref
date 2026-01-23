@@ -53,3 +53,43 @@ contextBridge.exposeInMainWorld(
     }
 )
 
+contextBridge.exposeInMainWorld(
+    'domain',
+    {
+        getAllMain: () => ipcRenderer.invoke("domain:getAllMain"),
+        getAllSub: () => ipcRenderer.invoke("domain:getAllSub"),
+        getSubRelations: () => ipcRenderer.invoke("domain:getSubRelations"),
+        addMain: (data) => ipcRenderer.invoke("domain:addMain", data),
+        updateMain: (data) => ipcRenderer.invoke("domain:updateMain", data),
+        deleteMain: (id) => ipcRenderer.invoke("domain:deleteMain", id),
+        addSub: (data) => ipcRenderer.invoke("domain:addSub", data),
+        updateSub: (data) => ipcRenderer.invoke("domain:updateSub", data),
+        deleteSub: (id) => ipcRenderer.invoke("domain:deleteSub", id)
+    }
+)
+
+contextBridge.exposeInMainWorld(
+    'entity',
+    {
+        getAllByType: (entityType) => ipcRenderer.invoke("entity:getAllByType", entityType),
+        getAll: () => ipcRenderer.invoke("entity:getAll"),
+        addObject: (data) => ipcRenderer.invoke("entity:addObject", data),
+        updateObject: (data) => ipcRenderer.invoke("entity:updateObject", data),
+        deleteObject: (id) => ipcRenderer.invoke("entity:deleteObject", id),
+        addAlgo: (data) => ipcRenderer.invoke("entity:addAlgo", data),
+        updateAlgo: (data) => ipcRenderer.invoke("entity:updateAlgo", data),
+        deleteAlgo: (id) => ipcRenderer.invoke("entity:deleteAlgo", id),
+        addImprovement: (data) => ipcRenderer.invoke("entity:addImprovement", data),
+        updateImprovement: (data) => ipcRenderer.invoke("entity:updateImprovement", data),
+        deleteImprovement: (id) => ipcRenderer.invoke("entity:deleteImprovement", id),
+        addProblem: (data) => ipcRenderer.invoke("entity:addProblem", data),
+        updateProblem: (data) => ipcRenderer.invoke("entity:updateProblem", data),
+        deleteProblem: (id) => ipcRenderer.invoke("entity:deleteProblem", id),
+        addDefinition: (data) => ipcRenderer.invoke("entity:addDefinition", data),
+        updateDefinition: (data) => ipcRenderer.invoke("entity:updateDefinition", data),
+        deleteDefinition: (id) => ipcRenderer.invoke("entity:deleteDefinition", id),
+        addContribution: (data) => ipcRenderer.invoke("entity:addContribution", data),
+        updateContribution: (data) => ipcRenderer.invoke("entity:updateContribution", data),
+        deleteContribution: (id) => ipcRenderer.invoke("entity:deleteContribution", id)
+    }
+)

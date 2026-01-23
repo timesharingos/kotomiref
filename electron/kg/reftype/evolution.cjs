@@ -136,7 +136,7 @@ class EvoContrib extends kg_interface.Concept {
             throw new TypeError("EvoContrib is not constructable, use EvoContrib.instance instead.")
         }
         EvoContrib.#first_create = false
-        super([AttributeEvoDesc.instance.id], "evoContrib")
+        super([AttributeEvoName.instance.id, AttributeEvoDesc.instance.id], "evoContrib")
     }
     static get instance(){return EvoContrib.#instance}
 }
@@ -381,8 +381,20 @@ class ProblemDomain extends kg_interface.InstanceRel {
     }
     static get instance(){return ProblemDomain.#instance}
 }
+class ProblemEvo extends kg_interface.InstanceRel {
+    static #first_create = true
+    static #instance = new ProblemEvo()
+    constructor(){
+        if(!ProblemEvo.#first_create){
+            throw new TypeError("ProblemEvo is not constructable, use ProblemEvo.instance instead.")
+        }
+        ProblemEvo.#first_create = false
+        super("problemEvo", EvoProblem.instance.id, EvoProblem.instance.id)
+    }
+    static get instance(){return ProblemEvo.#instance}
+}
 
-const evoProblemInstanceRel = { ProblemDomain }
+const evoProblemInstanceRel = { ProblemDomain, ProblemEvo }
 
 // definition
 // refine/scenario
@@ -411,8 +423,20 @@ class DefinitionScenario extends kg_interface.InstanceRel {
     }
     static get instance(){return DefinitionScenario.#instance}
 }
+class DefinitionEvo extends kg_interface.InstanceRel {
+    static #first_create = true
+    static #instance = new DefinitionEvo()
+    constructor(){
+        if(!DefinitionEvo.#first_create){
+            throw new TypeError("DefinitionEvo is not constructable, use DefinitionEvo.instance instead.")
+        }
+        DefinitionEvo.#first_create = false
+        super("definitionEvo", EvoDefinition.instance.id, EvoDefinition.instance.id)
+    }
+    static get instance(){return DefinitionEvo.#instance}
+}
 
-const evoDefinitionInstanceRel = { DefinitionRefine, DefinitionScenario }
+const evoDefinitionInstanceRel = { DefinitionRefine, DefinitionScenario, DefinitionEvo }
 
 const evoInstanceRel = { evoEntityInstanceRel, evoObjectInstanceRel, evoAlgoInstaceRel, evoImprovementInstanceRel, evoContribInstanceRel, evoProblemInstanceRel, evoDefinitionInstanceRel }
 

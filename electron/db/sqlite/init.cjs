@@ -140,9 +140,11 @@ function init_db(){
 
     const db = require("better-sqlite3")(db_path)
 
+    // Always enable foreign keys and WAL mode
+    db.pragma('foreign_keys = ON')
+    db.pragma('journal_mode = WAL')
+
     if(is_new){
-        db.pragma('foreign_keys = ON')
-        db.pragma('journal_mode = WAL')
         createTables(db)
     }
 

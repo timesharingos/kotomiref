@@ -14,11 +14,17 @@ function registerAuthorHandlers() {
                 const authorType = signatureType.Author.instance
                 const nodes = db.nodeops.queryNodesByType(authorType.id)
 
-                return nodes.map(node => ({
-                    id: node.id,
-                    name: node.name,
-                    affiliations: [] // Will be populated from relations
-                }))
+                return nodes.map(node => {
+                    // node.attributes is an array of attribute IDs, need to fetch actual AttributeInstance objects
+                    const nameAttrId = node.attributes[0] // First attribute is AuthorName
+                    const nameAttr = nameAttrId ? db.attrops.queryAttrById(nameAttrId) : null
+
+                    return {
+                        id: node.id,
+                        name: nameAttr ? nameAttr.value : node.name,
+                        affiliations: [] // Will be populated from relations
+                    }
+                })
             })
         } catch (e) {
             console.error("Failed to get authors:", e)
@@ -53,8 +59,21 @@ function registerAuthorHandlers() {
                 try {
                     const authorType = signatureType.Author.instance
 
-                    // Create author node
-                    const node = new kg_interface.Node(authorType.id, [], name)
+                    // Create attribute instance for AuthorName
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        signatureType.AttributeSigName.instance.id,
+                        name || ""
+                    )
+
+                    // Store attribute in database first
+                    db.attrops.mergeAttr(nameAttr.toDb())
+
+                    // Create author node with attribute ID
+                    const node = new kg_interface.Node(
+                        authorType.id,
+                        [nameAttr.id], // Pass attribute ID, not object
+                        name
+                    )
                     db.nodeops.mergeNode(node.toDb())
 
                     // Create author-affiliation relations
@@ -97,10 +116,24 @@ function registerAuthorHandlers() {
                         throw new Error("Author not found")
                     }
 
-                    // Update node with new name
+                    // Create new attribute instance
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        signatureType.AttributeSigName.instance.id,
+                        name || ""
+                    )
+
+                    // Delete old attribute
+                    if (existingNode.attributes[0]) {
+                        db.attrops.deleteAttr(existingNode.attributes[0])
+                    }
+
+                    // Store new attribute
+                    db.attrops.mergeAttr(nameAttr.toDb())
+
+                    // Update node with new attribute ID
                     const updatedNode = new kg_interface.Node(
                         existingNode.type,
-                        existingNode.attributes,
+                        [nameAttr.id],
                         name
                     )
                     const nodeDb = updatedNode.toDb()
@@ -150,7 +183,14 @@ function registerAuthorHandlers() {
                     const authorBelongToType = signatureType.AuthorBelongTo.instance
                     db.relops.deleteRelsByFromId(authorBelongToType.id, id)
 
-                    // Delete author node
+                    // Delete author node and its attributes
+                    const node = db.nodeops.queryNodeById(id)
+                    if (node) {
+                        // Delete attributes
+                        for (const attrId of node.attributes) {
+                            db.attrops.deleteAttr(attrId)
+                        }
+                    }
                     db.nodeops.deleteNode(id)
 
                     db.dbops.commit()
