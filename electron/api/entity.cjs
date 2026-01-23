@@ -65,14 +65,23 @@ function registerEntityHandlers() {
                     })
 
                     // Get Entity relations (Subject, Alias, Parent, Relation)
-                    // Find corresponding Entity node by name
-                    const entityConceptType = evolutionType.evoConcepts.EvoEntity.instance
-                    const entityNode = db.nodeops.queryNodeByName(entityConceptType.id, node.name)
+                    // For Contribution, query directly from the node itself
+                    // For other types, find corresponding Entity node by name
+                    let entityNodeId = node.id
+                    if (entityType !== 'contrib') {
+                        const entityConceptType = evolutionType.evoConcepts.EvoEntity.instance
+                        const entityNode = db.nodeops.queryNodeByName(entityConceptType.id, node.name)
+                        if (entityNode) {
+                            entityNodeId = entityNode.id
+                        } else {
+                            entityNodeId = null
+                        }
+                    }
 
-                    if (entityNode) {
+                    if (entityNodeId) {
                         // Get Subject relation
                         const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
-                        const subjectRels = db.relops.queryRelsByFromId(subjectRelType.id, entityNode.id)
+                        const subjectRels = db.relops.queryRelsByFromId(subjectRelType.id, entityNodeId)
                         if (subjectRels.length > 0) {
                             const subjectNode = db.nodeops.queryNodeById(subjectRels[0].to)
                             if (subjectNode) {
@@ -84,7 +93,7 @@ function registerEntityHandlers() {
 
                         // Get Alias relations
                         const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
-                        const aliasRels = db.relops.queryRelsByFromId(aliasRelType.id, entityNode.id)
+                        const aliasRels = db.relops.queryRelsByFromId(aliasRelType.id, entityNodeId)
                         result.aliasIds = aliasRels.map(rel => rel.to)
                         result.aliasNames = aliasRels.map(rel => {
                             const aliasNode = db.nodeops.queryNodeById(rel.to)
@@ -93,7 +102,7 @@ function registerEntityHandlers() {
 
                         // Get Parent relations
                         const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
-                        const parentRels = db.relops.queryRelsByFromId(parentRelType.id, entityNode.id)
+                        const parentRels = db.relops.queryRelsByFromId(parentRelType.id, entityNodeId)
                         result.parentIds = parentRels.map(rel => rel.to)
                         result.parentNames = parentRels.map(rel => {
                             const parentNode = db.nodeops.queryNodeById(rel.to)
@@ -102,7 +111,7 @@ function registerEntityHandlers() {
 
                         // Get Relation relations
                         const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
-                        const relationRels = db.relops.queryRelsByFromId(relationRelType.id, entityNode.id)
+                        const relationRels = db.relops.queryRelsByFromId(relationRelType.id, entityNodeId)
                         result.relationIds = relationRels.map(rel => rel.to)
                         result.relationNames = relationRels.map(rel => {
                             const relationNode = db.nodeops.queryNodeById(rel.to)
@@ -110,10 +119,10 @@ function registerEntityHandlers() {
                         })
 
                         // Get Algo-specific relations if entity type is algo
-                        if (entityType === 'algo') {
+                        if (entityNodeId && entityType === 'algo') {
                             // Get Target relations
                             const targetRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTarget.instance
-                            const targetRels = db.relops.queryRelsByFromId(targetRelType.id, entityNode.id)
+                            const targetRels = db.relops.queryRelsByFromId(targetRelType.id, entityNodeId)
                             result.targetIds = targetRels.map(rel => rel.to)
                             result.targetNames = targetRels.map(rel => {
                                 const targetNode = db.nodeops.queryNodeById(rel.to)
@@ -122,7 +131,7 @@ function registerEntityHandlers() {
 
                             // Get Expectation relations
                             const expectationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoExpectation.instance
-                            const expectationRels = db.relops.queryRelsByFromId(expectationRelType.id, entityNode.id)
+                            const expectationRels = db.relops.queryRelsByFromId(expectationRelType.id, entityNodeId)
                             result.expectationIds = expectationRels.map(rel => rel.to)
                             result.expectationNames = expectationRels.map(rel => {
                                 const expectationNode = db.nodeops.queryNodeById(rel.to)
@@ -131,7 +140,7 @@ function registerEntityHandlers() {
 
                             // Get Transformation relations
                             const transformationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTransformation.instance
-                            const transformationRels = db.relops.queryRelsByFromId(transformationRelType.id, entityNode.id)
+                            const transformationRels = db.relops.queryRelsByFromId(transformationRelType.id, entityNodeId)
                             result.transformationIds = transformationRels.map(rel => rel.to)
                             result.transformationNames = transformationRels.map(rel => {
                                 const transformationNode = db.nodeops.queryNodeById(rel.to)
@@ -140,10 +149,10 @@ function registerEntityHandlers() {
                         }
 
                         // Get Improvement-specific relations if entity type is improvement
-                        if (entityType === 'improvement') {
+                        if (entityNodeId && entityType === 'improvement') {
                             // Get Origin relations
                             const originRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementOrigin.instance
-                            const originRels = db.relops.queryRelsByFromId(originRelType.id, entityNode.id)
+                            const originRels = db.relops.queryRelsByFromId(originRelType.id, entityNodeId)
                             result.originIds = originRels.map(rel => rel.to)
                             result.originNames = originRels.map(rel => {
                                 const originNode = db.nodeops.queryNodeById(rel.to)
@@ -152,7 +161,7 @@ function registerEntityHandlers() {
 
                             // Get Advance relations
                             const advanceRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementAdvance.instance
-                            const advanceRels = db.relops.queryRelsByFromId(advanceRelType.id, entityNode.id)
+                            const advanceRels = db.relops.queryRelsByFromId(advanceRelType.id, entityNodeId)
                             result.advanceIds = advanceRels.map(rel => rel.to)
                             result.advanceNames = advanceRels.map(rel => {
                                 const advanceNode = db.nodeops.queryNodeById(rel.to)
@@ -209,6 +218,45 @@ function registerEntityHandlers() {
                                 const evoNode = db.nodeops.queryNodeById(rel.to)
                                 return evoNode ? evoNode.name : rel.to
                             })
+                        }
+
+                        // Get Contribution-specific relations if entity type is contrib
+                        if (entityType === 'contrib') {
+                            // Get Improvement relations (Contribution -> Improvement)
+                            const improvementRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribImprovement.instance
+                            const improvementRels = db.relops.queryRelsByFromId(improvementRelType.id, node.id)
+                            result.improvementIds = improvementRels.map(rel => rel.to)
+                            result.improvementNames = improvementRels.map(rel => {
+                                const improvementNode = db.nodeops.queryNodeById(rel.to)
+                                return improvementNode ? improvementNode.name : rel.to
+                            })
+
+                            // Get Algo relations (Contribution -> Algo)
+                            const algoRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribAlgo.instance
+                            const algoRels = db.relops.queryRelsByFromId(algoRelType.id, node.id)
+                            result.algoIds = algoRels.map(rel => rel.to)
+                            result.algoNames = algoRels.map(rel => {
+                                const algoNode = db.nodeops.queryNodeById(rel.to)
+                                return algoNode ? algoNode.name : rel.to
+                            })
+
+                            // Get Object relations (Contribution -> Object)
+                            const objectRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribObject.instance
+                            const objectRels = db.relops.queryRelsByFromId(objectRelType.id, node.id)
+                            result.objectIds = objectRels.map(rel => rel.to)
+                            result.objectNames = objectRels.map(rel => {
+                                const objectNode = db.nodeops.queryNodeById(rel.to)
+                                return objectNode ? objectNode.name : rel.to
+                            })
+
+                            // Get SolutionTo relation (Contribution -> Definition) - Single relation
+                            const solutionToRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribSolutionTo.instance
+                            const solutionToRels = db.relops.queryRelsByFromId(solutionToRelType.id, node.id)
+                            if (solutionToRels.length > 0) {
+                                result.solutionToId = solutionToRels[0].to
+                                const solutionToNode = db.nodeops.queryNodeById(solutionToRels[0].to)
+                                result.solutionToName = solutionToNode ? solutionToNode.name : solutionToRels[0].to
+                            }
                         }
                     }
 
@@ -284,6 +332,18 @@ function registerEntityHandlers() {
                         name: node.name,
                         type: 'definition',
                         typeName: 'Scenario'
+                    })
+                })
+
+                // Get all Contribution entities
+                const contribType = evolutionType.evoConcepts.EvoContrib.instance
+                const contribNodes = db.nodeops.queryNodesByType(contribType.id)
+                contribNodes.forEach(node => {
+                    allEntities.push({
+                        id: node.id,
+                        name: node.name,
+                        type: 'contrib',
+                        typeName: 'Contribution'
                     })
                 })
 
@@ -2334,6 +2394,437 @@ function registerEntityHandlers() {
             })
         } catch (e) {
             console.error("Failed to delete definition:", e)
+            return { success: false, error: e.message }
+        }
+    })
+
+    // Add entity (Contribution type)
+    ipcMain.handle("entity:addContribution", async (_ev, data) => {
+        try {
+            const { description, subjectId, aliasIds, parentIds, relationIds, improvementIds, algoIds, objectIds, solutionToId } = data
+            return invokeDb((db) => {
+                db.dbops.begin()
+                try {
+                    // 1. Generate name based on domain and incremental ID
+                    const contribType = evolutionType.evoConcepts.EvoContrib.instance
+
+                    // Get domain name for name generation
+                    let domainName = "unknown"
+                    if (subjectId) {
+                        const domainNode = db.nodeops.queryNodeById(subjectId)
+                        if (domainNode) {
+                            domainName = domainNode.name.toLowerCase().replace(/\s+/g, '_')
+                        }
+                    }
+
+                    // Find the next available ID for this domain
+                    const existingContribs = db.nodeops.queryNodesByType(contribType.id)
+                    const domainContribs = existingContribs.filter(node => {
+                        const namePrefix = `${domainName}_contrib_`
+                        return node.name.startsWith(namePrefix)
+                    })
+
+                    let nextId = 1
+                    if (domainContribs.length > 0) {
+                        const ids = domainContribs.map(node => {
+                            const match = node.name.match(/_contrib_(\d+)$/)
+                            return match ? parseInt(match[1], 10) : 0
+                        })
+                        nextId = Math.max(...ids) + 1
+                    }
+
+                    const generatedName = `${domainName}_contrib_${nextId}`
+
+                    // 2. Create EvoContrib node with attributes
+                    // Create attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoName.instance.id,
+                        generatedName
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoDesc.instance.id,
+                        description || ""
+                    )
+
+                    // Store attributes first
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Create Contribution node
+                    const contribNode = new kg_interface.Node(
+                        contribType.id,
+                        [nameAttr.id, descAttr.id],
+                        generatedName
+                    )
+                    db.nodeops.mergeNode(contribNode.toDb())
+                    const contribNodeId = contribNode.id
+
+                    // 3. Create Entity relations (Subject, Alias, Parent, Relation)
+                    if (subjectId) {
+                        const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                        const subjectRel = new kg_interface.Rel(
+                            subjectRelType.id,
+                            `${contribNodeId}_subject_${subjectId}`,
+                            [],
+                            contribNodeId,
+                            subjectId
+                        )
+                        db.relops.mergeRel(subjectRel.toDb())
+                    }
+
+                    if (aliasIds && aliasIds.length > 0) {
+                        const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                        for (const aliasId of aliasIds) {
+                            const aliasRel = new kg_interface.Rel(
+                                aliasRelType.id,
+                                `${contribNodeId}_alias_${aliasId}`,
+                                [],
+                                contribNodeId,
+                                aliasId
+                            )
+                            db.relops.mergeRel(aliasRel.toDb())
+                        }
+                    }
+
+                    if (parentIds && parentIds.length > 0) {
+                        const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                        for (const parentId of parentIds) {
+                            const parentRel = new kg_interface.Rel(
+                                parentRelType.id,
+                                `${contribNodeId}_parent_${parentId}`,
+                                [],
+                                contribNodeId,
+                                parentId
+                            )
+                            db.relops.mergeRel(parentRel.toDb())
+                        }
+                    }
+
+                    if (relationIds && relationIds.length > 0) {
+                        const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+                        for (const relationId of relationIds) {
+                            const relationRel = new kg_interface.Rel(
+                                relationRelType.id,
+                                `${contribNodeId}_relation_${relationId}`,
+                                [],
+                                contribNodeId,
+                                relationId
+                            )
+                            db.relops.mergeRel(relationRel.toDb())
+                        }
+                    }
+
+                    // 3. Create Contribution-specific relations
+                    // Improvement relations (required)
+                    if (improvementIds && improvementIds.length > 0) {
+                        const improvementRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribImprovement.instance
+                        for (const improvementId of improvementIds) {
+                            const improvementRel = new kg_interface.Rel(
+                                improvementRelType.id,
+                                `${contribNodeId}_improvement_${improvementId}`,
+                                [],
+                                contribNodeId,
+                                improvementId
+                            )
+                            db.relops.mergeRel(improvementRel.toDb())
+                        }
+                    }
+
+                    // Algo relations (optional)
+                    if (algoIds && algoIds.length > 0) {
+                        const algoRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribAlgo.instance
+                        for (const algoId of algoIds) {
+                            const algoRel = new kg_interface.Rel(
+                                algoRelType.id,
+                                `${contribNodeId}_algo_${algoId}`,
+                                [],
+                                contribNodeId,
+                                algoId
+                            )
+                            db.relops.mergeRel(algoRel.toDb())
+                        }
+                    }
+
+                    // Object relations (optional)
+                    if (objectIds && objectIds.length > 0) {
+                        const objectRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribObject.instance
+                        for (const objectId of objectIds) {
+                            const objectRel = new kg_interface.Rel(
+                                objectRelType.id,
+                                `${contribNodeId}_object_${objectId}`,
+                                [],
+                                contribNodeId,
+                                objectId
+                            )
+                            db.relops.mergeRel(objectRel.toDb())
+                        }
+                    }
+
+                    // SolutionTo relation (required, single)
+                    if (solutionToId) {
+                        const solutionToRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribSolutionTo.instance
+                        const solutionToRel = new kg_interface.Rel(
+                            solutionToRelType.id,
+                            `${contribNodeId}_solutionTo_${solutionToId}`,
+                            [],
+                            contribNodeId,
+                            solutionToId
+                        )
+                        db.relops.mergeRel(solutionToRel.toDb())
+                    }
+
+                    db.dbops.commit()
+                    return { success: true, id: contribNodeId }
+                } catch (e) {
+                    db.dbops.rollback()
+                    throw e
+                }
+            })
+        } catch (e) {
+            console.error("Failed to add contribution:", e)
+            return { success: false, error: e.message }
+        }
+    })
+
+    // Update entity (Contribution type)
+    ipcMain.handle("entity:updateContribution", async (_ev, data) => {
+        try {
+            const { id, description, subjectId, aliasIds, parentIds, relationIds, improvementIds, algoIds, objectIds, solutionToId } = data
+            return invokeDb((db) => {
+                db.dbops.begin()
+                try {
+                    // 1. Update EvoContrib node
+                    const existingContribNode = db.nodeops.queryNodeById(id)
+                    if (!existingContribNode) {
+                        throw new Error("Contribution not found")
+                    }
+
+                    // Keep the existing name (auto-generated, should not change)
+                    const existingName = existingContribNode.name
+
+                    // Create new attribute instances
+                    const nameAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoName.instance.id,
+                        existingName
+                    )
+                    const descAttr = new kg_interface.AttributeInstance(
+                        evolutionType.evoAttributes.AttributeEvoDesc.instance.id,
+                        description || ""
+                    )
+
+                    // Delete old attributes first
+                    for (const attrId of existingContribNode.attributes) {
+                        db.attrops.deleteAttr(attrId)
+                    }
+
+                    // Store new attributes
+                    db.attrops.mergeAttr(nameAttr.toDb())
+                    db.attrops.mergeAttr(descAttr.toDb())
+
+                    // Update Contribution node
+                    const contribType = evolutionType.evoConcepts.EvoContrib.instance
+                    const contribNode = new kg_interface.Node(
+                        contribType.id,
+                        [nameAttr.id, descAttr.id],
+                        existingName // Keep the existing auto-generated name
+                    )
+
+                    // Merge updated node
+                    db.nodeops.mergeNode(contribNode.toDb())
+
+                    // 2. Update Entity relations (Subject, Alias, Parent, Relation)
+                    const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                    const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                    const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                    const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+
+                    // Delete old Entity relations
+                    db.relops.deleteRelsByFromId(subjectRelType.id, id)
+                    db.relops.deleteRelsByFromId(aliasRelType.id, id)
+                    db.relops.deleteRelsByFromId(parentRelType.id, id)
+                    db.relops.deleteRelsByFromId(relationRelType.id, id)
+
+                    // Create new Entity relations
+                    if (subjectId) {
+                        const subjectRel = new kg_interface.Rel(
+                            subjectRelType.id,
+                            `${id}_subject_${subjectId}`,
+                            [],
+                            id,
+                            subjectId
+                        )
+                        db.relops.mergeRel(subjectRel.toDb())
+                    }
+
+                    if (aliasIds && aliasIds.length > 0) {
+                        for (const aliasId of aliasIds) {
+                            const aliasRel = new kg_interface.Rel(
+                                aliasRelType.id,
+                                `${id}_alias_${aliasId}`,
+                                [],
+                                id,
+                                aliasId
+                            )
+                            db.relops.mergeRel(aliasRel.toDb())
+                        }
+                    }
+
+                    if (parentIds && parentIds.length > 0) {
+                        for (const parentId of parentIds) {
+                            const parentRel = new kg_interface.Rel(
+                                parentRelType.id,
+                                `${id}_parent_${parentId}`,
+                                [],
+                                id,
+                                parentId
+                            )
+                            db.relops.mergeRel(parentRel.toDb())
+                        }
+                    }
+
+                    if (relationIds && relationIds.length > 0) {
+                        for (const relationId of relationIds) {
+                            const relationRel = new kg_interface.Rel(
+                                relationRelType.id,
+                                `${id}_relation_${relationId}`,
+                                [],
+                                id,
+                                relationId
+                            )
+                            db.relops.mergeRel(relationRel.toDb())
+                        }
+                    }
+
+                    // 3. Update Contribution-specific relations
+                    // Delete old relations
+                    const improvementRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribImprovement.instance
+                    const algoRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribAlgo.instance
+                    const objectRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribObject.instance
+                    const solutionToRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribSolutionTo.instance
+
+                    db.relops.deleteRelsByFromId(improvementRelType.id, id)
+                    db.relops.deleteRelsByFromId(algoRelType.id, id)
+                    db.relops.deleteRelsByFromId(objectRelType.id, id)
+                    db.relops.deleteRelsByFromId(solutionToRelType.id, id)
+
+                    // Create new relations
+                    if (improvementIds && improvementIds.length > 0) {
+                        for (const improvementId of improvementIds) {
+                            const improvementRel = new kg_interface.Rel(
+                                improvementRelType.id,
+                                `${id}_improvement_${improvementId}`,
+                                [],
+                                id,
+                                improvementId
+                            )
+                            db.relops.mergeRel(improvementRel.toDb())
+                        }
+                    }
+
+                    if (algoIds && algoIds.length > 0) {
+                        for (const algoId of algoIds) {
+                            const algoRel = new kg_interface.Rel(
+                                algoRelType.id,
+                                `${id}_algo_${algoId}`,
+                                [],
+                                id,
+                                algoId
+                            )
+                            db.relops.mergeRel(algoRel.toDb())
+                        }
+                    }
+
+                    if (objectIds && objectIds.length > 0) {
+                        for (const objectId of objectIds) {
+                            const objectRel = new kg_interface.Rel(
+                                objectRelType.id,
+                                `${id}_object_${objectId}`,
+                                [],
+                                id,
+                                objectId
+                            )
+                            db.relops.mergeRel(objectRel.toDb())
+                        }
+                    }
+
+                    if (solutionToId) {
+                        const solutionToRel = new kg_interface.Rel(
+                            solutionToRelType.id,
+                            `${id}_solutionTo_${solutionToId}`,
+                            [],
+                            id,
+                            solutionToId
+                        )
+                        db.relops.mergeRel(solutionToRel.toDb())
+                    }
+
+                    db.dbops.commit()
+                    return { success: true }
+                } catch (e) {
+                    db.dbops.rollback()
+                    throw e
+                }
+            })
+        } catch (e) {
+            console.error("Failed to update contribution:", e)
+            return { success: false, error: e.message }
+        }
+    })
+
+    // Delete entity (Contribution type)
+    ipcMain.handle("entity:deleteContribution", async (_ev, id) => {
+        try {
+            return invokeDb((db) => {
+                db.dbops.begin()
+                try {
+                    // 1. Get Contribution node
+                    const contribNode = db.nodeops.queryNodeById(id)
+                    if (!contribNode) {
+                        throw new Error("Contribution not found")
+                    }
+
+                    // 2. Delete all Entity relations
+                    const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                    const aliasRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityAlias.instance
+                    const parentRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityParent.instance
+                    const relationRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntityRelation.instance
+
+                    db.relops.deleteRelsByFromId(subjectRelType.id, id)
+                    db.relops.deleteRelsByFromId(aliasRelType.id, id)
+                    db.relops.deleteRelsByFromId(parentRelType.id, id)
+                    db.relops.deleteRelsByFromId(relationRelType.id, id)
+
+                    // Also delete relations where this contribution is the target
+                    db.relops.deleteRelsByToId(aliasRelType.id, id)
+                    db.relops.deleteRelsByToId(parentRelType.id, id)
+                    db.relops.deleteRelsByToId(relationRelType.id, id)
+
+                    // 3. Delete all Contribution-specific relations
+                    const improvementRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribImprovement.instance
+                    const algoRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribAlgo.instance
+                    const objectRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribObject.instance
+                    const solutionToRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribSolutionTo.instance
+
+                    db.relops.deleteRelsByFromId(improvementRelType.id, id)
+                    db.relops.deleteRelsByFromId(algoRelType.id, id)
+                    db.relops.deleteRelsByFromId(objectRelType.id, id)
+                    db.relops.deleteRelsByFromId(solutionToRelType.id, id)
+
+                    // 4. Delete Contribution node and its attributes
+                    for (const attrId of contribNode.attributes) {
+                        db.attrops.deleteAttr(attrId)
+                    }
+                    db.nodeops.deleteNode(id)
+
+                    db.dbops.commit()
+                    return { success: true }
+                } catch (e) {
+                    db.dbops.rollback()
+                    throw e
+                }
+            })
+        } catch (e) {
+            console.error("Failed to delete contribution:", e)
             return { success: false, error: e.message }
         }
     })

@@ -34,6 +34,7 @@ import ViewColumnIcon from '@mui/icons-material/ViewColumn'
 import ObjectDialog from './ObjectDialog'
 import AlgoDialog from './AlgoDialog'
 import ImprovementDialog from './ImprovementDialog'
+import ContributionDialog from './ContributionDialog'
 import ProblemDialog from './ProblemDialog'
 import DefinitionDialog from './DefinitionDialog'
 import QuickAddDomainDialog from './QuickAddDomainDialog'
@@ -67,7 +68,7 @@ const ENTITY_TYPES: EntityTypeInfo[] = [
   {
     value: 'contrib',
     label: 'Contribution',
-    columns: ['Description', 'Domain']
+    columns: ['Name', 'Description', 'Subject', 'Alias', 'Parent', 'Relations', 'Improvement', 'Algorithm', 'Object', 'Solution To']
   },
   {
     value: 'problem',
@@ -86,7 +87,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<EntityType, string[]> = {
   object: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations'],
   algo: ['Name', 'Description', 'Target', 'Expectation', 'Transformation'], // Default: core algo columns
   improvement: ['Name', 'Description', 'Metric', 'Result (String)', 'Result (Number)', 'Origin', 'Advance'], // Default: core improvement columns
-  contrib: ['Description', 'Domain'],
+  contrib: ['Name', 'Description', 'Subject', 'Alias', 'Parent', 'Relations', 'Improvement', 'Algorithm', 'Object', 'Solution To'],
   problem: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Domain (Problem)', 'Evolution'],
   definition: ['Name', 'Description', 'Domain', 'Alias', 'Parent', 'Relations', 'Refine', 'Scenario', 'Evolution']
 }
@@ -129,6 +130,15 @@ interface EntityItem {
   refineNames?: string[]
   scenarioIds?: string[]
   scenarioNames?: string[]
+  // Contribution-specific fields
+  improvementIds?: string[]
+  improvementNames?: string[]
+  algoIds?: string[]
+  algoNames?: string[]
+  objectIds?: string[]
+  objectNames?: string[]
+  solutionToId?: string
+  solutionToName?: string
 }
 
 interface SubDomain {
@@ -172,6 +182,9 @@ function TechEntityTab() {
   const [improvementDialogOpen, setImprovementDialogOpen] = useState(false)
   const [improvementDialogMode, setImprovementDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedImprovement, setSelectedImprovement] = useState<EntityItem | null>(null)
+  const [contributionDialogOpen, setContributionDialogOpen] = useState(false)
+  const [contributionDialogMode, setContributionDialogMode] = useState<'add' | 'edit'>('add')
+  const [selectedContribution, setSelectedContribution] = useState<EntityItem | null>(null)
   const [problemDialogOpen, setProblemDialogOpen] = useState(false)
   const [problemDialogMode, setProblemDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedProblem, setSelectedProblem] = useState<EntityItem | null>(null)
@@ -295,6 +308,10 @@ function TechEntityTab() {
       setImprovementDialogMode('add')
       setSelectedImprovement(null)
       setImprovementDialogOpen(true)
+    } else if (selectedType === 'contrib') {
+      setContributionDialogMode('add')
+      setSelectedContribution(null)
+      setContributionDialogOpen(true)
     } else if (selectedType === 'problem') {
       setProblemDialogMode('add')
       setSelectedProblem(null)
@@ -322,6 +339,10 @@ function TechEntityTab() {
       setImprovementDialogMode('edit')
       setSelectedImprovement(entity)
       setImprovementDialogOpen(true)
+    } else if (selectedType === 'contrib') {
+      setContributionDialogMode('edit')
+      setSelectedContribution(entity)
+      setContributionDialogOpen(true)
     } else if (selectedType === 'problem') {
       setProblemDialogMode('edit')
       setSelectedProblem(entity)
@@ -350,6 +371,8 @@ function TechEntityTab() {
           result = await window.entity.deleteAlgo(entity.id)
         } else if (selectedType === 'improvement') {
           result = await window.entity.deleteImprovement(entity.id)
+        } else if (selectedType === 'contrib') {
+          result = await window.entity.deleteContribution(entity.id)
         } else if (selectedType === 'problem') {
           result = await window.entity.deleteProblem(entity.id)
         } else if (selectedType === 'definition') {
@@ -388,6 +411,8 @@ function TechEntityTab() {
             await window.entity.deleteAlgo(id)
           } else if (selectedType === 'improvement') {
             await window.entity.deleteImprovement(id)
+          } else if (selectedType === 'contrib') {
+            await window.entity.deleteContribution(id)
           } else if (selectedType === 'problem') {
             await window.entity.deleteProblem(id)
           } else if (selectedType === 'definition') {
@@ -512,6 +537,43 @@ function TechEntityTab() {
       }
     } catch (e) {
       console.error('Failed to save improvement:', e)
+      alert('An error occurred while saving')
+    }
+  }
+
+  const handleContributionDialogClose = () => {
+    setContributionDialogOpen(false)
+    setSelectedContribution(null)
+  }
+
+  const handleContributionDialogSave = async (data: {
+    id?: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    improvementIds: string[]
+    algoIds: string[]
+    objectIds: string[]
+    solutionToId: string
+  }) => {
+    try {
+      let result
+      if (contributionDialogMode === 'add') {
+        result = await window.entity.addContribution(data)
+      } else if (data.id) {
+        result = await window.entity.updateContribution(data)
+      }
+
+      if (result?.success) {
+        handleContributionDialogClose()
+        await loadData()
+      } else {
+        alert(`Failed to save: ${result?.error}`)
+      }
+    } catch (e) {
+      console.error('Failed to save contribution:', e)
       alert('An error occurred while saving')
     }
   }
@@ -646,6 +708,7 @@ function TechEntityTab() {
           </Typography>
         )
       case 'Domain':
+      case 'Subject':
         return entity.subjectName || '-'
       case 'Alias':
         return entity.aliasNames && entity.aliasNames.length > 0 ? (
@@ -748,6 +811,34 @@ function TechEntityTab() {
               <Chip key={idx} label={name} size="small" color="success" />
             ))}
           </Box>
+        ) : '-'
+      case 'Improvement':
+        return entity.improvementNames && entity.improvementNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.improvementNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="primary" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Algorithm':
+        return entity.algoNames && entity.algoNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.algoNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="secondary" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Object':
+        return entity.objectNames && entity.objectNames.length > 0 ? (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {entity.objectNames.map((name, idx) => (
+              <Chip key={idx} label={name} size="small" color="success" />
+            ))}
+          </Box>
+        ) : '-'
+      case 'Solution To':
+        return entity.solutionToName ? (
+          <Chip label={entity.solutionToName} size="small" color="warning" />
         ) : '-'
       default:
         return '-'
@@ -1012,6 +1103,33 @@ function TechEntityTab() {
           allEntities={allEntities}
           onClose={handleImprovementDialogClose}
           onSave={handleImprovementDialogSave}
+          onQuickAddDomain={handleQuickAddDomain}
+        />
+      )}
+
+      {/* Contribution Dialog */}
+      {selectedType === 'contrib' && (
+        <ContributionDialog
+          key={contributionDialogOpen ? `${contributionDialogMode}-${selectedContribution?.id ?? 'new'}` : 'closed'}
+          open={contributionDialogOpen}
+          mode={contributionDialogMode}
+          contribution={selectedContribution ? {
+            id: selectedContribution.id,
+            description: selectedContribution.description || '',
+            subjectId: selectedContribution.subjectId || '',
+            aliasIds: selectedContribution.aliasIds || [],
+            parentIds: selectedContribution.parentIds || [],
+            relationIds: selectedContribution.relationIds || [],
+            improvementIds: selectedContribution.improvementIds || [],
+            algoIds: selectedContribution.algoIds || [],
+            objectIds: selectedContribution.objectIds || [],
+            solutionToId: selectedContribution.solutionToId || ''
+          } : null}
+          mainDomains={mainDomains}
+          subDomains={subDomains}
+          allEntities={allEntities}
+          onClose={handleContributionDialogClose}
+          onSave={handleContributionDialogSave}
           onQuickAddDomain={handleQuickAddDomain}
         />
       )}

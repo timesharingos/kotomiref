@@ -136,7 +136,7 @@ class EvoContrib extends kg_interface.Concept {
             throw new TypeError("EvoContrib is not constructable, use EvoContrib.instance instead.")
         }
         EvoContrib.#first_create = false
-        super([AttributeEvoDesc.instance.id], "evoContrib")
+        super([AttributeEvoName.instance.id, AttributeEvoDesc.instance.id], "evoContrib")
     }
     static get instance(){return EvoContrib.#instance}
 }

@@ -154,6 +154,19 @@ interface DefinitionData {
   evoIds: string[];
 }
 
+interface ContributionData {
+  id?: string;
+  description: string;
+  subjectId: string;
+  aliasIds: string[];
+  parentIds: string[];
+  relationIds: string[];
+  improvementIds: string[];
+  algoIds: string[];
+  objectIds: string[];
+  solutionToId: string;
+}
+
 declare global {
   interface Window {
     dev: {
@@ -218,6 +231,9 @@ declare global {
       addDefinition: (data: DefinitionData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
       updateDefinition: (data: DefinitionData) => Promise<{ success: boolean; error?: string }>;
       deleteDefinition: (id: string) => Promise<{ success: boolean; error?: string }>;
+      addContribution: (data: ContributionData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
+      updateContribution: (data: ContributionData) => Promise<{ success: boolean; error?: string }>;
+      deleteContribution: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

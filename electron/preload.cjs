@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld(
         deleteProblem: (id) => ipcRenderer.invoke("entity:deleteProblem", id),
         addDefinition: (data) => ipcRenderer.invoke("entity:addDefinition", data),
         updateDefinition: (data) => ipcRenderer.invoke("entity:updateDefinition", data),
-        deleteDefinition: (id) => ipcRenderer.invoke("entity:deleteDefinition", id)
+        deleteDefinition: (id) => ipcRenderer.invoke("entity:deleteDefinition", id),
+        addContribution: (data) => ipcRenderer.invoke("entity:addContribution", data),
+        updateContribution: (data) => ipcRenderer.invoke("entity:updateContribution", data),
+        deleteContribution: (id) => ipcRenderer.invoke("entity:deleteContribution", id)
     }
 )
