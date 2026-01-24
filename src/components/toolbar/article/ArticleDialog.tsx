@@ -1505,7 +1505,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                     <Box sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <Chip
-                          label={`#${ref.refNo}`}
+                          label={`#${Math.floor(ref.refNo)}`}
                           size="small"
                           color={ref.refNo === formData.artPrimaryRefEntry ? 'primary' : 'default'}
                         />
@@ -2699,7 +2699,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                         Ref No:
                       </Typography>
                       <Typography variant="body2" fontWeight="bold">
-                        {ref.refNo}
+                        {Math.floor(ref.refNo)}
                       </Typography>
                     </Box>
                     {ref.refIndex && (

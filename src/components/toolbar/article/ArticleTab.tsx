@@ -25,9 +25,11 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import ArticleDialog from './ArticleDialog'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router'
 
 // Article data interface for display
 interface ArticleItem {
@@ -102,6 +104,7 @@ interface Domain {
 }
 
 const ArticleTab = () => {
+  const navigate = useNavigate()
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [filteredArticles, setFilteredArticles] = useState<ArticleItem[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -109,7 +112,7 @@ const ArticleTab = () => {
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null)
   const [domains, setDomains] = useState<Domain[]>([])
-  
+
   // Search criteria state
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
     domain: '',
@@ -545,7 +548,18 @@ const ArticleTab = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          color: 'primary.main',
+                          textDecoration: 'underline'
+                        }
+                      }}
+                      onClick={() => navigate(`/article/${article.id}`)}
+                    >
                       {article.title}
                     </Typography>
                   </TableCell>
@@ -585,8 +599,17 @@ const ArticleTab = () => {
                   <TableCell>
                     <IconButton
                       size="small"
+                      onClick={() => navigate(`/article/${article.id}`)}
+                      color="info"
+                      title="View Details"
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
                       onClick={() => handleEdit(article)}
                       color="primary"
+                      title="Edit"
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
