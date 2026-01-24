@@ -40,21 +40,10 @@ interface Reference {
   refStartPage: number | null
   refEndPage: number | null
   refDoi: string
+  refUrl?: string
   refAbs?: string
-  authors: string[]
+  authors?: string[]
   signatures: ReferenceSignature[]
-}
-
-interface EntityTag {
-  id: string
-  name: string
-  type: 'object' | 'algo' | 'improvement' | 'problem' | 'definition' | 'contrib'
-}
-
-interface Contribution {
-  entityId: string
-  contributionType: 'propose' | 'improve' | 'solve' | 'define' | 'contribute'
-  description: string
 }
 
 interface Article {
@@ -605,7 +594,7 @@ function ArticleDetailPage() {
                 <Chip
                   key={tag.id}
                   label={tag.name}
-                  color={getEntityTypeColor(tag.type) as any}
+                  color={getEntityTypeColor(tag.type) as 'primary' | 'secondary' | 'success' | 'warning' | 'info' | 'error' | 'default'}
                   size="medium"
                 />
               ))}

@@ -275,6 +275,38 @@ function registerEntityHandlers() {
             return invokeDb((db) => {
                 const allEntities = []
 
+                // Helper function to get subjectId for an entity
+                const getSubjectId = (nodeId, entityType) => {
+                    try {
+                        // For contrib, query directly from the node itself
+                        // For other types, find corresponding Entity node by name
+                        let entityNodeId = nodeId
+                        if (entityType !== 'contrib') {
+                            const node = db.nodeops.queryNodeById(nodeId)
+                            if (!node) return null
+
+                            const entityConceptType = evolutionType.evoConcepts.EvoEntity.instance
+                            const entityNode = db.nodeops.queryNodeByName(entityConceptType.id, node.name)
+                            if (entityNode) {
+                                entityNodeId = entityNode.id
+                            } else {
+                                return null
+                            }
+                        }
+
+                        // Get Subject relation
+                        const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
+                        const subjectRels = db.relops.queryRelsByFromId(subjectRelType.id, entityNodeId)
+                        if (subjectRels.length > 0) {
+                            return subjectRels[0].to
+                        }
+                        return null
+                    } catch (e) {
+                        console.error(`Failed to get subjectId for node ${nodeId}:`, e)
+                        return null
+                    }
+                }
+
                 // Get all Object entities
                 const objectType = evolutionType.evoConcepts.EvoObject.instance
                 const objectNodes = db.nodeops.queryNodesByType(objectType.id)
@@ -283,7 +315,8 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'object',
-                        typeName: 'Research Object'
+                        typeName: 'Research Object',
+                        subjectId: getSubjectId(node.id, 'object')
                     })
                 })
 
@@ -295,7 +328,8 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'algo',
-                        typeName: 'Algorithm'
+                        typeName: 'Algorithm',
+                        subjectId: getSubjectId(node.id, 'algo')
                     })
                 })
 
@@ -307,7 +341,8 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'improvement',
-                        typeName: 'Improvement'
+                        typeName: 'Improvement',
+                        subjectId: getSubjectId(node.id, 'improvement')
                     })
                 })
 
@@ -319,7 +354,8 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'problem',
-                        typeName: 'Problem'
+                        typeName: 'Problem',
+                        subjectId: getSubjectId(node.id, 'problem')
                     })
                 })
 
@@ -331,7 +367,8 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'definition',
-                        typeName: 'Scenario'
+                        typeName: 'Scenario',
+                        subjectId: getSubjectId(node.id, 'definition')
                     })
                 })
 
@@ -343,7 +380,8 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'contrib',
-                        typeName: 'Contribution'
+                        typeName: 'Contribution',
+                        subjectId: getSubjectId(node.id, 'contrib')
                     })
                 })
 

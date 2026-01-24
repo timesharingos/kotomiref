@@ -31,6 +31,14 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router'
 
+// Reference interface for type safety
+interface ArticleReference {
+  refNo: number
+  refYear: number | null
+  refPublication: string
+  signatures?: Array<{ authorId: string }>
+}
+
 // Article data interface for display
 interface ArticleItem {
   id: string
@@ -39,8 +47,9 @@ interface ArticleItem {
   year: number | string
   publicationPlatform: string
   path?: string
-  references?: unknown[]
+  references?: ArticleReference[]
   entityTags?: string[]
+  entityTagDetails?: Array<{ id: string; name: string; type: string }>
   contributions?: string[]
   domainId?: string
   domainName?: string
@@ -112,6 +121,8 @@ const ArticleTab = () => {
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null)
   const [domains, setDomains] = useState<Domain[]>([])
+  const [allEntities, setAllEntities] = useState<Array<{ id: string; name: string; type: string; subjectId?: string }>>([])
+  const [allAuthors, setAllAuthors] = useState<Array<{ id: string; name: string }>>([])
 
   // Search criteria state
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
@@ -132,8 +143,13 @@ const ArticleTab = () => {
         const articlesResult = await window.article.getAll()
 
         // Load all authors to create a map
-        const allAuthors = await window.author.getAll()
-        const authorMap = new Map(allAuthors.map((author: { id: string; name: string }) => [author.id, author.name]))
+        const authorsData = await window.author.getAll()
+        const authorMap = new Map(authorsData.map((author: { id: string; name: string }) => [author.id, author.name]))
+        setAllAuthors(authorsData)
+
+        // Load all entities for domain matching
+        const entitiesData = await window.entity.getAll()
+        setAllEntities(entitiesData)
 
         // Transform articles to display format
         const transformedArticles = articlesResult.map((article: {
@@ -164,6 +180,16 @@ const ArticleTab = () => {
               .filter((name: string) => name !== 'Unknown')
           }
 
+          // Get entity tag details with names and types
+          const entityTagDetails = article.entityTags.map(tagId => {
+            const entity = entitiesData.find((e: { id: string; name: string; type: string }) => e.id === tagId)
+            return entity ? {
+              id: entity.id,
+              name: entity.name,
+              type: entity.type
+            } : null
+          }).filter(tag => tag !== null)
+
           return {
             id: article.id,
             title: article.artTitle,
@@ -173,6 +199,7 @@ const ArticleTab = () => {
             path: article.artPath,
             references: article.references,
             entityTags: article.entityTags,
+            entityTagDetails: entityTagDetails,
             contributions: article.contributions
           }
         })
@@ -193,10 +220,117 @@ const ArticleTab = () => {
     loadData()
   }, [])
 
-  // Search handler (placeholder)
+  // Search handler
   const handleSearch = () => {
-    // TODO: Implement search logic
     console.log('Search criteria:', searchCriteria)
+
+    // If all criteria are empty, show all articles
+    if (!searchCriteria.domain && !searchCriteria.title && !searchCriteria.year &&
+        !searchCriteria.author && !searchCriteria.publicationPlatform) {
+      setFilteredArticles(articles)
+      return
+    }
+
+    // Filter articles based on search criteria
+    const filtered = articles.filter((article) => {
+      // 1. Domain filter: check if any entity tag belongs to this domain
+      if (searchCriteria.domain) {
+        const articleEntityIds = [...(article.entityTags || []), ...(article.contributions || [])]
+        const hasMatchingDomain = articleEntityIds.some(entityId => {
+          const entity = allEntities.find(e => e.id === entityId)
+          return entity && entity.subjectId === searchCriteria.domain
+        })
+        if (!hasMatchingDomain) return false
+      }
+
+      // 2. Title filter: check article title (case-insensitive partial match)
+      if (searchCriteria.title) {
+        const titleMatch = article.title.toLowerCase().includes(searchCriteria.title.toLowerCase())
+        if (!titleMatch) return false
+      }
+
+      // 3. Year filter: check any reference year
+      if (searchCriteria.year) {
+        const yearMatch = article.references?.some((ref) => {
+          return ref.refYear && ref.refYear.toString() === searchCriteria.year
+        })
+        if (!yearMatch) return false
+      }
+
+      // 4. Publication Platform filter: check any reference publication (case-insensitive partial match)
+      if (searchCriteria.publicationPlatform) {
+        const pubMatch = article.references?.some((ref) => {
+          return ref.refPublication &&
+                 ref.refPublication.toLowerCase().includes(searchCriteria.publicationPlatform.toLowerCase())
+        })
+        if (!pubMatch) return false
+      }
+
+      // 5. Author filter: check any signature in any reference (case-insensitive partial match)
+      if (searchCriteria.author) {
+        const authorMatch = article.references?.some((ref) => {
+          return ref.signatures?.some((sig) => {
+            const author = allAuthors.find(a => a.id === sig.authorId)
+            return author && author.name.toLowerCase().includes(searchCriteria.author.toLowerCase())
+          })
+        })
+        if (!authorMatch) return false
+      }
+
+      return true
+    })
+
+    // Sort filtered articles
+    const sorted = sortArticles(filtered)
+    setFilteredArticles(sorted)
+  }
+
+  // Sort articles: first by domain (grouped), then by title within each domain group
+  const sortArticles = (articlesToSort: ArticleItem[]) => {
+    // Calculate domain hit rate for each article
+    const articlesWithDomain = articlesToSort.map(article => {
+      const articleEntityIds = [...(article.entityTags || []), ...(article.contributions || [])]
+
+      // Find the most common domain among all entity tags
+      const domainCounts = new Map<string, number>()
+      articleEntityIds.forEach(entityId => {
+        const entity = allEntities.find(e => e.id === entityId)
+        if (entity && entity.subjectId) {
+          domainCounts.set(entity.subjectId, (domainCounts.get(entity.subjectId) || 0) + 1)
+        }
+      })
+
+      // Get the domain with highest count (hit rate)
+      let primaryDomain = ''
+      let maxCount = 0
+      domainCounts.forEach((count, domainId) => {
+        if (count > maxCount) {
+          maxCount = count
+          primaryDomain = domainId
+        }
+      })
+
+      // Get domain name for sorting
+      const domain = domains.find(d => d.id === primaryDomain)
+      const domainName = domain ? domain.name : 'zzz_no_domain' // Put articles without domain at the end
+
+      return {
+        ...article,
+        domainId: primaryDomain,
+        domainName: domainName,
+        domainHitRate: maxCount
+      }
+    })
+
+    // Sort: first by domain name (alphabetically), then by title (alphabetically) within each domain
+    return articlesWithDomain.sort((a, b) => {
+      // First compare domain names
+      const domainCompare = a.domainName.localeCompare(b.domainName)
+      if (domainCompare !== 0) return domainCompare
+
+      // If same domain, compare titles
+      return a.title.localeCompare(b.title)
+    })
   }
 
   // Clear search
@@ -580,13 +714,21 @@ const ArticleTab = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 400 }}>
-                      {article.entityTags && article.entityTags.length > 0 ? (
-                        article.entityTags.map((tagId, index) => (
+                      {article.entityTagDetails && article.entityTagDetails.length > 0 ? (
+                        article.entityTagDetails.map((tag) => (
                           <Chip
-                            key={tagId || index}
-                            label={`Entity ${index + 1}`}
+                            key={tag.id}
+                            label={tag.name}
                             size="small"
-                            color="default"
+                            color={
+                              tag.type === 'object' ? 'primary' :
+                              tag.type === 'algo' ? 'secondary' :
+                              tag.type === 'improvement' ? 'success' :
+                              tag.type === 'problem' ? 'warning' :
+                              tag.type === 'definition' ? 'info' :
+                              'default'
+                            }
+                            variant="outlined"
                           />
                         ))
                       ) : (
