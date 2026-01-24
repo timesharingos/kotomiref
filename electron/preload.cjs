@@ -105,3 +105,14 @@ contextBridge.exposeInMainWorld(
         deleteContribution: (id) => ipcRenderer.invoke("entity:deleteContribution", id)
     }
 )
+
+contextBridge.exposeInMainWorld(
+    'article',
+    {
+        getAll: () => ipcRenderer.invoke("article:getAll"),
+        getById: (id) => ipcRenderer.invoke("article:getById", id),
+        add: (data) => ipcRenderer.invoke("article:add", data),
+        update: (data) => ipcRenderer.invoke("article:update", data),
+        delete: (id) => ipcRenderer.invoke("article:delete", id)
+    }
+)

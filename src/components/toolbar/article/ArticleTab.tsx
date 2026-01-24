@@ -35,13 +35,12 @@ interface ArticleItem {
   id: string
   title: string
   authors: string[]
-  year: number
+  year: number | string
   publicationPlatform: string
-  entityTags: {
-    id: string
-    name: string
-    type: string
-  }[]
+  path?: string
+  references?: any[]
+  entityTags?: string[]
+  contributions?: string[]
   domainId?: string
   domainName?: string
 }
@@ -73,7 +72,7 @@ const ArticleTab = () => {
     publicationPlatform: ''
   })
 
-  const { showConfirm } = useConfirmDialog()
+  const { ConfirmDialogComponent, confirm } = useConfirmDialog()
 
   // Load data
   useEffect(() => {
@@ -82,20 +81,57 @@ const ArticleTab = () => {
 
   const loadData = async () => {
     try {
-      // TODO: Load articles from backend
-      // const result = await window.article.getAll()
-      // setArticles(result)
-      // setFilteredArticles(result)
-      
-      // Load domains for search filter
-      const domainsResult = await window.domain.getAll()
-      setDomains(domainsResult)
-      
-      // Mock data for now
-      setArticles([])
-      setFilteredArticles([])
+      // Load articles from backend
+      const articlesResult = await window.article.getAll()
+
+      // Load all authors to create a map
+      const allAuthors = await window.author.getAll()
+      const authorMap = new Map(allAuthors.map((author: any) => [author.id, author.name]))
+
+      // Transform articles to display format
+      const transformedArticles = articlesResult.map((article: any) => {
+        // Find primary reference
+        let primaryRef = null
+        if (article.artPrimaryRefEntry !== -1 && article.references && article.references.length > 0) {
+          // artPrimaryRefEntry is the refNo, need to find the reference with matching refNo
+          primaryRef = article.references.find((ref: any) => ref.refNo === article.artPrimaryRefEntry)
+        }
+
+        // Get authors from primary reference signatures
+        let authors: string[] = []
+        if (primaryRef && primaryRef.signatures && primaryRef.signatures.length > 0) {
+          // Map author IDs to author names
+          authors = primaryRef.signatures
+            .map((sig: any) => {
+              const authorName = authorMap.get(sig.authorId)
+              return authorName || 'Unknown'
+            })
+            .filter((name: string) => name !== 'Unknown')
+        }
+
+        return {
+          id: article.id,
+          title: article.artTitle,
+          authors: authors,
+          year: primaryRef && primaryRef.refYear !== null && primaryRef.refYear !== -1 ? primaryRef.refYear : '',
+          publicationPlatform: primaryRef && primaryRef.refPublication ? primaryRef.refPublication : '',
+          path: article.artPath,
+          references: article.references,
+          entityTags: article.entityTags,
+          contributions: article.contributions
+        }
+      })
+
+      setArticles(transformedArticles)
+      setFilteredArticles(transformedArticles)
+
+      // Load domains for search filter (load both main and sub domains)
+      const mainDomainsResult = await window.domain.getAllMain()
+      const subDomainsResult = await window.domain.getAllSub()
+      setDomains([...mainDomainsResult, ...subDomainsResult])
     } catch (e) {
       console.error('Failed to load articles:', e)
+      toast.error('Failed to load articles')
     }
   }
 
@@ -155,7 +191,7 @@ const ArticleTab = () => {
       return
     }
 
-    const confirmed = await showConfirm(
+    const confirmed = await confirm(
       'Delete Articles',
       `Are you sure you want to delete ${selectedIds.size} article(s)?`
     )
@@ -374,22 +410,20 @@ const ArticleTab = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 400 }}>
-                      {article.entityTags.map((tag) => (
-                        <Chip
-                          key={tag.id}
-                          label={tag.name}
-                          size="small"
-                          color={
-                            tag.type === 'object' ? 'primary' :
-                            tag.type === 'algo' ? 'secondary' :
-                            tag.type === 'improvement' ? 'success' :
-                            tag.type === 'problem' ? 'warning' :
-                            tag.type === 'definition' ? 'info' :
-                            tag.type === 'contrib' ? 'error' :
-                            'default'
-                          }
-                        />
-                      ))}
+                      {article.entityTags && article.entityTags.length > 0 ? (
+                        article.entityTags.map((tagId, index) => (
+                          <Chip
+                            key={tagId || index}
+                            label={`Entity ${index + 1}`}
+                            size="small"
+                            color="default"
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No tags
+                        </Typography>
+                      )}
                     </Box>
                   </TableCell>
                   <TableCell>
@@ -416,6 +450,9 @@ const ArticleTab = () => {
         onClose={handleDialogClose}
         onSave={handleDialogSave}
       />
+
+      {/* Confirm Dialog */}
+      {ConfirmDialogComponent}
     </Box>
   )
 }

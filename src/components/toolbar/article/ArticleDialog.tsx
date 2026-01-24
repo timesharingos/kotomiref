@@ -879,10 +879,39 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     setActiveStep((prevStep) => prevStep - 1)
   }
 
-  const handleSave = () => {
-    // Final validation and save
-    console.log('Saving article:', formData)
-    onSave(formData)
+  const handleSave = async () => {
+    try {
+      // Prepare article data for saving
+      const articleData = {
+        id: formData.id,
+        artTitle: formData.artTitle,
+        artPath: formData.artPath,
+        artPrimaryRefEntry: formData.artPrimaryRefEntry,
+        references: formData.references,
+        entityTags: formData.entityTags.map((tag: any) => tag.id),
+        contributions: formData.contributions.map((contrib: any) => contrib.id || contrib)
+      }
+
+      let result
+      if (mode === 'add') {
+        // Add new article
+        result = await window.article.add(articleData)
+      } else {
+        // Update existing article
+        result = await window.article.update(articleData)
+      }
+
+      if (result.success) {
+        toast.success(mode === 'add' ? 'Article added successfully' : 'Article updated successfully')
+        onSave(articleData)
+        onClose()
+      } else {
+        toast.error(result.error || 'Failed to save article')
+      }
+    } catch (error) {
+      console.error('Failed to save article:', error)
+      toast.error('Failed to save article')
+    }
   }
 
   // Step 1: Basic Info & File Upload
