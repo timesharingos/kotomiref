@@ -111,6 +111,9 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   const [quickAddDefinitionDialogOpen, setQuickAddDefinitionDialogOpen] = useState(false)
   const [quickAddDomainDialogOpen, setQuickAddDomainDialogOpen] = useState(false)
 
+  // Detailed entities for preview step
+  const [detailedEntities, setDetailedEntities] = useState<{ [key: string]: any }>({})
+
   useEffect(() => {
     if (open) {
       loadData()
@@ -145,6 +148,48 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       setFilePreview(null) // Reset file preview
     }
   }, [open, mode, article])
+
+  // Load detailed entity information for preview step
+  useEffect(() => {
+    const loadDetailedEntities = async () => {
+      if (activeStep !== 4 || formData.contributions.length === 0) {
+        return
+      }
+
+      const entityIds = new Set<string>()
+
+      // Collect all entity IDs from contributions
+      formData.contributions.forEach((contrib: any) => {
+        if (contrib.improvementIds) contrib.improvementIds.forEach((id: string) => entityIds.add(id))
+        if (contrib.algoIds) contrib.algoIds.forEach((id: string) => entityIds.add(id))
+        if (contrib.objectIds) contrib.objectIds.forEach((id: string) => entityIds.add(id))
+        if (contrib.solutionToId) entityIds.add(contrib.solutionToId)
+      })
+
+      // Fetch detailed information for each entity
+      const detailedData: { [key: string]: any } = {}
+
+      for (const id of entityIds) {
+        const entity = allEntities.find(e => e.id === id)
+        if (entity) {
+          try {
+            // Fetch full entity details based on type
+            const entities = await window.entity.getAllByType(entity.type)
+            const fullEntity = entities.find(e => e.id === id)
+            if (fullEntity) {
+              detailedData[id] = fullEntity
+            }
+          } catch (error) {
+            console.error(`Failed to fetch details for entity ${id}:`, error)
+          }
+        }
+      }
+
+      setDetailedEntities(detailedData)
+    }
+
+    loadDetailedEntities()
+  }, [activeStep, formData.contributions, allEntities])
 
   const loadData = async () => {
     try {
@@ -1878,6 +1923,120 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
   // Step 5: Preview & Confirm
   const renderPreviewStep = () => {
+    // Helper function to get entity name by ID
+    const getEntityName = (id: string) => {
+      return detailedEntities[id]?.name || allEntities.find(e => e.id === id)?.name || id
+    }
+
+    // Helper function to get domain name by ID
+    const getDomainName = (id: string) => {
+      const mainDomain = mainDomains.find(d => d.id === id)
+      if (mainDomain) return mainDomain.name
+      const subDomain = subDomains.find(d => d.id === id)
+      if (subDomain) return subDomain.name
+      return id
+    }
+
+    // Component to render entity details card
+    const EntityDetailCard = ({ entityId }: { entityId: string }) => {
+      const entity = detailedEntities[entityId]
+
+      if (!entity) {
+        return (
+          <Box sx={{
+            p: 1.5,
+            bgcolor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 1,
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <Typography variant="body2" color="text.secondary">
+              Loading details for {getEntityName(entityId)}...
+            </Typography>
+          </Box>
+        )
+      }
+
+      return (
+        <Box sx={{
+          p: 1.5,
+          bgcolor: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: 1,
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+            {entity.name || 'Unnamed'}
+          </Typography>
+          {entity.description && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.875rem' }}>
+              {entity.description}
+            </Typography>
+          )}
+          {entity.subjectId && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Domain:</Typography>
+              <Chip label={getDomainName(entity.subjectId)} size="small" variant="outlined" />
+            </Box>
+          )}
+          {entity.metric && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Metric:</Typography>
+              <Typography variant="caption">{entity.metric}</Typography>
+              {entity.metricResultString && (
+                <Typography variant="caption" color="success.main">
+                  → {entity.metricResultString}
+                </Typography>
+              )}
+              {entity.metricResultNumber !== undefined && entity.metricResultNumber !== null && (
+                <Typography variant="caption" color="success.main">
+                  → {entity.metricResultNumber}
+                </Typography>
+              )}
+            </Box>
+          )}
+          {entity.originIds && entity.originIds.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Origin:</Typography>
+              {entity.originIds.map((id: string, idx: number) => (
+                <Chip key={idx} label={getEntityName(id)} size="small" variant="outlined" />
+              ))}
+            </Box>
+          )}
+          {entity.advanceIds && entity.advanceIds.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Advance:</Typography>
+              {entity.advanceIds.map((id: string, idx: number) => (
+                <Chip key={idx} label={getEntityName(id)} size="small" variant="outlined" />
+              ))}
+            </Box>
+          )}
+          {entity.targetIds && entity.targetIds.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Target:</Typography>
+              {entity.targetIds.map((id: string, idx: number) => (
+                <Chip key={idx} label={getEntityName(id)} size="small" variant="outlined" />
+              ))}
+            </Box>
+          )}
+          {entity.expectationIds && entity.expectationIds.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Expectation:</Typography>
+              {entity.expectationIds.map((id: string, idx: number) => (
+                <Chip key={idx} label={getEntityName(id)} size="small" variant="outlined" />
+              ))}
+            </Box>
+          )}
+          {entity.transformationIds && entity.transformationIds.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Transformation:</Typography>
+              {entity.transformationIds.map((id: string, idx: number) => (
+                <Chip key={idx} label={getEntityName(id)} size="small" variant="outlined" />
+              ))}
+            </Box>
+          )}
+        </Box>
+      )
+    }
+
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Typography variant="h6" gutterBottom>
@@ -2281,11 +2440,158 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
             References
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {formData.references.length > 0
-              ? `${formData.references.length} reference(s) added`
-              : 'No references added'}
-          </Typography>
+          {formData.references.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {formData.references.map((ref: any, index: number) => (
+                <Box
+                  key={index}
+                  sx={{
+                    p: 2,
+                    bgcolor: ref.refNo === formData.artPrimaryRefEntry ? 'rgba(76, 175, 80, 0.1)' : 'background.paper',
+                    borderRadius: 1,
+                    border: ref.refNo === formData.artPrimaryRefEntry ? '2px solid #4caf50' : '1px solid #444',
+                    position: 'relative'
+                  }}
+                >
+                  {ref.refNo === formData.artPrimaryRefEntry && (
+                    <Chip
+                      label="PRIMARY"
+                      size="small"
+                      color="success"
+                      sx={{ position: 'absolute', top: 8, right: 8 }}
+                    />
+                  )}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px' }}>
+                        Ref No:
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {ref.refNo}
+                      </Typography>
+                    </Box>
+                    {ref.refIndex && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px' }}>
+                          Index:
+                        </Typography>
+                        <Typography variant="body2">
+                          {ref.refIndex}
+                        </Typography>
+                      </Box>
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px', mt: 0.5 }}>
+                        Title:
+                      </Typography>
+                      <Typography variant="body2" sx={{ flex: 1 }}>
+                        {ref.refTitle || '-'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      {ref.refYear && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Year:
+                          </Typography>
+                          <Typography variant="body2">
+                            {ref.refYear}
+                          </Typography>
+                        </Box>
+                      )}
+                      {ref.refPublication && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Publication:
+                          </Typography>
+                          <Typography variant="body2">
+                            {ref.refPublication}
+                          </Typography>
+                        </Box>
+                      )}
+                      {ref.refVolume && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Volume:
+                          </Typography>
+                          <Typography variant="body2">
+                            {ref.refVolume}
+                          </Typography>
+                        </Box>
+                      )}
+                      {ref.refIssue && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Issue:
+                          </Typography>
+                          <Typography variant="body2">
+                            {ref.refIssue}
+                          </Typography>
+                        </Box>
+                      )}
+                      {(ref.refStartPage || ref.refEndPage) && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Pages:
+                          </Typography>
+                          <Typography variant="body2">
+                            {ref.refStartPage && ref.refEndPage
+                              ? `${ref.refStartPage}-${ref.refEndPage}`
+                              : ref.refStartPage || ref.refEndPage}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                    {ref.refDoi && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px' }}>
+                          DOI:
+                        </Typography>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                          {ref.refDoi}
+                        </Typography>
+                      </Box>
+                    )}
+                    {ref.refUrl && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px' }}>
+                          URL:
+                        </Typography>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                          {ref.refUrl}
+                        </Typography>
+                      </Box>
+                    )}
+                    {ref.signatures && ref.signatures.length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px', mt: 0.5 }}>
+                          Authors:
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', flex: 1 }}>
+                          {ref.signatures.map((sig: any, idx: number) => {
+                            const author = authors.find(a => a.id === sig.authorId)
+                            const affiliation = affiliations.find(aff => aff.id === sig.affiliationId)
+                            return (
+                              <Chip
+                                key={idx}
+                                label={`${author?.name || sig.authorId}${affiliation ? ` (${affiliation.name})` : ''}`}
+                                size="small"
+                                variant="outlined"
+                              />
+                            )
+                          })}
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No references added
+            </Typography>
+          )}
         </Paper>
 
         {/* Entity Tags */}
@@ -2331,72 +2637,76 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                   <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                     Contribution #{index + 1}
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    {contrib.description}
-                  </Typography>
+
+                  {/* Contribution Description */}
+                  <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(33, 150, 243, 0.1)', borderRadius: 1, border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+                    <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block' }}>
+                      Description:
+                    </Typography>
+                    <Typography variant="body2">
+                      {contrib.description || 'No description'}
+                    </Typography>
+                  </Box>
+
+                  {/* Domain */}
+                  {contrib.subjectId && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                        Domain:
+                      </Typography>
+                      <Chip label={getDomainName(contrib.subjectId)} size="small" color="primary" />
+                    </Box>
+                  )}
+
+                  {/* Improvements */}
                   {contrib.improvementIds && contrib.improvementIds.length > 0 && (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Improvements:
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                        Improvements ({contrib.improvementIds.length}):
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {contrib.improvementIds.map((id: string) => (
-                          <Chip
-                            key={id}
-                            label={allEntities.find(e => e.id === id)?.name ?? id}
-                            size="small"
-                            color="success"
-                          />
+                          <EntityDetailCard key={id} entityId={id} />
                         ))}
                       </Box>
                     </Box>
                   )}
+
+                  {/* Algorithms */}
                   {contrib.algoIds && contrib.algoIds.length > 0 && (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Algorithms:
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                        Algorithms ({contrib.algoIds.length}):
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {contrib.algoIds.map((id: string) => (
-                          <Chip
-                            key={id}
-                            label={allEntities.find(e => e.id === id)?.name ?? id}
-                            size="small"
-                            color="secondary"
-                          />
+                          <EntityDetailCard key={id} entityId={id} />
                         ))}
                       </Box>
                     </Box>
                   )}
+
+                  {/* Research Objects */}
                   {contrib.objectIds && contrib.objectIds.length > 0 && (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Research Objects:
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
+                        Research Objects ({contrib.objectIds.length}):
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {contrib.objectIds.map((id: string) => (
-                          <Chip
-                            key={id}
-                            label={allEntities.find(e => e.id === id)?.name ?? id}
-                            size="small"
-                            color="primary"
-                          />
+                          <EntityDetailCard key={id} entityId={id} />
                         ))}
                       </Box>
                     </Box>
                   )}
+
+                  {/* Solution To */}
                   {contrib.solutionToId && (
                     <Box>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block', mb: 1 }}>
                         Solution To:
                       </Typography>
-                      <Box sx={{ mt: 0.5 }}>
-                        <Chip
-                          label={allEntities.find(e => e.id === contrib.solutionToId)?.name ?? contrib.solutionToId}
-                          size="small"
-                          color="info"
-                        />
-                      </Box>
+                      <EntityDetailCard entityId={contrib.solutionToId} />
                     </Box>
                   )}
                 </Box>
