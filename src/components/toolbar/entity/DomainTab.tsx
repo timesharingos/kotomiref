@@ -28,6 +28,7 @@ import DomainDialog from './DomainDialog'
 import MainDomainDialog from './MainDomainDialog'
 import { useAsyncData } from '../../../hooks/useAsyncData'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { toast } from 'react-toastify'
 
 interface MainDomain {
   id: string
@@ -95,7 +96,7 @@ function DomainTab() {
   // Sub-domain handlers
   const handleAddSubDomain = useCallback(() => {
     if (!selectedMainDomainId) {
-      alert('Please select a main domain first')
+      toast.error('Please select a main domain first')
       return
     }
     setDialogMode('add')
@@ -120,18 +121,18 @@ function DomainTab() {
         if (result.success) {
           reload()
         } else {
-          alert(`Failed to delete: ${result.error}`)
+          toast.error(`Failed to delete: ${result.error}`)
         }
       } catch (e) {
         console.error('Delete failed:', e)
-        alert('An error occurred while deleting')
+        toast.error('An error occurred while deleting')
       }
     }
   }, [reload, confirm])
 
   const handleBatchDeleteSubDomains = useCallback(async () => {
     if (selectedIds.size === 0) {
-      alert('Please select sub-domains to delete')
+      toast.error('Please select sub-domains to delete')
       return
     }
     const confirmed = await confirm(
@@ -147,7 +148,7 @@ function DomainTab() {
         reload()
       } catch (e) {
         console.error('Batch delete failed:', e)
-        alert('An error occurred during batch delete')
+        toast.error('An error occurred during batch delete')
       }
     }
   }, [selectedIds, reload, confirm])
@@ -179,11 +180,11 @@ function DomainTab() {
         reload()
         handleDialogClose()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Save failed:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }, [dialogMode, selectedMainDomainId, selectedSubDomain, reload, handleDialogClose])
 
@@ -196,7 +197,7 @@ function DomainTab() {
 
   const handleEditMainDomain = useCallback(() => {
     if (!selectedMainDomainId) {
-      alert('Please select a main domain first')
+      toast.error('Please select a main domain first')
       return
     }
     const mainDomain = mainDomains.find((m: MainDomain) => m.id === selectedMainDomainId)
@@ -209,7 +210,7 @@ function DomainTab() {
 
   const handleDeleteMainDomain = useCallback(async () => {
     if (!selectedMainDomainId) {
-      alert('Please select a main domain first')
+      toast.error('Please select a main domain first')
       return
     }
     const mainDomain = mainDomains.find((m: MainDomain) => m.id === selectedMainDomainId)
@@ -226,11 +227,11 @@ function DomainTab() {
           setSelectedMainDomainId('')
           reload()
         } else {
-          alert(`Failed to delete: ${result.error}`)
+          toast.error(`Failed to delete: ${result.error}`)
         }
       } catch (e) {
         console.error('Delete failed:', e)
-        alert('An error occurred while deleting')
+        toast.error('An error occurred while deleting')
       }
     }
   }, [selectedMainDomainId, mainDomains, subDomains, reload, confirm])
@@ -263,11 +264,11 @@ function DomainTab() {
         reload()
         handleMainDomainDialogClose()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Save failed:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }, [mainDomainDialogMode, selectedMainDomain, reload, handleMainDomainDialogClose])
 

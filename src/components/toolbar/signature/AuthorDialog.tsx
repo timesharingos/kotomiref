@@ -14,6 +14,7 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ClearIcon from '@mui/icons-material/Clear'
+import { toast } from 'react-toastify'
 
 interface Author {
   id: string
@@ -55,7 +56,7 @@ function AuthorDialog({ open, mode, author, availableAffiliations, onClose, onSa
 
   const handleSave = () => {
     if (!name.trim()) {
-      alert('Please enter author name')
+      toast.error('Please enter author name')
       return
     }
     onSave({ name: name.trim(), affiliations: selectedAffiliations })

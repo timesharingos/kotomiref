@@ -20,6 +20,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import AuthorDialog from './AuthorDialog'
+import { toast } from 'react-toastify'
 
 interface Author {
   id: string
@@ -89,18 +90,18 @@ function AuthorTab() {
         if (result.success) {
           await loadData()
         } else {
-          alert(`Failed to delete: ${result.error}`)
+          toast.error(`Failed to delete: ${result.error}`)
         }
       } catch (e) {
         console.error('Delete failed:', e)
-        alert('An error occurred while deleting')
+        toast.error('An error occurred while deleting')
       }
     }
   }
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) {
-      alert('Please select authors to delete')
+      toast.error('Please select authors to delete')
       return
     }
     if (window.confirm(`Are you sure you want to delete ${selectedIds.size} author(s)?`)) {
@@ -112,7 +113,7 @@ function AuthorTab() {
         await loadData()
       } catch (e) {
         console.error('Batch delete failed:', e)
-        alert('An error occurred during batch delete')
+        toast.error('An error occurred during batch delete')
       }
     }
   }
@@ -138,11 +139,11 @@ function AuthorTab() {
         await loadData()
         handleDialogClose()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Save failed:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 

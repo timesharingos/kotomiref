@@ -17,6 +17,7 @@ import {
   Divider
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import { toast } from 'react-toastify'
 
 interface MainDomain {
   id: string
@@ -96,19 +97,19 @@ function ContributionDialog({
   const handleSave = () => {
     const trimmedDescription = description.trim()
     if (!trimmedDescription) {
-      alert('Please enter a description')
+      toast.error('Please enter a description')
       return
     }
     if (!subjectId) {
-      alert('Please select a domain (subject)')
+      toast.error('Please select a domain (subject)')
       return
     }
     if (improvementIds.length === 0) {
-      alert('Please select at least one improvement')
+      toast.error('Please select at least one improvement')
       return
     }
     if (!solutionToId) {
-      alert('Please select a scenario (solution to)')
+      toast.error('Please select a scenario (solution to)')
       return
     }
 

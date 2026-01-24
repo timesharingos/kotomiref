@@ -28,6 +28,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
 import ArticleDialog from './ArticleDialog'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { toast } from 'react-toastify'
 
 // Article data interface
 interface ArticleItem {
@@ -150,7 +151,7 @@ const ArticleTab = () => {
 
   const handleDelete = async () => {
     if (selectedIds.size === 0) {
-      alert('Please select at least one article to delete')
+      toast.error('Please select at least one article to delete')
       return
     }
 
@@ -168,9 +169,10 @@ const ArticleTab = () => {
         console.log('Delete articles:', Array.from(selectedIds))
         setSelectedIds(new Set())
         await loadData()
+        toast.success('Articles deleted successfully')
       } catch (e) {
         console.error('Failed to delete articles:', e)
-        alert('Failed to delete articles')
+        toast.error('Failed to delete articles')
       }
     }
   }
@@ -191,9 +193,10 @@ const ArticleTab = () => {
       console.log('Save article:', data)
       handleDialogClose()
       await loadData()
+      toast.success('Article saved successfully')
     } catch (e) {
       console.error('Failed to save article:', e)
-      alert('Failed to save article')
+      toast.error('Failed to save article')
     }
   }
 

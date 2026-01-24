@@ -13,6 +13,7 @@ import {
   MenuItem,
   Typography
 } from '@mui/material'
+import { toast } from 'react-toastify'
 
 interface Affiliation {
   id: string
@@ -57,20 +58,20 @@ function AffiliationDialog({
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      alert('Please enter affiliation name')
+      toast.error('Please enter affiliation name')
       return
     }
 
     // Prevent circular reference
     if (mode === 'edit' && affiliation && parentId === affiliation.id) {
-      alert('An affiliation cannot be its own parent')
+      toast.error('An affiliation cannot be its own parent')
       return
     }
 
     // Check if setting parent would create a cycle
     if (mode === 'edit' && affiliation && parentId) {
       if (isDescendant(parentId, affiliation.id)) {
-        alert('Cannot set a descendant as parent (would create a cycle)')
+        toast.error('Cannot set a descendant as parent (would create a cycle)')
         return
       }
     }

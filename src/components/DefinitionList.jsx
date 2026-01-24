@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 function DefinitionList() {
     const navigate = useNavigate()
@@ -33,10 +34,10 @@ function DefinitionList() {
             if (result.success) {
                 loadDefinitions()
             } else {
-                alert('Failed to delete definition: ' + result.error)
+                toast.error('Failed to delete definition: ' + result.error)
             }
         } catch (err) {
-            alert('Failed to delete definition: ' + err.message)
+            toast.error('Failed to delete definition: ' + err.message)
         }
     }
 
