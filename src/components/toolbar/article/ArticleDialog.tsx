@@ -15,11 +15,14 @@ import {
   Step,
   StepLabel,
   Paper,
-  CircularProgress
+  CircularProgress,
+  IconButton
 } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
 import * as pdfjsLib from 'pdfjs-dist'
 // @ts-ignore
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
@@ -33,6 +36,12 @@ import 'react-toastify/dist/ReactToastify.css'
 import SignatureDialog from './SignatureDialog'
 import QuickAddAuthorDialog from './QuickAddAuthorDialog'
 import QuickAddAffiliationDialog from './QuickAddAffiliationDialog'
+import QuickAddContributionDialog from './QuickAddContributionDialog'
+import QuickAddImprovementDialog from './QuickAddImprovementDialog'
+import QuickAddAlgoDialog from './QuickAddAlgoDialog'
+import QuickAddObjectDialog from './QuickAddObjectDialog'
+import QuickAddDefinitionDialog from './QuickAddDefinitionDialog'
+import QuickAddDomainDialog from './QuickAddDomainDialog'
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
@@ -45,7 +54,7 @@ interface ArticleDialogProps {
   onSave: (data: any) => void
 }
 
-const steps = ['Basic Info & Upload', 'References', 'Entity Tags', 'Preview & Confirm']
+const steps = ['Basic Info & Upload', 'References', 'Entity Tags', 'Contributions', 'Preview & Confirm']
 
 const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogProps) => {
   const [activeStep, setActiveStep] = useState(0)
@@ -57,7 +66,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     artPrimaryRefEntry: null as number | null,
     file: null as File | null,
     references: [] as any[],
-    entityTags: [] as any[]
+    entityTags: [] as any[],
+    contributions: [] as any[]
   })
 
   // Current reference being edited
@@ -77,6 +87,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   })
 
   const [allEntities, setAllEntities] = useState<any[]>([])
+  const [mainDomains, setMainDomains] = useState<any[]>([])
+  const [subDomains, setSubDomains] = useState<any[]>([])
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false)
   const [textContent, setTextContent] = useState<string>('')  // 文本文件内容
@@ -92,6 +104,12 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   // Quick add dialogs
   const [quickAddAuthorDialogOpen, setQuickAddAuthorDialogOpen] = useState(false)
   const [quickAddAffiliationDialogOpen, setQuickAddAffiliationDialogOpen] = useState(false)
+  const [quickAddContributionDialogOpen, setQuickAddContributionDialogOpen] = useState(false)
+  const [quickAddImprovementDialogOpen, setQuickAddImprovementDialogOpen] = useState(false)
+  const [quickAddAlgoDialogOpen, setQuickAddAlgoDialogOpen] = useState(false)
+  const [quickAddObjectDialogOpen, setQuickAddObjectDialogOpen] = useState(false)
+  const [quickAddDefinitionDialogOpen, setQuickAddDefinitionDialogOpen] = useState(false)
+  const [quickAddDomainDialogOpen, setQuickAddDomainDialogOpen] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -104,7 +122,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           artPrimaryRefEntry: article.artPrimaryRefEntry || null,
           file: null,
           references: article.references || [],
-          entityTags: article.entityTags || []
+          entityTags: article.entityTags || [],
+          contributions: article.contributions || []
         })
         // Load file preview if artPath exists
         if (article.artPath) {
@@ -118,7 +137,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           artPrimaryRefEntry: null,
           file: null,
           references: [],
-          entityTags: []
+          entityTags: [],
+          contributions: []
         })
       }
       setActiveStep(0) // Reset to first step when dialog opens
@@ -133,12 +153,16 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       setAllEntities(entitiesResult)
 
       // Load authors and affiliations for signature management
-      const [authorsResult, affiliationsResult] = await Promise.all([
+      const [authorsResult, affiliationsResult, mainDomainsResult, subDomainsResult] = await Promise.all([
         window.author.getAll(),
-        window.affiliation.getAll()
+        window.affiliation.getAll(),
+        window.domain.getAllMain(),
+        window.domain.getAllSub()
       ])
       setAuthors(authorsResult)
       setAffiliations(affiliationsResult)
+      setMainDomains(mainDomainsResult)
+      setSubDomains(subDomainsResult)
     } catch (e) {
       console.error('Failed to load data:', e)
     }
@@ -516,6 +540,263 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     }
   }
 
+  // Quick add entity handlers
+  const handleSaveQuickImprovement = async (data: {
+    name: string
+    description: string
+    subjectId: string
+    metric: string
+    metricResultString: string
+    metricResultNumber: number | null
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    originIds: string[]
+    advanceIds: string[]
+  }) => {
+    try {
+      const result = await window.entity.addImprovement({
+        name: data.name,
+        description: data.description,
+        subjectId: data.subjectId,
+        metric: data.metric,
+        metricResultString: data.metricResultString,
+        metricResultNumber: data.metricResultNumber || undefined,
+        aliasIds: data.aliasIds,
+        parentIds: data.parentIds,
+        relationIds: data.relationIds,
+        originIds: data.originIds,
+        advanceIds: data.advanceIds
+      })
+      if (result.success) {
+        setQuickAddImprovementDialogOpen(false)
+        toast.success('Improvement added successfully')
+        // Reload entities
+        const entitiesResult = await window.entity.getAll()
+        setAllEntities(entitiesResult)
+      } else {
+        toast.error(result.error || 'Failed to add improvement')
+      }
+    } catch (error) {
+      console.error('Failed to add improvement:', error)
+      toast.error('Failed to add improvement')
+    }
+  }
+
+  const handleSaveQuickAlgo = async (data: {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    targetIds: string[]
+    expectationIds: string[]
+    transformationIds: string[]
+  }) => {
+    try {
+      const result = await window.entity.addAlgo({
+        name: data.name,
+        description: data.description,
+        subjectId: data.subjectId,
+        aliasIds: data.aliasIds,
+        parentIds: data.parentIds,
+        relationIds: data.relationIds,
+        targetIds: data.targetIds,
+        expectationIds: data.expectationIds,
+        transformationIds: data.transformationIds
+      })
+      if (result.success) {
+        setQuickAddAlgoDialogOpen(false)
+        toast.success('Algorithm added successfully')
+        // Reload entities
+        const entitiesResult = await window.entity.getAll()
+        setAllEntities(entitiesResult)
+      } else {
+        toast.error(result.error || 'Failed to add algorithm')
+      }
+    } catch (error) {
+      console.error('Failed to add algorithm:', error)
+      toast.error('Failed to add algorithm')
+    }
+  }
+
+  const handleSaveQuickObject = async (data: {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+  }) => {
+    try {
+      const result = await window.entity.addObject({
+        name: data.name,
+        description: data.description,
+        subjectId: data.subjectId,
+        aliasIds: data.aliasIds,
+        parentIds: data.parentIds,
+        relationIds: data.relationIds
+      })
+      if (result.success) {
+        setQuickAddObjectDialogOpen(false)
+        toast.success('Research object added successfully')
+        // Reload entities
+        const entitiesResult = await window.entity.getAll()
+        setAllEntities(entitiesResult)
+      } else {
+        toast.error(result.error || 'Failed to add research object')
+      }
+    } catch (error) {
+      console.error('Failed to add research object:', error)
+      toast.error('Failed to add research object')
+    }
+  }
+
+  const handleSaveQuickDefinition = async (data: {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    refineIds: string[]
+    scenarioIds: string[]
+    evoIds: string[]
+  }) => {
+    try {
+      const result = await window.entity.addDefinition({
+        name: data.name,
+        description: data.description,
+        subjectId: data.subjectId,
+        aliasIds: data.aliasIds,
+        parentIds: data.parentIds,
+        relationIds: data.relationIds,
+        refineIds: data.refineIds,
+        scenarioIds: data.scenarioIds,
+        evoIds: data.evoIds
+      })
+      if (result.success) {
+        setQuickAddDefinitionDialogOpen(false)
+        toast.success('Definition added successfully')
+        // Reload entities
+        const entitiesResult = await window.entity.getAll()
+        setAllEntities(entitiesResult)
+      } else {
+        toast.error(result.error || 'Failed to add definition')
+      }
+    } catch (error) {
+      console.error('Failed to add definition:', error)
+      toast.error('Failed to add definition')
+    }
+  }
+
+  const handleSaveQuickDomain = async (data: {
+    name: string
+    description: string
+    type: 'main' | 'sub'
+    mainDomainId?: string
+  }) => {
+    try {
+      if (data.type === 'main') {
+        const result = await window.domain.addMain({
+          name: data.name,
+          desc: data.description
+        })
+        if (result.success) {
+          setQuickAddDomainDialogOpen(false)
+          toast.success('Main domain added successfully')
+          // Reload domains
+          const [mainDomainsResult, subDomainsResult] = await Promise.all([
+            window.domain.getAllMain(),
+            window.domain.getAllSub()
+          ])
+          setMainDomains(mainDomainsResult)
+          setSubDomains(subDomainsResult)
+        } else {
+          toast.error(result.error || 'Failed to add main domain')
+        }
+      } else {
+        const result = await window.domain.addSub({
+          name: data.name,
+          desc: data.description,
+          mainDomainId: data.mainDomainId!
+        })
+        if (result.success) {
+          setQuickAddDomainDialogOpen(false)
+          toast.success('Sub domain added successfully')
+          // Reload domains
+          const [mainDomainsResult, subDomainsResult] = await Promise.all([
+            window.domain.getAllMain(),
+            window.domain.getAllSub()
+          ])
+          setMainDomains(mainDomainsResult)
+          setSubDomains(subDomainsResult)
+        } else {
+          toast.error(result.error || 'Failed to add sub domain')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add domain:', error)
+      toast.error('Failed to add domain')
+    }
+  }
+
+  const handleSaveQuickContribution = async (data: {
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    improvementIds: string[]
+    algoIds: string[]
+    objectIds: string[]
+    solutionToId: string
+  }) => {
+    try {
+      const result = await window.entity.addContribution({
+        description: data.description,
+        subjectId: data.subjectId,
+        aliasIds: data.aliasIds,
+        parentIds: data.parentIds,
+        relationIds: data.relationIds,
+        improvementIds: data.improvementIds,
+        algoIds: data.algoIds,
+        objectIds: data.objectIds,
+        solutionToId: data.solutionToId
+      })
+      if (result.success && result.id) {
+        setQuickAddContributionDialogOpen(false)
+        toast.success('Contribution added successfully')
+        // Add to contributions list
+        const newContribution = {
+          id: result.id,
+          description: data.description,
+          subjectId: data.subjectId,
+          aliasIds: data.aliasIds,
+          parentIds: data.parentIds,
+          relationIds: data.relationIds,
+          improvementIds: data.improvementIds,
+          algoIds: data.algoIds,
+          objectIds: data.objectIds,
+          solutionToId: data.solutionToId
+        }
+        setFormData({
+          ...formData,
+          contributions: [...formData.contributions, newContribution]
+        })
+        // Reload entities
+        const entitiesResult = await window.entity.getAll()
+        setAllEntities(entitiesResult)
+      } else {
+        toast.error(result.error || 'Failed to add contribution')
+      }
+    } catch (error) {
+      console.error('Failed to add contribution:', error)
+      toast.error('Failed to add contribution')
+    }
+  }
+
   const handleSetPrimary = (refNo: number) => {
     setFormData({
       ...formData,
@@ -619,7 +900,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
           {/* File Preview */}
           {filePreview && !pdfPreviewLoading && (
-            <Paper sx={{ p: 2, bgcolor: 'grey.50', mt: 2 }}>
+            <Paper sx={{ p: 2, bgcolor: 'background.paper', mt: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
                 File Preview
               </Typography>
@@ -634,7 +915,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : filePreview === 'pdf-preview-error' ? (
                 // PDF preview error
-                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', border: '1px solid #f44336' }}>
+                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                   <Typography variant="body2" color="error">
                     ❌ Failed to load PDF preview
                   </Typography>
@@ -644,7 +925,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : filePreview === 'text-preview' ? (
                 // Text file preview (txt, md)
-                <Box sx={{ p: 2, bgcolor: 'white', border: '1px solid #e0e0e0', borderRadius: 1, maxHeight: 400, overflow: 'auto' }}>
+                <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid #444', borderRadius: 1, maxHeight: 400, overflow: 'auto' }}>
                   <Typography variant="caption" color="text.secondary" gutterBottom>
                     📝 Text Content:
                   </Typography>
@@ -653,9 +934,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                     fontFamily: 'monospace',
                     fontSize: '0.875rem',
                     whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    color: '#000000',
-                    backgroundColor: '#ffffff'
+                    wordBreak: 'break-word'
                   }}>
                     {textContent.length > 0 ? (
                       <>
@@ -675,7 +954,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : filePreview === 'text-preview-error' ? (
                 // Text preview error
-                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', border: '1px solid #f44336' }}>
+                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                   <Typography variant="body2" color="error">
                     ❌ Failed to load text preview
                   </Typography>
@@ -687,8 +966,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 // Markdown file preview
                 <Box sx={{
                   p: 3,
-                  bgcolor: 'white',
-                  border: '1px solid #e0e0e0',
+                  bgcolor: 'background.paper',
+                  border: '1px solid #444',
                   borderRadius: 1,
                   maxHeight: 400,
                   overflow: 'auto',
@@ -829,7 +1108,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : filePreview === 'markdown-preview-error' ? (
                 // Markdown preview error
-                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', border: '1px solid #f44336' }}>
+                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                   <Typography variant="body2" color="error">
                     ❌ Failed to load Markdown preview
                   </Typography>
@@ -841,8 +1120,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 // Word document preview
                 <Box sx={{
                   p: 3,
-                  bgcolor: 'white',
-                  border: '1px solid #e0e0e0',
+                  bgcolor: 'background.paper',
+                  border: '1px solid #444',
                   borderRadius: 1,
                   maxHeight: 400,
                   overflow: 'auto',
@@ -960,7 +1239,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : filePreview === 'word-preview-error' ? (
                 // Word preview error
-                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', border: '1px solid #f44336' }}>
+                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                   <Typography variant="body2" color="error">
                     ❌ Failed to load Word document preview
                   </Typography>
@@ -970,7 +1249,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : (
                 // File path display
-                <Box sx={{ p: 2, bgcolor: 'white', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid #444', borderRadius: 1 }}>
                   <Typography variant="caption" color="text.secondary">
                     File Path:
                   </Typography>
@@ -1380,7 +1659,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         />
 
         {formData.entityTags.length > 0 && (
-          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+          <Paper sx={{ p: 2, bgcolor: 'background.paper' }}>
             <Typography variant="subtitle2" gutterBottom>
               Selected Entity Tags ({formData.entityTags.length})
             </Typography>
@@ -1408,7 +1687,196 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     )
   }
 
-  // Step 4: Preview & Confirm
+  // Step 4: Contributions
+  const renderContributionsStep = () => {
+    const getEntityName = (id: string) => {
+      return allEntities.find(e => e.id === id)?.name ?? id
+    }
+
+    const handleRemoveContribution = (index: number) => {
+      const newContributions = formData.contributions.filter((_, i) => i !== index)
+      setFormData({ ...formData, contributions: newContributions })
+    }
+
+    // Get all contribution entities
+    const allContributions = allEntities.filter(e => e.type === 'contrib')
+
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Contributions
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Select existing contributions or create new ones. Each contribution can include improvements, algorithms, research objects, and a definition it solves.
+        </Typography>
+
+        {/* Autocomplete for selecting existing contributions */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+          <Autocomplete
+            sx={{ flexGrow: 1 }}
+            options={allContributions.filter(c => !formData.contributions.find(fc => fc.id === c.id))}
+            getOptionLabel={(option) => option.name || 'Unnamed Contribution'}
+            onChange={async (_, value) => {
+              if (value) {
+                // Fetch full contribution details
+                try {
+                  const contributions = await window.entity.getAllByType('contrib')
+                  const fullContribution = contributions.find(c => c.id === value.id)
+                  if (fullContribution) {
+                    // Add the full contribution to the list
+                    setFormData({
+                      ...formData,
+                      contributions: [...formData.contributions, fullContribution]
+                    })
+                  } else {
+                    // Fallback: add the basic info if full details not found
+                    setFormData({
+                      ...formData,
+                      contributions: [...formData.contributions, value]
+                    })
+                  }
+                } catch (error) {
+                  console.error('Failed to fetch contribution details:', error)
+                  toast.error('Failed to load contribution details')
+                }
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Contribution"
+                placeholder="Search for existing contributions..."
+              />
+            )}
+            value={null}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setQuickAddContributionDialogOpen(true)}
+            sx={{ minWidth: '150px', height: '56px' }}
+          >
+            Quick Add
+          </Button>
+        </Box>
+
+        {/* Contributions List */}
+        {formData.contributions.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {formData.contributions.map((contrib, index) => (
+              <Paper key={index} sx={{ p: 2, bgcolor: '#2a2a2a', border: '1px solid #444' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Contribution #{index + 1}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemoveContribution(index)}
+                    sx={{ color: '#ff6b6b' }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {/* Description */}
+                  <Box>
+                    <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                      Description:
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {contrib.description}
+                    </Typography>
+                  </Box>
+
+                  {/* Improvements */}
+                  {contrib.improvementIds && contrib.improvementIds.length > 0 && (
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                        Improvements ({contrib.improvementIds.length}):
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {contrib.improvementIds.map((id: string) => (
+                          <Chip
+                            key={id}
+                            label={getEntityName(id)}
+                            size="small"
+                            color="success"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Algorithms */}
+                  {contrib.algoIds && contrib.algoIds.length > 0 && (
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                        Algorithms ({contrib.algoIds.length}):
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {contrib.algoIds.map((id: string) => (
+                          <Chip
+                            key={id}
+                            label={getEntityName(id)}
+                            size="small"
+                            color="secondary"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Research Objects */}
+                  {contrib.objectIds && contrib.objectIds.length > 0 && (
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                        Research Objects ({contrib.objectIds.length}):
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {contrib.objectIds.map((id: string) => (
+                          <Chip
+                            key={id}
+                            label={getEntityName(id)}
+                            size="small"
+                            color="primary"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Solution To (Definition) */}
+                  {contrib.solutionToId && (
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                        Solution To:
+                      </Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        <Chip
+                          label={getEntityName(contrib.solutionToId)}
+                          size="small"
+                          color="info"
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+            ))}
+          </Box>
+        ) : (
+          <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper' }}>
+            <Typography variant="body2" color="text.secondary">
+              No contributions added yet. Click "Add Contribution" to get started.
+            </Typography>
+          </Paper>
+        )}
+      </Box>
+    )
+  }
+
+  // Step 5: Preview & Confirm
   const renderPreviewStep = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1463,7 +1931,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               </Box>
             ) : filePreview === 'pdf-preview-error' ? (
               // PDF preview error
-              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'white', border: '1px solid #f44336' }}>
+              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                 <Typography variant="body2" color="error">
                   ❌ Failed to load PDF preview
                 </Typography>
@@ -1473,7 +1941,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               </Box>
             ) : filePreview === 'text-preview' ? (
               // Text file preview (txt, md)
-              <Box sx={{ p: 2, bgcolor: 'white', border: '1px solid #e0e0e0', borderRadius: 1, maxHeight: 300, overflow: 'auto' }}>
+              <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid #444', borderRadius: 1, maxHeight: 300, overflow: 'auto' }}>
                 <Typography variant="caption" color="text.secondary" gutterBottom>
                   📝 Text Content:
                 </Typography>
@@ -1504,7 +1972,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               </Box>
             ) : filePreview === 'text-preview-error' ? (
               // Text preview error
-              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'white', border: '1px solid #f44336' }}>
+              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                 <Typography variant="body2" color="error">
                   ❌ Failed to load text preview
                 </Typography>
@@ -1516,8 +1984,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               // Markdown file preview
               <Box sx={{
                 p: 3,
-                bgcolor: 'white',
-                border: '1px solid #e0e0e0',
+                bgcolor: 'background.paper',
+                border: '1px solid #444',
                 borderRadius: 1,
                 maxHeight: 300,
                 overflow: 'auto',
@@ -1659,7 +2127,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               </Box>
             ) : filePreview === 'markdown-preview-error' ? (
               // Markdown preview error
-              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'white', border: '1px solid #f44336' }}>
+              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                 <Typography variant="body2" color="error">
                   ❌ Failed to load Markdown preview
                 </Typography>
@@ -1671,8 +2139,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               // Word document preview
               <Box sx={{
                 p: 3,
-                bgcolor: 'white',
-                border: '1px solid #e0e0e0',
+                bgcolor: 'background.paper',
+                border: '1px solid #444',
                 borderRadius: 1,
                 maxHeight: 300,
                 overflow: 'auto',
@@ -1791,7 +2259,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               </Box>
             ) : filePreview === 'word-preview-error' ? (
               // Word preview error
-              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'white', border: '1px solid #f44336' }}>
+              <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'background.paper', border: '1px solid #f44336' }}>
                 <Typography variant="body2" color="error">
                   ❌ Failed to load Word document preview
                 </Typography>
@@ -1850,6 +2318,96 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
             </Typography>
           )}
         </Paper>
+
+        {/* Contributions */}
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+            Contributions
+          </Typography>
+          {formData.contributions.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {formData.contributions.map((contrib: any, index: number) => (
+                <Box key={index} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #444' }}>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                    Contribution #{index + 1}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    {contrib.description}
+                  </Typography>
+                  {contrib.improvementIds && contrib.improvementIds.length > 0 && (
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Improvements:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                        {contrib.improvementIds.map((id: string) => (
+                          <Chip
+                            key={id}
+                            label={allEntities.find(e => e.id === id)?.name ?? id}
+                            size="small"
+                            color="success"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                  {contrib.algoIds && contrib.algoIds.length > 0 && (
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Algorithms:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                        {contrib.algoIds.map((id: string) => (
+                          <Chip
+                            key={id}
+                            label={allEntities.find(e => e.id === id)?.name ?? id}
+                            size="small"
+                            color="secondary"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                  {contrib.objectIds && contrib.objectIds.length > 0 && (
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Research Objects:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                        {contrib.objectIds.map((id: string) => (
+                          <Chip
+                            key={id}
+                            label={allEntities.find(e => e.id === id)?.name ?? id}
+                            size="small"
+                            color="primary"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                  {contrib.solutionToId && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Solution To:
+                      </Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        <Chip
+                          label={allEntities.find(e => e.id === contrib.solutionToId)?.name ?? contrib.solutionToId}
+                          size="small"
+                          color="info"
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No contributions added
+            </Typography>
+          )}
+        </Paper>
       </Box>
     )
   }
@@ -1891,7 +2449,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           {activeStep === 0 && renderBasicInfoStep()}
           {activeStep === 1 && renderReferencesStep()}
           {activeStep === 2 && renderEntityTagsStep()}
-          {activeStep === 3 && renderPreviewStep()}
+          {activeStep === 3 && renderContributionsStep()}
+          {activeStep === 4 && renderPreviewStep()}
         </Box>
       </DialogContent>
       <DialogActions>
@@ -1947,6 +2506,73 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         affiliations={affiliations}
         onClose={() => setQuickAddAffiliationDialogOpen(false)}
         onSave={handleSaveQuickAffiliation}
+      />
+
+      {/* Quick Add Contribution Dialog */}
+      <QuickAddContributionDialog
+        open={quickAddContributionDialogOpen}
+        allEntities={allEntities}
+        mainDomains={mainDomains}
+        subDomains={subDomains}
+        onClose={() => setQuickAddContributionDialogOpen(false)}
+        onSave={handleSaveQuickContribution}
+        onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
+        onQuickAddImprovement={() => setQuickAddImprovementDialogOpen(true)}
+        onQuickAddAlgo={() => setQuickAddAlgoDialogOpen(true)}
+        onQuickAddObject={() => setQuickAddObjectDialogOpen(true)}
+        onQuickAddDefinition={() => setQuickAddDefinitionDialogOpen(true)}
+      />
+
+      {/* Quick Add Improvement Dialog */}
+      <QuickAddImprovementDialog
+        open={quickAddImprovementDialogOpen}
+        allEntities={allEntities}
+        mainDomains={mainDomains}
+        subDomains={subDomains}
+        onClose={() => setQuickAddImprovementDialogOpen(false)}
+        onSave={handleSaveQuickImprovement}
+        onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
+      />
+
+      {/* Quick Add Algo Dialog */}
+      <QuickAddAlgoDialog
+        open={quickAddAlgoDialogOpen}
+        allEntities={allEntities}
+        mainDomains={mainDomains}
+        subDomains={subDomains}
+        onClose={() => setQuickAddAlgoDialogOpen(false)}
+        onSave={handleSaveQuickAlgo}
+        onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
+      />
+
+      {/* Quick Add Object Dialog */}
+      <QuickAddObjectDialog
+        open={quickAddObjectDialogOpen}
+        allEntities={allEntities}
+        mainDomains={mainDomains}
+        subDomains={subDomains}
+        onClose={() => setQuickAddObjectDialogOpen(false)}
+        onSave={handleSaveQuickObject}
+        onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
+      />
+
+      {/* Quick Add Definition Dialog */}
+      <QuickAddDefinitionDialog
+        open={quickAddDefinitionDialogOpen}
+        allEntities={allEntities}
+        mainDomains={mainDomains}
+        subDomains={subDomains}
+        onClose={() => setQuickAddDefinitionDialogOpen(false)}
+        onSave={handleSaveQuickDefinition}
+        onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
+      />
+
+      {/* Quick Add Domain Dialog */}
+      <QuickAddDomainDialog
+        open={quickAddDomainDialogOpen}
+        mainDomains={mainDomains}
+        onClose={() => setQuickAddDomainDialogOpen(false)}
+        onSave={handleSaveQuickDomain}
       />
     </Dialog>
   )
