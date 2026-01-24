@@ -275,38 +275,6 @@ function registerEntityHandlers() {
             return invokeDb((db) => {
                 const allEntities = []
 
-                // Helper function to get subjectId for an entity
-                const getSubjectId = (nodeId, entityType) => {
-                    try {
-                        // For contrib, query directly from the node itself
-                        // For other types, find corresponding Entity node by name
-                        let entityNodeId = nodeId
-                        if (entityType !== 'contrib') {
-                            const node = db.nodeops.queryNodeById(nodeId)
-                            if (!node) return null
-
-                            const entityConceptType = evolutionType.evoConcepts.EvoEntity.instance
-                            const entityNode = db.nodeops.queryNodeByName(entityConceptType.id, node.name)
-                            if (entityNode) {
-                                entityNodeId = entityNode.id
-                            } else {
-                                return null
-                            }
-                        }
-
-                        // Get Subject relation
-                        const subjectRelType = evolutionType.evoInstanceRel.evoEntityInstanceRel.EntitySubject.instance
-                        const subjectRels = db.relops.queryRelsByFromId(subjectRelType.id, entityNodeId)
-                        if (subjectRels.length > 0) {
-                            return subjectRels[0].to
-                        }
-                        return null
-                    } catch (e) {
-                        console.error(`Failed to get subjectId for node ${nodeId}:`, e)
-                        return null
-                    }
-                }
-
                 // Get all Object entities
                 const objectType = evolutionType.evoConcepts.EvoObject.instance
                 const objectNodes = db.nodeops.queryNodesByType(objectType.id)
@@ -315,8 +283,7 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'object',
-                        typeName: 'Research Object',
-                        subjectId: getSubjectId(node.id, 'object')
+                        typeName: 'Research Object'
                     })
                 })
 
@@ -328,8 +295,7 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'algo',
-                        typeName: 'Algorithm',
-                        subjectId: getSubjectId(node.id, 'algo')
+                        typeName: 'Algorithm'
                     })
                 })
 
@@ -341,8 +307,7 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'improvement',
-                        typeName: 'Improvement',
-                        subjectId: getSubjectId(node.id, 'improvement')
+                        typeName: 'Improvement'
                     })
                 })
 
@@ -354,8 +319,7 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'problem',
-                        typeName: 'Problem',
-                        subjectId: getSubjectId(node.id, 'problem')
+                        typeName: 'Problem'
                     })
                 })
 
@@ -367,8 +331,7 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'definition',
-                        typeName: 'Scenario',
-                        subjectId: getSubjectId(node.id, 'definition')
+                        typeName: 'Scenario'
                     })
                 })
 
@@ -380,8 +343,7 @@ function registerEntityHandlers() {
                         id: node.id,
                         name: node.name,
                         type: 'contrib',
-                        typeName: 'Contribution',
-                        subjectId: getSubjectId(node.id, 'contrib')
+                        typeName: 'Contribution'
                     })
                 })
 
@@ -821,46 +783,67 @@ function registerEntityHandlers() {
                         }
                     }
 
-                    // 4. Create Algo-specific relations
+                    // 4. Create Algo-specific relations (all point to Entity nodes)
+                    // Target relations - convert concrete IDs to Entity node IDs
                     if (targetIds && targetIds.length > 0) {
                         const targetRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTarget.instance
                         for (const targetId of targetIds) {
-                            const targetRel = new kg_interface.Rel(
-                                targetRelType.id,
-                                `${entityNode.id}_target_${targetId}`,
-                                [],
-                                entityNode.id,
-                                targetId
-                            )
-                            db.relops.mergeRel(targetRel.toDb())
+                            const concreteNode = db.nodeops.queryNodeById(targetId)
+                            if (concreteNode) {
+                                const targetEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                if (targetEntityNode) {
+                                    const targetRel = new kg_interface.Rel(
+                                        targetRelType.id,
+                                        `${entityNode.id}_target_${targetEntityNode.id}`,
+                                        [],
+                                        entityNode.id,
+                                        targetEntityNode.id
+                                    )
+                                    db.relops.mergeRel(targetRel.toDb())
+                                }
+                            }
                         }
                     }
 
+                    // Expectation relations - convert concrete IDs to Entity node IDs
                     if (expectationIds && expectationIds.length > 0) {
                         const expectationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoExpectation.instance
                         for (const expectationId of expectationIds) {
-                            const expectationRel = new kg_interface.Rel(
-                                expectationRelType.id,
-                                `${entityNode.id}_expectation_${expectationId}`,
-                                [],
-                                entityNode.id,
-                                expectationId
-                            )
-                            db.relops.mergeRel(expectationRel.toDb())
+                            const concreteNode = db.nodeops.queryNodeById(expectationId)
+                            if (concreteNode) {
+                                const expectationEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                if (expectationEntityNode) {
+                                    const expectationRel = new kg_interface.Rel(
+                                        expectationRelType.id,
+                                        `${entityNode.id}_expectation_${expectationEntityNode.id}`,
+                                        [],
+                                        entityNode.id,
+                                        expectationEntityNode.id
+                                    )
+                                    db.relops.mergeRel(expectationRel.toDb())
+                                }
+                            }
                         }
                     }
 
+                    // Transformation relations - convert concrete IDs to Entity node IDs
                     if (transformationIds && transformationIds.length > 0) {
                         const transformationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTransformation.instance
                         for (const transformationId of transformationIds) {
-                            const transformationRel = new kg_interface.Rel(
-                                transformationRelType.id,
-                                `${entityNode.id}_transformation_${transformationId}`,
-                                [],
-                                entityNode.id,
-                                transformationId
-                            )
-                            db.relops.mergeRel(transformationRel.toDb())
+                            const concreteNode = db.nodeops.queryNodeById(transformationId)
+                            if (concreteNode) {
+                                const transformationEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                if (transformationEntityNode) {
+                                    const transformationRel = new kg_interface.Rel(
+                                        transformationRelType.id,
+                                        `${entityNode.id}_transformation_${transformationEntityNode.id}`,
+                                        [],
+                                        entityNode.id,
+                                        transformationEntityNode.id
+                                    )
+                                    db.relops.mergeRel(transformationRel.toDb())
+                                }
+                            }
                         }
                     }
 
@@ -1033,46 +1016,67 @@ function registerEntityHandlers() {
                             }
                         }
 
-                        // 4. Create Algo-specific relations
+                        // 4. Create Algo-specific relations (all point to Entity nodes)
+                        // Target relations - convert concrete IDs to Entity node IDs
                         if (targetIds && targetIds.length > 0) {
                             const targetRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTarget.instance
                             for (const targetId of targetIds) {
-                                const targetRel = new kg_interface.Rel(
-                                    targetRelType.id,
-                                    `${entityNodeId}_target_${targetId}`,
-                                    [],
-                                    entityNodeId,
-                                    targetId
-                                )
-                                db.relops.mergeRel(targetRel.toDb())
+                                const concreteNode = db.nodeops.queryNodeById(targetId)
+                                if (concreteNode) {
+                                    const targetEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                    if (targetEntityNode) {
+                                        const targetRel = new kg_interface.Rel(
+                                            targetRelType.id,
+                                            `${entityNodeId}_target_${targetEntityNode.id}`,
+                                            [],
+                                            entityNodeId,
+                                            targetEntityNode.id
+                                        )
+                                        db.relops.mergeRel(targetRel.toDb())
+                                    }
+                                }
                             }
                         }
 
+                        // Expectation relations - convert concrete IDs to Entity node IDs
                         if (expectationIds && expectationIds.length > 0) {
                             const expectationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoExpectation.instance
                             for (const expectationId of expectationIds) {
-                                const expectationRel = new kg_interface.Rel(
-                                    expectationRelType.id,
-                                    `${entityNodeId}_expectation_${expectationId}`,
-                                    [],
-                                    entityNodeId,
-                                    expectationId
-                                )
-                                db.relops.mergeRel(expectationRel.toDb())
+                                const concreteNode = db.nodeops.queryNodeById(expectationId)
+                                if (concreteNode) {
+                                    const expectationEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                    if (expectationEntityNode) {
+                                        const expectationRel = new kg_interface.Rel(
+                                            expectationRelType.id,
+                                            `${entityNodeId}_expectation_${expectationEntityNode.id}`,
+                                            [],
+                                            entityNodeId,
+                                            expectationEntityNode.id
+                                        )
+                                        db.relops.mergeRel(expectationRel.toDb())
+                                    }
+                                }
                             }
                         }
 
+                        // Transformation relations - convert concrete IDs to Entity node IDs
                         if (transformationIds && transformationIds.length > 0) {
                             const transformationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTransformation.instance
                             for (const transformationId of transformationIds) {
-                                const transformationRel = new kg_interface.Rel(
-                                    transformationRelType.id,
-                                    `${entityNodeId}_transformation_${transformationId}`,
-                                    [],
-                                    entityNodeId,
-                                    transformationId
-                                )
-                                db.relops.mergeRel(transformationRel.toDb())
+                                const concreteNode = db.nodeops.queryNodeById(transformationId)
+                                if (concreteNode) {
+                                    const transformationEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                    if (transformationEntityNode) {
+                                        const transformationRel = new kg_interface.Rel(
+                                            transformationRelType.id,
+                                            `${entityNodeId}_transformation_${transformationEntityNode.id}`,
+                                            [],
+                                            entityNodeId,
+                                            transformationEntityNode.id
+                                        )
+                                        db.relops.mergeRel(transformationRel.toDb())
+                                    }
+                                }
                             }
                         }
                     }
@@ -1281,32 +1285,46 @@ function registerEntityHandlers() {
                         }
                     }
 
-                    // 4. Create Improvement-specific relations
+                    // 4. Create Improvement-specific relations (all point to Entity nodes)
+                    // Origin relations - convert concrete IDs to Entity node IDs
                     if (originIds && originIds.length > 0) {
                         const originRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementOrigin.instance
                         for (const originId of originIds) {
-                            const originRel = new kg_interface.Rel(
-                                originRelType.id,
-                                `${entityNode.id}_origin_${originId}`,
-                                [],
-                                entityNode.id,
-                                originId
-                            )
-                            db.relops.mergeRel(originRel.toDb())
+                            const concreteNode = db.nodeops.queryNodeById(originId)
+                            if (concreteNode) {
+                                const originEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                if (originEntityNode) {
+                                    const originRel = new kg_interface.Rel(
+                                        originRelType.id,
+                                        `${entityNode.id}_origin_${originEntityNode.id}`,
+                                        [],
+                                        entityNode.id,
+                                        originEntityNode.id
+                                    )
+                                    db.relops.mergeRel(originRel.toDb())
+                                }
+                            }
                         }
                     }
 
+                    // Advance relations - convert concrete IDs to Entity node IDs
                     if (advanceIds && advanceIds.length > 0) {
                         const advanceRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementAdvance.instance
                         for (const advanceId of advanceIds) {
-                            const advanceRel = new kg_interface.Rel(
-                                advanceRelType.id,
-                                `${entityNode.id}_advance_${advanceId}`,
-                                [],
-                                entityNode.id,
-                                advanceId
-                            )
-                            db.relops.mergeRel(advanceRel.toDb())
+                            const concreteNode = db.nodeops.queryNodeById(advanceId)
+                            if (concreteNode) {
+                                const advanceEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                if (advanceEntityNode) {
+                                    const advanceRel = new kg_interface.Rel(
+                                        advanceRelType.id,
+                                        `${entityNode.id}_advance_${advanceEntityNode.id}`,
+                                        [],
+                                        entityNode.id,
+                                        advanceEntityNode.id
+                                    )
+                                    db.relops.mergeRel(advanceRel.toDb())
+                                }
+                            }
                         }
                     }
 
@@ -1503,31 +1521,46 @@ function registerEntityHandlers() {
                         }
 
                         // 4. Create Improvement-specific relations
+                        // 4. Create Improvement-specific relations (all point to Entity nodes)
+                        // Origin relations - convert concrete IDs to Entity node IDs
                         if (originIds && originIds.length > 0) {
                             const originRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementOrigin.instance
                             for (const originId of originIds) {
-                                const originRel = new kg_interface.Rel(
-                                    originRelType.id,
-                                    `${entityNodeId}_origin_${originId}`,
-                                    [],
-                                    entityNodeId,
-                                    originId
-                                )
-                                db.relops.mergeRel(originRel.toDb())
+                                const concreteNode = db.nodeops.queryNodeById(originId)
+                                if (concreteNode) {
+                                    const originEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                    if (originEntityNode) {
+                                        const originRel = new kg_interface.Rel(
+                                            originRelType.id,
+                                            `${entityNodeId}_origin_${originEntityNode.id}`,
+                                            [],
+                                            entityNodeId,
+                                            originEntityNode.id
+                                        )
+                                        db.relops.mergeRel(originRel.toDb())
+                                    }
+                                }
                             }
                         }
 
+                        // Advance relations - convert concrete IDs to Entity node IDs
                         if (advanceIds && advanceIds.length > 0) {
                             const advanceRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementAdvance.instance
                             for (const advanceId of advanceIds) {
-                                const advanceRel = new kg_interface.Rel(
-                                    advanceRelType.id,
-                                    `${entityNodeId}_advance_${advanceId}`,
-                                    [],
-                                    entityNodeId,
-                                    advanceId
-                                )
-                                db.relops.mergeRel(advanceRel.toDb())
+                                const concreteNode = db.nodeops.queryNodeById(advanceId)
+                                if (concreteNode) {
+                                    const advanceEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                    if (advanceEntityNode) {
+                                        const advanceRel = new kg_interface.Rel(
+                                            advanceRelType.id,
+                                            `${entityNodeId}_advance_${advanceEntityNode.id}`,
+                                            [],
+                                            entityNodeId,
+                                            advanceEntityNode.id
+                                        )
+                                        db.relops.mergeRel(advanceRel.toDb())
+                                    }
+                                }
                             }
                         }
                     }
@@ -1703,18 +1736,25 @@ function registerEntityHandlers() {
                         }
                     }
 
-                    // 4. Create Problem-specific relations
+                    // 4. Create Problem-specific relations (all point to Entity nodes)
+                    // Domain relations - convert concrete IDs to Entity node IDs
                     if (domainIds && domainIds.length > 0) {
                         const domainRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemDomain.instance
                         for (const domainId of domainIds) {
-                            const domainRel = new kg_interface.Rel(
-                                domainRelType.id,
-                                `${problemNode.id}_domain_${domainId}`,
-                                [],
-                                problemNode.id,
-                                domainId
-                            )
-                            db.relops.mergeRel(domainRel.toDb())
+                            const concreteNode = db.nodeops.queryNodeById(domainId)
+                            if (concreteNode) {
+                                const domainEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                if (domainEntityNode) {
+                                    const domainRel = new kg_interface.Rel(
+                                        domainRelType.id,
+                                        `${problemNode.id}_domain_${domainEntityNode.id}`,
+                                        [],
+                                        problemNode.id,
+                                        domainEntityNode.id
+                                    )
+                                    db.relops.mergeRel(domainRel.toDb())
+                                }
+                            }
                         }
                     }
 
@@ -1896,17 +1936,25 @@ function registerEntityHandlers() {
                         }
 
                         // 4. Create Problem-specific relations
+                        // 4. Create Problem-specific relations (all point to Entity nodes)
+                        // Domain relations - convert concrete IDs to Entity node IDs
                         if (domainIds && domainIds.length > 0) {
                             const domainRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemDomain.instance
                             for (const domainId of domainIds) {
-                                const domainRel = new kg_interface.Rel(
-                                    domainRelType.id,
-                                    `${id}_domain_${domainId}`,
-                                    [],
-                                    id,
-                                    domainId
-                                )
-                                db.relops.mergeRel(domainRel.toDb())
+                                const concreteNode = db.nodeops.queryNodeById(domainId)
+                                if (concreteNode) {
+                                    const domainEntityNode = db.nodeops.queryNodeByName(entityType.id, concreteNode.name)
+                                    if (domainEntityNode) {
+                                        const domainRel = new kg_interface.Rel(
+                                            domainRelType.id,
+                                            `${id}_domain_${domainEntityNode.id}`,
+                                            [],
+                                            id,
+                                            domainEntityNode.id
+                                        )
+                                        db.relops.mergeRel(domainRel.toDb())
+                                    }
+                                }
                             }
                         }
 
