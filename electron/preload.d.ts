@@ -34,8 +34,9 @@ interface AuthorAffiliation {
 interface Signature {
   id: string;
   name: string;
-  authorId: string | null;
-  affiliationId: string | null;
+  authorId: string;
+  affiliationId: string;
+  sigNo: number;
 }
 
 interface SignatureData {
@@ -97,6 +98,15 @@ interface EntityItem {
   refineNames?: string[];
   scenarioIds?: string[];
   scenarioNames?: string[];
+  // Contribution-specific fields
+  improvementIds?: string[];
+  improvementNames?: string[];
+  algoIds?: string[];
+  algoNames?: string[];
+  objectIds?: string[];
+  objectNames?: string[];
+  solutionToId?: string;
+  solutionToName?: string;
 }
 
 interface AllEntityItem {

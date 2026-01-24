@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -7,10 +7,6 @@ import {
   TextField,
   Button,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Typography,
   Autocomplete
 } from '@mui/material'
@@ -28,9 +24,10 @@ interface Affiliation {
 
 interface Signature {
   id?: string
+  authorId: string
+  affiliationId: string
   name: string
-  authorId: string | null
-  affiliationId: string | null
+  sigNo: number
 }
 
 interface SignatureDialogProps {
@@ -43,7 +40,7 @@ interface SignatureDialogProps {
   authors: Author[]
   affiliations: Affiliation[]
   onClose: () => void
-  onSave: (data: Signature) => void
+  onSave: (data: Signature) => Promise<void>
   onQuickAddAuthor?: () => void
   onQuickAddAffiliation?: () => void
 }
@@ -68,16 +65,18 @@ function SignatureDialog({
   const authorSelectRef = useRef<HTMLInputElement>(null)
 
   // Generate signature name based on article name, ref number, and signature index
-  const generateSignatureName = (authId: string | null, affId: string | null) => {
+  const generateSignatureName = useCallback((authId: string | null, affId: string | null) => {
     const sigIndex = mode === 'add' ? currentSignatureCount + 1 : (signature?.name.split('-').pop() || '1')
     const authorName = authId ? authors.find(a => a.id === authId)?.name || 'Unknown' : 'Unknown'
     const affName = affId ? affiliations.find(a => a.id === affId)?.name || 'Unknown' : 'Unknown'
     return `${articleName}-Ref${refNo}-Sig${sigIndex} (${authorName} @ ${affName})`
-  }
+  }, [mode, currentSignatureCount, signature, authors, affiliations, articleName, refNo])
 
   // Initialize state from props
   useEffect(() => {
-    if (open) {
+    if (!open) return
+
+    const initializeForm = async () => {
       if (mode === 'edit' && signature) {
         setAuthorId(signature.authorId)
         setAffiliationId(signature.affiliationId)
@@ -88,14 +87,20 @@ function SignatureDialog({
         setName(generateSignatureName(null, null))
       }
     }
-  }, [open, mode, signature])
 
-  // Update name when author or affiliation changes
+    initializeForm()
+  }, [open, mode, signature, generateSignatureName])
+
+  // Update name when author or affiliation changes in add mode
   useEffect(() => {
-    if (open && mode === 'add') {
+    if (!open || mode !== 'add') return
+
+    const updateName = async () => {
       setName(generateSignatureName(authorId, affiliationId))
     }
-  }, [authorId, affiliationId, open, mode])
+
+    updateName()
+  }, [authorId, affiliationId, open, mode, generateSignatureName])
 
   // Focus management
   useEffect(() => {
@@ -117,11 +122,15 @@ function SignatureDialog({
       return
     }
 
+    // Calculate sigNo from the signature name or use existing
+    const sigNo = signature?.sigNo || currentSignatureCount + 1
+
     onSave({
       id: signature?.id,
       name: name.trim(),
       authorId,
-      affiliationId
+      affiliationId,
+      sigNo
     })
   }
 

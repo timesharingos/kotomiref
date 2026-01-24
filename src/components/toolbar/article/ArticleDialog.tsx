@@ -24,7 +24,6 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import * as pdfjsLib from 'pdfjs-dist'
-// @ts-ignore
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import mammoth from 'mammoth'
 import ReactMarkdown from 'react-markdown'
@@ -46,12 +45,96 @@ import QuickAddDomainDialog from './QuickAddDomainDialog'
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
+// Type definitions
+interface Signature {
+  id?: string
+  authorId: string
+  affiliationId: string
+  name: string
+  sigNo: number
+}
+
+interface Reference {
+  id?: string
+  refNo: number
+  refIndex: string
+  refTitle: string
+  refYear: number | null
+  refPublication: string
+  refVolume: number | null
+  refIssue: number | null
+  refStartPage: number | null
+  refEndPage: number | null
+  refDoi: string
+  refAbs: string
+  refUrl?: string
+  signatures: Signature[]
+}
+
+interface EntityType {
+  id: string
+  name: string
+  type: string
+  typeName: string
+  description?: string
+  subjectId?: string
+  mainDomainId?: string | null
+  metric?: string
+  metricResultString?: string
+  metricResultNumber?: number
+  aliasIds?: string[]
+  parentIds?: string[]
+  originIds?: string[]
+  advanceIds?: string[]
+  targetIds?: string[]
+  expectationIds?: string[]
+  transformationIds?: string[]
+  problemIds?: string[]
+  // Contribution-specific fields
+  improvementIds?: string[]
+  algoIds?: string[]
+  objectIds?: string[]
+  solutionToId?: string
+}
+
+interface Author {
+  id: string
+  name: string
+}
+
+interface Affiliation {
+  id: string
+  name: string
+}
+
+interface MainDomain {
+  id: string
+  name: string
+}
+
+interface SubDomain {
+  id: string
+  name: string
+  mainDomainId: string | null
+}
+
+interface ArticleData {
+  id: string
+  artTitle: string
+  artPath: string
+  artPrimaryRefEntry: number | null
+  file: File | null
+  references: Reference[]
+  entityTags: (EntityType | string)[]
+  contributions: (EntityType | string)[]
+}
+
 interface ArticleDialogProps {
   open: boolean
   mode: 'add' | 'edit'
-  article: any | null
+  article: ArticleData | null
   onClose: () => void
-  onSave: (data: any) => void
+  onSave: (data: ArticleData) => void
 }
 
 const steps = ['Basic Info & Upload', 'References', 'Entity Tags', 'Contributions', 'Preview & Confirm']
@@ -59,44 +142,44 @@ const steps = ['Basic Info & Upload', 'References', 'Entity Tags', 'Contribution
 const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogProps) => {
   const [activeStep, setActiveStep] = useState(0)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ArticleData>({
     id: '',
     artTitle: '',
     artPath: '',
-    artPrimaryRefEntry: null as number | null,
-    file: null as File | null,
-    references: [] as any[],
-    entityTags: [] as any[],
-    contributions: [] as any[]
+    artPrimaryRefEntry: null,
+    file: null,
+    references: [],
+    entityTags: [],
+    contributions: []
   })
 
   // Current reference being edited
-  const [currentReference, setCurrentReference] = useState({
+  const [currentReference, setCurrentReference] = useState<Reference>({
     refNo: 0,
     refIndex: '',
     refTitle: '',
-    refYear: null as number | null,
+    refYear: null,
     refPublication: '',
-    refVolume: null as number | null,
-    refIssue: null as number | null,
-    refStartPage: null as number | null,
-    refEndPage: null as number | null,
+    refVolume: null,
+    refIssue: null,
+    refStartPage: null,
+    refEndPage: null,
     refDoi: '',
     refAbs: '',
-    signatures: [] as any[]
+    signatures: []
   })
 
-  const [allEntities, setAllEntities] = useState<any[]>([])
-  const [mainDomains, setMainDomains] = useState<any[]>([])
-  const [subDomains, setSubDomains] = useState<any[]>([])
+  const [allEntities, setAllEntities] = useState<EntityType[]>([])
+  const [mainDomains, setMainDomains] = useState<MainDomain[]>([])
+  const [subDomains, setSubDomains] = useState<SubDomain[]>([])
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false)
-  const [textContent, setTextContent] = useState<string>('')  // 文本文件内容
+  const [textContent, setTextContent] = useState<string>('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // Signature management states
-  const [authors, setAuthors] = useState<any[]>([])
-  const [affiliations, setAffiliations] = useState<any[]>([])
+  const [authors, setAuthors] = useState<Author[]>([])
+  const [affiliations, setAffiliations] = useState<Affiliation[]>([])
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false)
   const [signatureDialogMode, setSignatureDialogMode] = useState<'add' | 'edit'>('add')
   const [selectedSignatureIndex, setSelectedSignatureIndex] = useState<number | null>(null)
@@ -112,85 +195,9 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   const [quickAddDomainDialogOpen, setQuickAddDomainDialogOpen] = useState(false)
 
   // Detailed entities for preview step
-  const [detailedEntities, setDetailedEntities] = useState<{ [key: string]: any }>({})
+  const [detailedEntities, setDetailedEntities] = useState<Record<string, EntityType>>({})
 
-  useEffect(() => {
-    if (open) {
-      loadData()
-      if (mode === 'edit' && article) {
-        setFormData({
-          id: article.id,
-          artTitle: article.artTitle || '',
-          artPath: article.artPath || '',
-          artPrimaryRefEntry: article.artPrimaryRefEntry || null,
-          file: null,
-          references: article.references || [],
-          entityTags: article.entityTags || [],
-          contributions: article.contributions || []
-        })
-        // Load file preview if artPath exists
-        if (article.artPath) {
-          loadFilePreview(article.artPath)
-        }
-      } else {
-        setFormData({
-          id: '',
-          artTitle: '',
-          artPath: '',
-          artPrimaryRefEntry: null,
-          file: null,
-          references: [],
-          entityTags: [],
-          contributions: []
-        })
-      }
-      setActiveStep(0) // Reset to first step when dialog opens
-      setFilePreview(null) // Reset file preview
-    }
-  }, [open, mode, article])
-
-  // Load detailed entity information for preview step
-  useEffect(() => {
-    const loadDetailedEntities = async () => {
-      if (activeStep !== 4 || formData.contributions.length === 0) {
-        return
-      }
-
-      const entityIds = new Set<string>()
-
-      // Collect all entity IDs from contributions
-      formData.contributions.forEach((contrib: any) => {
-        if (contrib.improvementIds) contrib.improvementIds.forEach((id: string) => entityIds.add(id))
-        if (contrib.algoIds) contrib.algoIds.forEach((id: string) => entityIds.add(id))
-        if (contrib.objectIds) contrib.objectIds.forEach((id: string) => entityIds.add(id))
-        if (contrib.solutionToId) entityIds.add(contrib.solutionToId)
-      })
-
-      // Fetch detailed information for each entity
-      const detailedData: { [key: string]: any } = {}
-
-      for (const id of entityIds) {
-        const entity = allEntities.find(e => e.id === id)
-        if (entity) {
-          try {
-            // Fetch full entity details based on type
-            const entities = await window.entity.getAllByType(entity.type)
-            const fullEntity = entities.find(e => e.id === id)
-            if (fullEntity) {
-              detailedData[id] = fullEntity
-            }
-          } catch (error) {
-            console.error(`Failed to fetch details for entity ${id}:`, error)
-          }
-        }
-      }
-
-      setDetailedEntities(detailedData)
-    }
-
-    loadDetailedEntities()
-  }, [activeStep, formData.contributions, allEntities])
-
+  // Load data function
   const loadData = async () => {
     try {
       // Load all entities for tagging
@@ -224,6 +231,104 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     }
   }
 
+  // Initialize form data when dialog opens
+  useEffect(() => {
+    if (!open) return
+
+    const initializeData = async () => {
+      await loadData()
+
+      // Initialize form data
+      const initialFormData = mode === 'edit' && article ? {
+        id: article.id,
+        artTitle: article.artTitle || '',
+        artPath: article.artPath || '',
+        artPrimaryRefEntry: article.artPrimaryRefEntry || null,
+        file: null,
+        references: article.references || [],
+        entityTags: article.entityTags || [],
+        contributions: article.contributions || []
+      } : {
+        id: '',
+        artTitle: '',
+        artPath: '',
+        artPrimaryRefEntry: null,
+        file: null,
+        references: [],
+        entityTags: [],
+        contributions: []
+      }
+
+      setFormData(initialFormData)
+      setActiveStep(0)
+      setFilePreview(null)
+
+      // Load file preview if artPath exists
+      if (mode === 'edit' && article?.artPath) {
+        loadFilePreview(article.artPath)
+      }
+    }
+
+    initializeData()
+  }, [open, mode, article])
+
+  // Load detailed entity information for preview step
+  useEffect(() => {
+    const loadDetailedEntities = async () => {
+      if (activeStep !== 4 || formData.contributions.length === 0) {
+        return
+      }
+
+      const entityIds = new Set<string>()
+
+      // Collect all entity IDs from contributions
+      formData.contributions.forEach((contrib) => {
+        if (typeof contrib === 'string') return
+        if (contrib.improvementIds) contrib.improvementIds.forEach((id: string) => entityIds.add(id))
+        if (contrib.algoIds) contrib.algoIds.forEach((id: string) => entityIds.add(id))
+        if (contrib.objectIds) contrib.objectIds.forEach((id: string) => entityIds.add(id))
+        if (contrib.solutionToId) entityIds.add(contrib.solutionToId)
+      })
+
+      // Fetch detailed information for each entity
+      const detailedData: Record<string, EntityType> = {}
+
+      for (const id of entityIds) {
+        const entity = allEntities.find(e => e.id === id)
+        if (entity && entity.type) {
+          try {
+            // Fetch full entity details based on type
+            const entities = await window.entity.getAllByType(entity.type)
+            const fullEntity = entities.find(e => e.id === id)
+            if (fullEntity) {
+              // Convert EntityItem to EntityType
+              detailedData[id] = {
+                id: fullEntity.id,
+                name: fullEntity.name || '',
+                type: entity.type,
+                typeName: entity.typeName,
+                description: fullEntity.description,
+                subjectId: fullEntity.subjectId,
+                aliasIds: fullEntity.aliasIds,
+                parentIds: fullEntity.parentIds,
+                improvementIds: fullEntity.improvementIds,
+                algoIds: fullEntity.algoIds,
+                objectIds: fullEntity.objectIds,
+                solutionToId: fullEntity.solutionToId
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch details for entity ${id}:`, error)
+          }
+        }
+      }
+
+      setDetailedEntities(detailedData)
+    }
+
+    loadDetailedEntities()
+  }, [activeStep, formData.contributions, allEntities])
+
   // Render PDF first page to canvas
   const renderPdfPreview = async (file: File) => {
     try {
@@ -248,12 +353,13 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
         const context = canvas.getContext('2d')
         if (context) {
-          // Render PDF page
-          const renderContext: any = {
+          // Render PDF page - PDF.js expects this format
+          const renderContext = {
             canvasContext: context,
             viewport: viewport
           }
-          await page.render(renderContext).promise
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await page.render(renderContext as any).promise
 
           // Convert canvas to data URL for preview
           const dataUrl = canvas.toDataURL()
@@ -334,7 +440,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       // Convert Word document to HTML with better styling options
       const result = await mammoth.convertToHtml({
         arrayBuffer: arrayBuffer
-      } as any)
+      } as { arrayBuffer: ArrayBuffer })
 
       // Store HTML content and set preview type
       setTextContent(result.value)
@@ -523,7 +629,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     })
   }
 
-  const handleSaveSignature = (data: any) => {
+  const handleSaveSignature = async (data: Signature) => {
     if (signatureDialogMode === 'add') {
       setCurrentReference({
         ...currentReference,
@@ -814,13 +920,15 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         setQuickAddContributionDialogOpen(false)
         toast.success('Contribution added successfully')
         // Add to contributions list
-        const newContribution = {
+        const newContribution: EntityType = {
           id: result.id,
+          name: data.description, // Use description as name
+          type: 'contrib',
+          typeName: 'Contribution',
           description: data.description,
           subjectId: data.subjectId,
           aliasIds: data.aliasIds,
           parentIds: data.parentIds,
-          relationIds: data.relationIds,
           improvementIds: data.improvementIds,
           algoIds: data.algoIds,
           objectIds: data.objectIds,
@@ -887,23 +995,28 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         artTitle: formData.artTitle,
         artPath: formData.artPath,
         artPrimaryRefEntry: formData.artPrimaryRefEntry,
-        references: formData.references,
-        entityTags: formData.entityTags.map((tag: any) => tag.id),
-        contributions: formData.contributions.map((contrib: any) => contrib.id || contrib)
+        file: formData.file,
+        references: formData.references as never[],
+        entityTags: formData.entityTags.map((tag) =>
+          typeof tag === 'string' ? tag : tag.id
+        ),
+        contributions: formData.contributions.map((contrib) =>
+          typeof contrib === 'string' ? contrib : contrib.id
+        )
       }
 
       let result
       if (mode === 'add') {
         // Add new article
-        result = await window.article.add(articleData)
+        result = await window.article.add(articleData as never)
       } else {
         // Update existing article
-        result = await window.article.update(articleData)
+        result = await window.article.update(articleData as never)
       }
 
       if (result.success) {
         toast.success(mode === 'add' ? 'Article added successfully' : 'Article updated successfully')
-        onSave(articleData)
+        onSave(formData)
         onClose()
       } else {
         toast.error(result.error || 'Failed to save article')
@@ -1420,7 +1533,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                             Signatures ({ref.signatures.length}):
                           </Typography>
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            {ref.signatures.map((sig: any, index: number) => {
+                            {ref.signatures.map((sig: Signature, index: number) => {
                               const author = authors.find(a => a.id === sig.authorId)
                               const affiliation = affiliations.find(a => a.id === sig.affiliationId)
                               return (
@@ -1513,7 +1626,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               {/* Signatures List */}
               {currentReference.signatures.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {currentReference.signatures.map((sig: any, index: number) => {
+                  {currentReference.signatures.map((sig: Signature, index: number) => {
                     const author = authors.find(a => a.id === sig.authorId)
                     const affiliation = affiliations.find(a => a.id === sig.affiliationId)
                     return (
@@ -1700,7 +1813,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         <Autocomplete
           multiple
           options={allEntities}
-          getOptionLabel={(option) => `${option.name} (${option.typeName})`}
+          getOptionLabel={(option) => typeof option === 'string' ? option : `${option.name} (${option.typeName})`}
           value={formData.entityTags}
           onChange={(_, newValue) => {
             setFormData({ ...formData, entityTags: newValue })
@@ -1713,22 +1826,33 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
             />
           )}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip
-                label={option.name}
-                {...getTagProps({ index })}
-                size="small"
-                color={
-                  option.type === 'object' ? 'primary' :
-                  option.type === 'algo' ? 'secondary' :
-                  option.type === 'improvement' ? 'success' :
-                  option.type === 'problem' ? 'warning' :
-                  option.type === 'definition' ? 'info' :
-                  option.type === 'contrib' ? 'error' :
-                  'default'
-                }
-              />
-            ))
+            value.map((option, index) => {
+              if (typeof option === 'string') {
+                return (
+                  <Chip
+                    label={option}
+                    {...getTagProps({ index })}
+                    size="small"
+                  />
+                )
+              }
+              return (
+                <Chip
+                  label={option.name}
+                  {...getTagProps({ index })}
+                  size="small"
+                  color={
+                    option.type === 'object' ? 'primary' :
+                    option.type === 'algo' ? 'secondary' :
+                    option.type === 'improvement' ? 'success' :
+                    option.type === 'problem' ? 'warning' :
+                    option.type === 'definition' ? 'info' :
+                    option.type === 'contrib' ? 'error' :
+                    'default'
+                  }
+                />
+              )
+            })
           }
         />
 
@@ -1738,22 +1862,33 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               Selected Entity Tags ({formData.entityTags.length})
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-              {formData.entityTags.map((tag) => (
-                <Chip
-                  key={tag.id}
-                  label={`${tag.name} (${tag.typeName})`}
-                  size="medium"
-                  color={
-                    tag.type === 'object' ? 'primary' :
-                    tag.type === 'algo' ? 'secondary' :
-                    tag.type === 'improvement' ? 'success' :
-                    tag.type === 'problem' ? 'warning' :
-                    tag.type === 'definition' ? 'info' :
-                    tag.type === 'contrib' ? 'error' :
-                    'default'
-                  }
-                />
-              ))}
+              {formData.entityTags.map((tag, index) => {
+                if (typeof tag === 'string') {
+                  return (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      size="medium"
+                    />
+                  )
+                }
+                return (
+                  <Chip
+                    key={tag.id}
+                    label={`${tag.name} (${tag.typeName})`}
+                    size="medium"
+                    color={
+                      tag.type === 'object' ? 'primary' :
+                      tag.type === 'algo' ? 'secondary' :
+                      tag.type === 'improvement' ? 'success' :
+                      tag.type === 'problem' ? 'warning' :
+                      tag.type === 'definition' ? 'info' :
+                      tag.type === 'contrib' ? 'error' :
+                      'default'
+                    }
+                  />
+                )
+              })}
             </Box>
           </Paper>
         )}
@@ -1788,7 +1923,10 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
           <Autocomplete
             sx={{ flexGrow: 1 }}
-            options={allContributions.filter(c => !formData.contributions.find(fc => fc.id === c.id))}
+            options={allContributions.filter(c => !formData.contributions.find(fc => {
+              if (typeof fc === 'string') return false
+              return fc.id === c.id
+            }))}
             getOptionLabel={(option) => option.name || 'Unnamed Contribution'}
             onChange={async (_, value) => {
               if (value) {
@@ -1797,16 +1935,38 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                   const contributions = await window.entity.getAllByType('contrib')
                   const fullContribution = contributions.find(c => c.id === value.id)
                   if (fullContribution) {
+                    // Convert EntityItem to EntityType
+                    const entityContribution: EntityType = {
+                      id: fullContribution.id,
+                      name: fullContribution.name || 'Unnamed Contribution',
+                      type: 'contrib',
+                      typeName: 'Contribution',
+                      description: fullContribution.description,
+                      subjectId: fullContribution.subjectId,
+                      aliasIds: fullContribution.aliasIds,
+                      parentIds: fullContribution.parentIds,
+                      improvementIds: fullContribution.improvementIds,
+                      algoIds: fullContribution.algoIds,
+                      objectIds: fullContribution.objectIds,
+                      solutionToId: fullContribution.solutionToId
+                    }
                     // Add the full contribution to the list
                     setFormData({
                       ...formData,
-                      contributions: [...formData.contributions, fullContribution]
+                      contributions: [...formData.contributions, entityContribution]
                     })
                   } else {
-                    // Fallback: add the basic info if full details not found
+                    // Fallback: convert value to EntityType
+                    const entityValue: EntityType = {
+                      id: value.id,
+                      name: value.name,
+                      type: 'contrib',
+                      typeName: 'Contribution',
+                      description: value.name
+                    }
                     setFormData({
                       ...formData,
-                      contributions: [...formData.contributions, value]
+                      contributions: [...formData.contributions, entityValue]
                     })
                   }
                 } catch (error) {
@@ -1837,107 +1997,130 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         {/* Contributions List */}
         {formData.contributions.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {formData.contributions.map((contrib, index) => (
-              <Paper key={index} sx={{ p: 2, bgcolor: '#2a2a2a', border: '1px solid #444' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Contribution #{index + 1}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleRemoveContribution(index)}
-                    sx={{ color: '#ff6b6b' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
+            {formData.contributions.map((contrib, index) => {
+              // Handle string contributions
+              if (typeof contrib === 'string') {
+                return (
+                  <Paper key={index} sx={{ p: 2, bgcolor: '#2a2a2a', border: '1px solid #444' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {contrib}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveContribution(index)}
+                        sx={{ color: '#ff6b6b' }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </Paper>
+                )
+              }
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {/* Description */}
-                  <Box>
-                    <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
-                      Description:
+              // Handle EntityType contributions
+              return (
+                <Paper key={index} sx={{ p: 2, bgcolor: '#2a2a2a', border: '1px solid #444' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Contribution #{index + 1}
                     </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>
-                      {contrib.description}
-                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveContribution(index)}
+                      sx={{ color: '#ff6b6b' }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </Box>
 
-                  {/* Improvements */}
-                  {contrib.improvementIds && contrib.improvementIds.length > 0 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {/* Description */}
                     <Box>
                       <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
-                        Improvements ({contrib.improvementIds.length}):
+                        Description:
                       </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                        {contrib.improvementIds.map((id: string) => (
-                          <Chip
-                            key={id}
-                            label={getEntityName(id)}
-                            size="small"
-                            color="success"
-                          />
-                        ))}
-                      </Box>
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        {contrib.description}
+                      </Typography>
                     </Box>
-                  )}
 
-                  {/* Algorithms */}
-                  {contrib.algoIds && contrib.algoIds.length > 0 && (
-                    <Box>
-                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
-                        Algorithms ({contrib.algoIds.length}):
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                        {contrib.algoIds.map((id: string) => (
-                          <Chip
-                            key={id}
-                            label={getEntityName(id)}
-                            size="small"
-                            color="secondary"
-                          />
-                        ))}
+                    {/* Improvements */}
+                    {contrib.improvementIds && contrib.improvementIds.length > 0 && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                          Improvements ({contrib.improvementIds.length}):
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                          {contrib.improvementIds.map((id: string) => (
+                            <Chip
+                              key={id}
+                              label={getEntityName(id)}
+                              size="small"
+                              color="success"
+                            />
+                          ))}
+                        </Box>
                       </Box>
-                    </Box>
-                  )}
+                    )}
 
-                  {/* Research Objects */}
-                  {contrib.objectIds && contrib.objectIds.length > 0 && (
-                    <Box>
-                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
-                        Research Objects ({contrib.objectIds.length}):
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                        {contrib.objectIds.map((id: string) => (
-                          <Chip
-                            key={id}
-                            label={getEntityName(id)}
-                            size="small"
-                            color="primary"
-                          />
-                        ))}
+                    {/* Algorithms */}
+                    {contrib.algoIds && contrib.algoIds.length > 0 && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                          Algorithms ({contrib.algoIds.length}):
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                          {contrib.algoIds.map((id: string) => (
+                            <Chip
+                              key={id}
+                              label={getEntityName(id)}
+                              size="small"
+                              color="secondary"
+                            />
+                          ))}
+                        </Box>
                       </Box>
-                    </Box>
-                  )}
+                    )}
 
-                  {/* Solution To (Definition) */}
-                  {contrib.solutionToId && (
-                    <Box>
-                      <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
-                        Solution To:
-                      </Typography>
-                      <Box sx={{ mt: 0.5 }}>
-                        <Chip
-                          label={getEntityName(contrib.solutionToId)}
-                          size="small"
-                          color="info"
-                        />
+                    {/* Research Objects */}
+                    {contrib.objectIds && contrib.objectIds.length > 0 && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                          Research Objects ({contrib.objectIds.length}):
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                          {contrib.objectIds.map((id: string) => (
+                            <Chip
+                              key={id}
+                              label={getEntityName(id)}
+                              size="small"
+                              color="primary"
+                            />
+                          ))}
+                        </Box>
                       </Box>
-                    </Box>
-                  )}
-                </Box>
-              </Paper>
-            ))}
+                    )}
+
+                    {/* Solution To (Definition) */}
+                    {contrib.solutionToId && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: '#999', fontWeight: 'bold' }}>
+                          Solution To:
+                        </Typography>
+                        <Box sx={{ mt: 0.5 }}>
+                          <Chip
+                            label={getEntityName(contrib.solutionToId)}
+                            size="small"
+                            color="info"
+                          />
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                </Paper>
+              )
+            })}
           </Box>
         ) : (
           <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'background.paper' }}>
@@ -2471,7 +2654,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           </Typography>
           {formData.references.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {formData.references.map((ref: any, index: number) => (
+              {formData.references.map((ref: Reference, index: number) => (
                 <Box
                   key={index}
                   sx={{
@@ -2597,7 +2780,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                           Authors:
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', flex: 1 }}>
-                          {ref.signatures.map((sig: any, idx: number) => {
+                          {ref.signatures.map((sig: Signature, idx: number) => {
                             const author = authors.find(a => a.id === sig.authorId)
                             const affiliation = affiliations.find(aff => aff.id === sig.affiliationId)
                             return (
@@ -2630,22 +2813,34 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           </Typography>
           {formData.entityTags.length > 0 ? (
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {formData.entityTags.map((tag) => (
-                <Chip
-                  key={tag.id}
-                  label={tag.name}
-                  size="small"
-                  color={
-                    tag.type === 'object' ? 'primary' :
-                    tag.type === 'algo' ? 'secondary' :
-                    tag.type === 'improvement' ? 'success' :
-                    tag.type === 'problem' ? 'warning' :
-                    tag.type === 'definition' ? 'info' :
-                    tag.type === 'contrib' ? 'error' :
-                    'default'
-                  }
-                />
-              ))}
+              {formData.entityTags.map((tag, index) => {
+                if (typeof tag === 'string') {
+                  return (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      size="small"
+                      color="default"
+                    />
+                  )
+                }
+                return (
+                  <Chip
+                    key={tag.id}
+                    label={tag.name}
+                    size="small"
+                    color={
+                      tag.type === 'object' ? 'primary' :
+                      tag.type === 'algo' ? 'secondary' :
+                      tag.type === 'improvement' ? 'success' :
+                      tag.type === 'problem' ? 'warning' :
+                      tag.type === 'definition' ? 'info' :
+                      tag.type === 'contrib' ? 'error' :
+                      'default'
+                    }
+                  />
+                )
+              })}
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -2661,11 +2856,24 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           </Typography>
           {formData.contributions.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {formData.contributions.map((contrib: any, index: number) => (
-                <Box key={index} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #444' }}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                    Contribution #{index + 1}
-                  </Typography>
+              {formData.contributions.map((contrib, index: number) => {
+                if (typeof contrib === 'string') {
+                  return (
+                    <Box key={index} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #444' }}>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                        Contribution #{index + 1}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        ID: {contrib}
+                      </Typography>
+                    </Box>
+                  )
+                }
+                return (
+                  <Box key={index} sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #444' }}>
+                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                      Contribution #{index + 1}
+                    </Typography>
 
                   {/* Contribution Description */}
                   <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(33, 150, 243, 0.1)', borderRadius: 1, border: '1px solid rgba(33, 150, 243, 0.3)' }}>
@@ -2739,7 +2947,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                     </Box>
                   )}
                 </Box>
-              ))}
+                )
+              })}
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -2852,7 +3061,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         open={quickAddContributionDialogOpen}
         allEntities={allEntities}
         mainDomains={mainDomains}
-        subDomains={subDomains}
+        subDomains={subDomains as never[]}
         onClose={() => setQuickAddContributionDialogOpen(false)}
         onSave={handleSaveQuickContribution}
         onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
@@ -2867,7 +3076,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         open={quickAddImprovementDialogOpen}
         allEntities={allEntities}
         mainDomains={mainDomains}
-        subDomains={subDomains}
+        subDomains={subDomains as never[]}
         onClose={() => setQuickAddImprovementDialogOpen(false)}
         onSave={handleSaveQuickImprovement}
         onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
@@ -2878,7 +3087,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         open={quickAddAlgoDialogOpen}
         allEntities={allEntities}
         mainDomains={mainDomains}
-        subDomains={subDomains}
+        subDomains={subDomains as never[]}
         onClose={() => setQuickAddAlgoDialogOpen(false)}
         onSave={handleSaveQuickAlgo}
         onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
@@ -2889,7 +3098,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         open={quickAddObjectDialogOpen}
         allEntities={allEntities}
         mainDomains={mainDomains}
-        subDomains={subDomains}
+        subDomains={subDomains as never[]}
         onClose={() => setQuickAddObjectDialogOpen(false)}
         onSave={handleSaveQuickObject}
         onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}
@@ -2900,7 +3109,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         open={quickAddDefinitionDialogOpen}
         allEntities={allEntities}
         mainDomains={mainDomains}
-        subDomains={subDomains}
+        subDomains={subDomains as never[]}
         onClose={() => setQuickAddDefinitionDialogOpen(false)}
         onSave={handleSaveQuickDefinition}
         onQuickAddDomain={() => setQuickAddDomainDialogOpen(true)}

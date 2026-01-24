@@ -73,18 +73,23 @@ function QuickAddObjectDialog({
 
   // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
       setName('')
       setDescription('')
       setSubjectId('')
       setAliasIds([])
       setParentIds([])
       setRelationIds([])
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {

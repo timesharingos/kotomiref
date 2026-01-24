@@ -32,14 +32,19 @@ function QuickAddDialog({
 
   // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
       setName('')
-      // Focus on name input after a short delay
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
     }
+    resetForm()
+
+    // Focus on name input after a short delay
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
@@ -71,7 +76,7 @@ function QuickAddDialog({
             label={label}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             fullWidth
             required
             inputRef={nameInputRef}

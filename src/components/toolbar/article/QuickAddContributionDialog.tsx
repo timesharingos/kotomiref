@@ -87,7 +87,10 @@ function QuickAddContributionDialog({
 
   // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
       setDescription('')
       setSubjectId('')
       setAliasIds([])
@@ -97,11 +100,13 @@ function QuickAddContributionDialog({
       setAlgoIds([])
       setObjectIds([])
       setSolutionToId('')
-      const timer = setTimeout(() => {
-        descInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      descInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {

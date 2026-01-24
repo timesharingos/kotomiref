@@ -15,7 +15,6 @@ import {
   IconButton,
   Typography,
   Chip,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -30,7 +29,7 @@ import ArticleDialog from './ArticleDialog'
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
 import { toast } from 'react-toastify'
 
-// Article data interface
+// Article data interface for display
 interface ArticleItem {
   id: string
   title: string
@@ -38,7 +37,7 @@ interface ArticleItem {
   year: number | string
   publicationPlatform: string
   path?: string
-  references?: any[]
+  references?: unknown[]
   entityTags?: string[]
   contributions?: string[]
   domainId?: string
@@ -54,14 +53,62 @@ interface SearchCriteria {
   publicationPlatform: string
 }
 
+interface Signature {
+  id?: string
+  authorId: string
+  affiliationId: string
+  name: string
+  sigNo: number
+}
+
+interface Reference {
+  id?: string
+  refNo: number
+  refIndex: string
+  refTitle: string
+  refYear: number | null
+  refPublication: string
+  refVolume: number | null
+  refIssue: number | null
+  refStartPage: number | null
+  refEndPage: number | null
+  refDoi: string
+  refAbs: string
+  signatures: Signature[]
+}
+
+interface EntityTag {
+  id: string
+  name: string
+  type: string
+  typeName: string
+}
+
+// ArticleData interface for dialog (matches ArticleDialog props)
+interface ArticleData {
+  id: string
+  artTitle: string
+  artPath: string
+  artPrimaryRefEntry: number | null
+  file: File | null
+  references: Reference[]
+  entityTags: (string | EntityTag)[]
+  contributions: (string | EntityTag)[]
+}
+
+interface Domain {
+  id: string
+  name: string
+}
+
 const ArticleTab = () => {
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [filteredArticles, setFilteredArticles] = useState<ArticleItem[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add')
-  const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(null)
-  const [domains, setDomains] = useState<any[]>([])
+  const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null)
+  const [domains, setDomains] = useState<Domain[]>([])
   
   // Search criteria state
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
@@ -76,64 +123,72 @@ const ArticleTab = () => {
 
   // Load data
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load articles from backend
+        const articlesResult = await window.article.getAll()
+
+        // Load all authors to create a map
+        const allAuthors = await window.author.getAll()
+        const authorMap = new Map(allAuthors.map((author: { id: string; name: string }) => [author.id, author.name]))
+
+        // Transform articles to display format
+        const transformedArticles = articlesResult.map((article: {
+          id: string
+          artTitle: string
+          artPath: string
+          artPrimaryRefEntry: number | null
+          references: { refNo: number; refYear: number | null; refPublication: string; signatures: { authorId: string }[] }[]
+          entityTags: string[]
+          contributions: string[]
+        }) => {
+          // Find primary reference
+          let primaryRef = null
+          if (article.artPrimaryRefEntry !== -1 && article.references && article.references.length > 0) {
+            // artPrimaryRefEntry is the refNo, need to find the reference with matching refNo
+            primaryRef = article.references.find((ref) => ref.refNo === article.artPrimaryRefEntry)
+          }
+
+          // Get authors from primary reference signatures
+          let authors: string[] = []
+          if (primaryRef && primaryRef.signatures && primaryRef.signatures.length > 0) {
+            // Map author IDs to author names
+            authors = primaryRef.signatures
+              .map((sig) => {
+                const authorName = authorMap.get(sig.authorId)
+                return authorName || 'Unknown'
+              })
+              .filter((name: string) => name !== 'Unknown')
+          }
+
+          return {
+            id: article.id,
+            title: article.artTitle,
+            authors: authors,
+            year: primaryRef && primaryRef.refYear !== null && primaryRef.refYear !== -1 ? primaryRef.refYear : '',
+            publicationPlatform: primaryRef && primaryRef.refPublication ? primaryRef.refPublication : '',
+            path: article.artPath,
+            references: article.references,
+            entityTags: article.entityTags,
+            contributions: article.contributions
+          }
+        })
+
+        setArticles(transformedArticles)
+        setFilteredArticles(transformedArticles)
+
+        // Load domains for search filter (load both main and sub domains)
+        const mainDomainsResult = await window.domain.getAllMain()
+        const subDomainsResult = await window.domain.getAllSub()
+        setDomains([...mainDomainsResult, ...subDomainsResult])
+      } catch (e) {
+        console.error('Failed to load articles:', e)
+        toast.error('Failed to load articles')
+      }
+    }
+
     loadData()
   }, [])
-
-  const loadData = async () => {
-    try {
-      // Load articles from backend
-      const articlesResult = await window.article.getAll()
-
-      // Load all authors to create a map
-      const allAuthors = await window.author.getAll()
-      const authorMap = new Map(allAuthors.map((author: any) => [author.id, author.name]))
-
-      // Transform articles to display format
-      const transformedArticles = articlesResult.map((article: any) => {
-        // Find primary reference
-        let primaryRef = null
-        if (article.artPrimaryRefEntry !== -1 && article.references && article.references.length > 0) {
-          // artPrimaryRefEntry is the refNo, need to find the reference with matching refNo
-          primaryRef = article.references.find((ref: any) => ref.refNo === article.artPrimaryRefEntry)
-        }
-
-        // Get authors from primary reference signatures
-        let authors: string[] = []
-        if (primaryRef && primaryRef.signatures && primaryRef.signatures.length > 0) {
-          // Map author IDs to author names
-          authors = primaryRef.signatures
-            .map((sig: any) => {
-              const authorName = authorMap.get(sig.authorId)
-              return authorName || 'Unknown'
-            })
-            .filter((name: string) => name !== 'Unknown')
-        }
-
-        return {
-          id: article.id,
-          title: article.artTitle,
-          authors: authors,
-          year: primaryRef && primaryRef.refYear !== null && primaryRef.refYear !== -1 ? primaryRef.refYear : '',
-          publicationPlatform: primaryRef && primaryRef.refPublication ? primaryRef.refPublication : '',
-          path: article.artPath,
-          references: article.references,
-          entityTags: article.entityTags,
-          contributions: article.contributions
-        }
-      })
-
-      setArticles(transformedArticles)
-      setFilteredArticles(transformedArticles)
-
-      // Load domains for search filter (load both main and sub domains)
-      const mainDomainsResult = await window.domain.getAllMain()
-      const subDomainsResult = await window.domain.getAllSub()
-      setDomains([...mainDomainsResult, ...subDomainsResult])
-    } catch (e) {
-      console.error('Failed to load articles:', e)
-      toast.error('Failed to load articles')
-    }
-  }
 
   // Search handler (placeholder)
   const handleSearch = () => {
@@ -179,9 +234,45 @@ const ArticleTab = () => {
     setDialogOpen(true)
   }
 
-  const handleEdit = (article: ArticleItem) => {
+  const handleEdit = async (article: ArticleItem) => {
     setDialogMode('edit')
-    setSelectedArticle(article)
+
+    // Fetch full article data from backend
+    try {
+      const fullArticle = await window.article.getById(article.id)
+      if (fullArticle) {
+        // Convert backend references to frontend format
+        const convertedReferences: Reference[] = fullArticle.references.map(ref => ({
+          ...ref,
+          signatures: ref.signatures.map(sig => ({
+            id: sig.id,
+            authorId: sig.authorId,
+            affiliationId: sig.affiliationId,
+            name: '', // Will be populated by the dialog
+            sigNo: sig.order
+          }))
+        }))
+
+        // Convert to ArticleData format expected by dialog
+        const articleData: ArticleData = {
+          id: fullArticle.id,
+          artTitle: fullArticle.artTitle,
+          artPath: fullArticle.artPath,
+          artPrimaryRefEntry: fullArticle.artPrimaryRefEntry,
+          file: null, // File is not stored, only path
+          references: convertedReferences,
+          entityTags: fullArticle.entityTags, // These are string IDs from backend
+          contributions: fullArticle.contributions // These are string IDs from backend
+        }
+        setSelectedArticle(articleData)
+      } else {
+        toast.error('Failed to load article details')
+      }
+    } catch (error) {
+      console.error('Failed to fetch article:', error)
+      toast.error('Failed to load article details')
+    }
+
     setDialogOpen(true)
   }
 
@@ -204,8 +295,8 @@ const ArticleTab = () => {
         // }
         console.log('Delete articles:', Array.from(selectedIds))
         setSelectedIds(new Set())
-        await loadData()
-        toast.success('Articles deleted successfully')
+        // Reload data after delete
+        window.location.reload()
       } catch (e) {
         console.error('Failed to delete articles:', e)
         toast.error('Failed to delete articles')
@@ -218,18 +309,12 @@ const ArticleTab = () => {
     setSelectedArticle(null)
   }
 
-  const handleDialogSave = async (data: any) => {
+  const handleDialogSave = async (data: ArticleData) => {
     try {
-      // TODO: Implement save logic
-      // if (dialogMode === 'add') {
-      //   await window.article.add(data)
-      // } else {
-      //   await window.article.update(data)
-      // }
       console.log('Save article:', data)
       handleDialogClose()
-      await loadData()
-      toast.success('Article saved successfully')
+      // Reload data after save
+      window.location.reload()
     } catch (e) {
       console.error('Failed to save article:', e)
       toast.error('Failed to save article')
@@ -246,8 +331,8 @@ const ArticleTab = () => {
         <Typography variant="h6" gutterBottom>
           Search Articles
         </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={2.4}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
             <FormControl fullWidth size="small">
               <InputLabel>Domain</InputLabel>
               <Select
@@ -263,8 +348,8 @@ const ArticleTab = () => {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
             <TextField
               fullWidth
               size="small"
@@ -272,8 +357,8 @@ const ArticleTab = () => {
               value={searchCriteria.title}
               onChange={(e) => setSearchCriteria({ ...searchCriteria, title: e.target.value })}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
             <TextField
               fullWidth
               size="small"
@@ -282,8 +367,8 @@ const ArticleTab = () => {
               onChange={(e) => setSearchCriteria({ ...searchCriteria, year: e.target.value })}
               placeholder="e.g., 2023"
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
             <TextField
               fullWidth
               size="small"
@@ -291,8 +376,8 @@ const ArticleTab = () => {
               value={searchCriteria.author}
               onChange={(e) => setSearchCriteria({ ...searchCriteria, author: e.target.value })}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
             <TextField
               fullWidth
               size="small"
@@ -300,8 +385,8 @@ const ArticleTab = () => {
               value={searchCriteria.publicationPlatform}
               onChange={(e) => setSearchCriteria({ ...searchCriteria, publicationPlatform: e.target.value })}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
         <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
           <Button
             variant="contained"

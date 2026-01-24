@@ -20,10 +20,11 @@ import { toast } from 'react-toastify'
 import SignatureDialog from './SignatureDialog'
 
 interface Signature {
-  id: string
+  id?: string
   name: string
-  authorId: string | null
-  affiliationId: string | null
+  authorId: string
+  affiliationId: string
+  sigNo: number
 }
 
 interface Author {
@@ -40,14 +41,12 @@ interface SignatureManagementProps {
   referenceId: string
   articleName: string
   refNo: number
-  onSignaturesChange?: () => void
 }
 
 function SignatureManagement({
   referenceId,
   articleName,
-  refNo,
-  onSignaturesChange
+  refNo
 }: SignatureManagementProps) {
   const [signatures, setSignatures] = useState<Signature[]>([])
   const [authors, setAuthors] = useState<Author[]>([])
@@ -57,26 +56,26 @@ function SignatureManagement({
   const [selectedSignature, setSelectedSignature] = useState<Signature | null>(null)
 
   useEffect(() => {
-    if (referenceId) {
-      loadData()
-    }
-  }, [referenceId])
+    const loadData = async () => {
+      if (!referenceId) return
 
-  const loadData = async () => {
-    try {
-      const [sigs, auths, affs] = await Promise.all([
-        window.signature.getByReference(referenceId),
-        window.author.getAll(),
-        window.affiliation.getAll()
-      ])
-      setSignatures(sigs)
-      setAuthors(auths)
-      setAffiliations(affs)
-    } catch (e) {
-      console.error('Failed to load signature data:', e)
-      toast.error('Failed to load signature data')
+      try {
+        const [sigs, auths, affs] = await Promise.all([
+          window.signature.getByReference(referenceId),
+          window.author.getAll(),
+          window.affiliation.getAll()
+        ])
+        setSignatures(sigs)
+        setAuthors(auths)
+        setAffiliations(affs)
+      } catch (e) {
+        console.error('Failed to load signature data:', e)
+        toast.error('Failed to load signature data')
+      }
     }
-  }
+
+    loadData()
+  }, [referenceId])
 
   const handleAdd = () => {
     setDialogMode('add')
@@ -91,6 +90,11 @@ function SignatureManagement({
   }
 
   const handleDelete = async (signature: Signature) => {
+    if (!signature.id) {
+      toast.error('Cannot delete signature: missing ID')
+      return
+    }
+
     if (!window.confirm(`Are you sure you want to delete signature "${signature.name}"?`)) {
       return
     }
@@ -107,8 +111,7 @@ function SignatureManagement({
       const deleteResult = await window.signature.delete(signature.id)
       if (deleteResult.success) {
         toast.success('Signature deleted successfully')
-        await loadData()
-        onSignaturesChange?.()
+        window.location.reload()
       } else {
         toast.error(`Failed to delete signature: ${deleteResult.error}`)
       }
@@ -144,8 +147,7 @@ function SignatureManagement({
 
       toast.success(`Signature ${dialogMode === 'add' ? 'added' : 'updated'} successfully`)
       setDialogOpen(false)
-      await loadData()
-      onSignaturesChange?.()
+      window.location.reload()
     } catch (e) {
       console.error('Failed to save signature:', e)
       toast.error('An error occurred while saving signature')

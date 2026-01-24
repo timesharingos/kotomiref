@@ -10,8 +10,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  Typography
+  MenuItem
 } from '@mui/material'
 import { toast } from 'react-toastify'
 

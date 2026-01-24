@@ -41,15 +41,20 @@ function QuickAddAuthorDialog({
 
   // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
       setName('')
       setSelectedAffiliations([])
-      // Focus on name input after a short delay
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
     }
+    resetForm()
+
+    // Focus on name input after a short delay
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
