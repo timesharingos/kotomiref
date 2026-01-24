@@ -30,6 +30,9 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+import SignatureDialog from './SignatureDialog'
+import QuickAddAuthorDialog from './QuickAddAuthorDialog'
+import QuickAddAffiliationDialog from './QuickAddAffiliationDialog'
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
@@ -69,7 +72,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     refStartPage: null as number | null,
     refEndPage: null as number | null,
     refDoi: '',
-    refAbs: ''
+    refAbs: '',
+    signatures: [] as any[]
   })
 
   const [allEntities, setAllEntities] = useState<any[]>([])
@@ -77,6 +81,17 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false)
   const [textContent, setTextContent] = useState<string>('')  // 文本文件内容
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // Signature management states
+  const [authors, setAuthors] = useState<any[]>([])
+  const [affiliations, setAffiliations] = useState<any[]>([])
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false)
+  const [signatureDialogMode, setSignatureDialogMode] = useState<'add' | 'edit'>('add')
+  const [selectedSignatureIndex, setSelectedSignatureIndex] = useState<number | null>(null)
+
+  // Quick add dialogs
+  const [quickAddAuthorDialogOpen, setQuickAddAuthorDialogOpen] = useState(false)
+  const [quickAddAffiliationDialogOpen, setQuickAddAffiliationDialogOpen] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -116,6 +131,14 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       // Load all entities for tagging
       const entitiesResult = await window.entity.getAll()
       setAllEntities(entitiesResult)
+
+      // Load authors and affiliations for signature management
+      const [authorsResult, affiliationsResult] = await Promise.all([
+        window.author.getAll(),
+        window.affiliation.getAll()
+      ])
+      setAuthors(authorsResult)
+      setAffiliations(affiliationsResult)
     } catch (e) {
       console.error('Failed to load data:', e)
     }
@@ -379,7 +402,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       refStartPage: null,
       refEndPage: null,
       refDoi: '',
-      refAbs: ''
+      refAbs: '',
+      signatures: []
     })
 
     toast.success('Reference added successfully')
@@ -407,6 +431,89 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
       references: updatedReferences,
       artPrimaryRefEntry: updatedPrimary
     })
+  }
+
+  // Signature management functions
+  const handleAddSignature = () => {
+    setSignatureDialogMode('add')
+    setSelectedSignatureIndex(null)
+    setSignatureDialogOpen(true)
+  }
+
+  const handleEditSignature = (index: number) => {
+    setSignatureDialogMode('edit')
+    setSelectedSignatureIndex(index)
+    setSignatureDialogOpen(true)
+  }
+
+  const handleDeleteSignature = (index: number) => {
+    const updatedSignatures = currentReference.signatures.filter((_, i) => i !== index)
+    setCurrentReference({
+      ...currentReference,
+      signatures: updatedSignatures
+    })
+  }
+
+  const handleSaveSignature = (data: any) => {
+    if (signatureDialogMode === 'add') {
+      setCurrentReference({
+        ...currentReference,
+        signatures: [...currentReference.signatures, data]
+      })
+    } else if (signatureDialogMode === 'edit' && selectedSignatureIndex !== null) {
+      const updatedSignatures = [...currentReference.signatures]
+      updatedSignatures[selectedSignatureIndex] = data
+      setCurrentReference({
+        ...currentReference,
+        signatures: updatedSignatures
+      })
+    }
+    setSignatureDialogOpen(false)
+  }
+
+  // Quick add handlers
+  const handleQuickAddAuthor = () => {
+    setQuickAddAuthorDialogOpen(true)
+  }
+
+  const handleQuickAddAffiliation = () => {
+    setQuickAddAffiliationDialogOpen(true)
+  }
+
+  const handleSaveQuickAuthor = async (name: string, affiliationIds: string[]) => {
+    try {
+      const result = await window.author.add({ name, affiliations: affiliationIds })
+      if (result.success && result.id) {
+        setQuickAddAuthorDialogOpen(false)
+        toast.success('Author added successfully')
+        // Reload authors to get the complete data
+        const authorsResult = await window.author.getAll()
+        setAuthors(authorsResult)
+      } else {
+        toast.error(result.error || 'Failed to add author')
+      }
+    } catch (error) {
+      console.error('Failed to add author:', error)
+      toast.error('Failed to add author')
+    }
+  }
+
+  const handleSaveQuickAffiliation = async (name: string, parentId: string | null) => {
+    try {
+      const result = await window.affiliation.add({ name, parentId })
+      if (result.success && result.id) {
+        setQuickAddAffiliationDialogOpen(false)
+        toast.success('Affiliation added successfully')
+        // Reload affiliations to get the complete data
+        const affiliationsResult = await window.affiliation.getAll()
+        setAffiliations(affiliationsResult)
+      } else {
+        toast.error(result.error || 'Failed to add affiliation')
+      }
+    } catch (error) {
+      console.error('Failed to add affiliation:', error)
+      toast.error('Failed to add affiliation')
+    }
   }
 
   const handleSetPrimary = (refNo: number) => {
@@ -952,6 +1059,49 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                           {ref.refAbs.length > 150 && '...'}
                         </Typography>
                       )}
+
+                      {/* Signatures Display */}
+                      {ref.signatures && ref.signatures.length > 0 && (
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="caption" sx={{ color: '#e0e0e0', fontWeight: 'bold' }} display="block" gutterBottom>
+                            Signatures ({ref.signatures.length}):
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                            {ref.signatures.map((sig: any, index: number) => {
+                              const author = authors.find(a => a.id === sig.authorId)
+                              const affiliation = affiliations.find(a => a.id === sig.affiliationId)
+                              return (
+                                <Box
+                                  key={index}
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    borderRadius: 1,
+                                    px: 1,
+                                    py: 0.5
+                                  }}
+                                >
+                                  <Typography variant="caption" sx={{ color: '#90caf9', fontWeight: 'bold' }}>
+                                    #{index + 1}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#ffffff' }}>
+                                    {author?.name || 'Unknown'}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#e0e0e0' }}>
+                                    @
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#ce93d8' }}>
+                                    {affiliation?.name || 'Unknown'}
+                                  </Typography>
+                                </Box>
+                              )
+                            })}
+                          </Box>
+                        </Box>
+                      )}
                     </Box>
 
                     <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
@@ -986,6 +1136,90 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {/* Signature Management Section - FIRST */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Signatures (Authors & Affiliations) *
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Add author-affiliation pairs for this reference. Each signature represents one author from one institution.
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleAddSignature}
+                  startIcon={<CloudUploadIcon />}
+                >
+                  Add Signature
+                </Button>
+              </Box>
+
+              {/* Signatures List */}
+              {currentReference.signatures.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {currentReference.signatures.map((sig: any, index: number) => {
+                    const author = authors.find(a => a.id === sig.authorId)
+                    const affiliation = affiliations.find(a => a.id === sig.affiliationId)
+                    return (
+                      <Paper
+                        key={index}
+                        sx={{
+                          p: 2,
+                          bgcolor: '#424242',
+                          border: '1px solid',
+                          borderColor: '#616161',
+                          color: '#ffffff'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Chip label={`#${index + 1}`} size="small" color="primary" />
+                              <Chip label={author?.name || 'Unknown Author'} size="small" />
+                              <Typography variant="caption" sx={{ color: '#ffffff' }}>@</Typography>
+                              <Chip label={affiliation?.name || 'Unknown Affiliation'} size="small" color="secondary" />
+                            </Box>
+                            <Typography variant="caption" sx={{ color: '#e0e0e0' }}>
+                              {sig.name || `${formData.artTitle}-Ref${currentReference.refNo}-Sig${index + 1}`}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              sx={{ color: '#ffffff', borderColor: '#ffffff' }}
+                              onClick={() => handleEditSignature(index)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleDeleteSignature(index)}
+                            >
+                              Remove
+                            </Button>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    )
+                  })}
+                </Box>
+              ) : (
+                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#424242', border: '1px solid #616161' }}>
+                  <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                    No signatures added yet. Click "Add Signature" to add author-affiliation pairs.
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
             {/* Row 1: Index and Title */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
@@ -1088,7 +1322,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
             <Button
               variant="contained"
               onClick={handleAddReference}
-              sx={{ alignSelf: 'flex-start' }}
+              sx={{ alignSelf: 'flex-start', mt: 2 }}
             >
               Add Reference
             </Button>
@@ -1678,6 +1912,42 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           </Button>
         )}
       </DialogActions>
+
+      {/* Signature Dialog */}
+      <SignatureDialog
+        open={signatureDialogOpen}
+        mode={signatureDialogMode}
+        signature={
+          signatureDialogMode === 'edit' && selectedSignatureIndex !== null
+            ? currentReference.signatures[selectedSignatureIndex]
+            : null
+        }
+        articleName={formData.artTitle}
+        refNo={formData.references.length}
+        currentSignatureCount={currentReference.signatures.length}
+        authors={authors}
+        affiliations={affiliations}
+        onClose={() => setSignatureDialogOpen(false)}
+        onSave={handleSaveSignature}
+        onQuickAddAuthor={handleQuickAddAuthor}
+        onQuickAddAffiliation={handleQuickAddAffiliation}
+      />
+
+      {/* Quick Add Author Dialog */}
+      <QuickAddAuthorDialog
+        open={quickAddAuthorDialogOpen}
+        affiliations={affiliations}
+        onClose={() => setQuickAddAuthorDialogOpen(false)}
+        onSave={handleSaveQuickAuthor}
+      />
+
+      {/* Quick Add Affiliation Dialog */}
+      <QuickAddAffiliationDialog
+        open={quickAddAffiliationDialogOpen}
+        affiliations={affiliations}
+        onClose={() => setQuickAddAffiliationDialogOpen(false)}
+        onSave={handleSaveQuickAffiliation}
+      />
     </Dialog>
   )
 }

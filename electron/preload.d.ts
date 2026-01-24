@@ -31,6 +31,21 @@ interface AuthorAffiliation {
   affiliationId: string;
 }
 
+interface Signature {
+  id: string;
+  name: string;
+  authorId: string | null;
+  affiliationId: string | null;
+}
+
+interface SignatureData {
+  id?: string;
+  name: string;
+  authorId: string | null;
+  affiliationId: string | null;
+  referenceId?: string;
+}
+
 interface MainDomain {
   id: string;
   name: string;
@@ -201,6 +216,14 @@ declare global {
       add: (data: { name: string; affiliations: string[] }) => Promise<{ success: boolean; id?: string; error?: string }>;
       update: (data: { id: string; name: string; affiliations: string[] }) => Promise<{ success: boolean; error?: string }>;
       delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+    };
+    signature: {
+      getAll: () => Promise<Signature[]>;
+      getByReference: (referenceId: string) => Promise<Signature[]>;
+      save: (data: SignatureData) => Promise<{ success: boolean; id?: string; error?: string }>;
+      delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+      linkToReference: (referenceId: string, signatureId: string) => Promise<{ success: boolean; id?: string; error?: string }>;
+      unlinkFromReference: (referenceId: string, signatureId: string) => Promise<{ success: boolean; error?: string }>;
     };
     domain: {
       getAllMain: () => Promise<MainDomain[]>;

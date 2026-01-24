@@ -54,6 +54,18 @@ contextBridge.exposeInMainWorld(
 )
 
 contextBridge.exposeInMainWorld(
+    'signature',
+    {
+        getAll: () => ipcRenderer.invoke("signature:getAll"),
+        getByReference: (referenceId) => ipcRenderer.invoke("signature:getByReference", referenceId),
+        save: (data) => ipcRenderer.invoke("signature:save", data),
+        delete: (id) => ipcRenderer.invoke("signature:delete", id),
+        linkToReference: (referenceId, signatureId) => ipcRenderer.invoke("signature:linkToReference", referenceId, signatureId),
+        unlinkFromReference: (referenceId, signatureId) => ipcRenderer.invoke("signature:unlinkFromReference", referenceId, signatureId)
+    }
+)
+
+contextBridge.exposeInMainWorld(
     'domain',
     {
         getAllMain: () => ipcRenderer.invoke("domain:getAllMain"),
