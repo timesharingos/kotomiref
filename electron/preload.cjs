@@ -32,6 +32,14 @@ contextBridge.exposeInMainWorld(
 )
 
 contextBridge.exposeInMainWorld(
+    'electron',
+    {
+        readFile: (filePath) => ipcRenderer.invoke("electron:readFile", filePath),
+        selectFile: () => ipcRenderer.invoke("electron:selectFile")
+    }
+)
+
+contextBridge.exposeInMainWorld(
     'affiliation',
     {
         getAll: () => ipcRenderer.invoke("affiliation:getAll"),

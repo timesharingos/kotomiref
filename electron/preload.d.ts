@@ -256,6 +256,10 @@ declare global {
       reset: (includeConfig: boolean) => Promise<boolean>;
       selectDirectory: () => Promise<string | null>;
     };
+    electron: {
+      readFile: (filePath: string) => Promise<Buffer>;
+      selectFile: () => Promise<string | null>;
+    };
     affiliation: {
       getAll: () => Promise<Affiliation[]>;
       getHierarchy: () => Promise<AffiliationHierarchy[]>;

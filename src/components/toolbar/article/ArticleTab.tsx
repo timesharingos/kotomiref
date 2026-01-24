@@ -253,6 +253,61 @@ const ArticleTab = () => {
           }))
         }))
 
+        // Load entity details for tags and contributions
+        const [allEntities] = await Promise.all([
+          window.entity.getAll()
+        ])
+
+        // Convert entity tag IDs to entity objects
+        const entityTagObjects: EntityTag[] = fullArticle.entityTags
+          .map(tagId => {
+            const entity = allEntities.find(e => e.id === tagId)
+            if (entity) {
+              return {
+                id: entity.id,
+                name: entity.name,
+                type: entity.type,
+                typeName: entity.type
+              }
+            }
+            return null
+          })
+          .filter((tag): tag is EntityTag => tag !== null)
+
+        // Load full contribution data
+        const contributionObjects = await Promise.all(
+          fullArticle.contributions.map(async (contribId) => {
+            try {
+              // Get full contribution details
+              const contribEntities = await window.entity.getAllByType('contrib')
+              const fullContrib = contribEntities.find(e => e.id === contribId)
+
+              if (fullContrib) {
+                return {
+                  id: fullContrib.id,
+                  name: fullContrib.name || '',
+                  type: 'contrib' as const,
+                  typeName: 'contrib',
+                  description: fullContrib.description,
+                  subjectId: fullContrib.subjectId,
+                  improvementIds: fullContrib.improvementIds || [],
+                  algoIds: fullContrib.algoIds || [],
+                  objectIds: fullContrib.objectIds || [],
+                  solutionToId: fullContrib.solutionToId,
+                  aliasIds: fullContrib.aliasIds || [],
+                  parentIds: fullContrib.parentIds || []
+                }
+              }
+              return null
+            } catch (error) {
+              console.error(`Failed to load contribution ${contribId}:`, error)
+              return null
+            }
+          })
+        )
+
+        const validContributions = contributionObjects.filter((c): c is NonNullable<typeof c> => c !== null)
+
         // Convert to ArticleData format expected by dialog
         const articleData: ArticleData = {
           id: fullArticle.id,
@@ -261,8 +316,8 @@ const ArticleTab = () => {
           artPrimaryRefEntry: fullArticle.artPrimaryRefEntry,
           file: null, // File is not stored, only path
           references: convertedReferences,
-          entityTags: fullArticle.entityTags, // These are string IDs from backend
-          contributions: fullArticle.contributions // These are string IDs from backend
+          entityTags: entityTagObjects,
+          contributions: validContributions
         }
         setSelectedArticle(articleData)
       } else {
@@ -284,17 +339,33 @@ const ArticleTab = () => {
 
     const confirmed = await confirm(
       'Delete Articles',
-      `Are you sure you want to delete ${selectedIds.size} article(s)?`
+      `Are you sure you want to delete ${selectedIds.size} article(s)? This will also delete all associated references and signatures.`
     )
 
     if (confirmed) {
       try {
-        // TODO: Implement delete logic
-        // for (const id of selectedIds) {
-        //   await window.article.delete(id)
-        // }
-        console.log('Delete articles:', Array.from(selectedIds))
+        let successCount = 0
+        let failCount = 0
+
+        for (const id of selectedIds) {
+          const result = await window.article.delete(id)
+          if (result.success) {
+            successCount++
+          } else {
+            failCount++
+            console.error(`Failed to delete article ${id}:`, result.error)
+          }
+        }
+
         setSelectedIds(new Set())
+
+        if (successCount > 0) {
+          toast.success(`Successfully deleted ${successCount} article(s)`)
+        }
+        if (failCount > 0) {
+          toast.error(`Failed to delete ${failCount} article(s)`)
+        }
+
         // Reload data after delete
         window.location.reload()
       } catch (e) {

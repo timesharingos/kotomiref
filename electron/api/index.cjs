@@ -6,6 +6,7 @@ const { registerAuthorHandlers } = require("./author.cjs")
 const { registerDomainHandlers } = require("./domain.cjs")
 const { registerEntityHandlers } = require("./entity.cjs")
 const { registerArticleHandlers } = require("./article.cjs")
+const { registerElectronHandlers } = require("./electron.cjs")
 
 /**
  * Register all IPC handlers
@@ -20,6 +21,7 @@ function registerAllHandlers(createWindow) {
     registerDomainHandlers()
     registerEntityHandlers()
     registerArticleHandlers()
+    registerElectronHandlers()
 }
 
 module.exports = {

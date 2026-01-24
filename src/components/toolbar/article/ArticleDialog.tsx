@@ -223,11 +223,107 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   // Load file preview from path
   const loadFilePreview = async (filePath: string) => {
     try {
-      // TODO: Implement file preview loading from electron
-      // For now, just set the path
-      setFilePreview(filePath)
+      if (!filePath) return
+
+      setPdfPreviewLoading(true)
+
+      // Get file extension
+      const ext = filePath.toLowerCase().split('.').pop()
+
+      if (ext === 'pdf') {
+        // Load PDF preview
+        const fileBuffer = await window.electron.readFile(filePath)
+        const arrayBuffer = fileBuffer.buffer.slice(
+          fileBuffer.byteOffset,
+          fileBuffer.byteOffset + fileBuffer.byteLength
+        )
+
+        // Load PDF document
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+        // Get first page
+        const page = await pdf.getPage(1)
+
+        // Set canvas size
+        const viewport = page.getViewport({ scale: 1.5 })
+        const canvas = canvasRef.current
+
+        if (canvas) {
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+
+          const context = canvas.getContext('2d')
+          if (context) {
+            // Render PDF page
+            const renderContext = {
+              canvasContext: context,
+              viewport: viewport
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await page.render(renderContext as any).promise
+
+            // Convert canvas to data URL for preview
+            const dataUrl = canvas.toDataURL()
+            setFilePreview(dataUrl)
+          }
+        }
+      } else if (ext === 'docx' || ext === 'doc') {
+        // Load Word document preview
+        const fileBuffer = await window.electron.readFile(filePath)
+        const arrayBuffer = fileBuffer.buffer.slice(
+          fileBuffer.byteOffset,
+          fileBuffer.byteOffset + fileBuffer.byteLength
+        )
+
+        // Convert Word document to HTML
+        const result = await mammoth.convertToHtml({
+          arrayBuffer: arrayBuffer
+        } as { arrayBuffer: ArrayBuffer })
+
+        // Store HTML content and set preview type
+        setTextContent(result.value)
+        setFilePreview('word-preview')
+      } else if (ext === 'txt') {
+        // Load text file preview
+        const fileBuffer = await window.electron.readFile(filePath)
+        const text = new TextDecoder().decode(fileBuffer)
+        setTextContent(text)
+        setFilePreview('text-preview')
+      } else if (ext === 'md') {
+        // Load Markdown file preview
+        const fileBuffer = await window.electron.readFile(filePath)
+        const text = new TextDecoder().decode(fileBuffer)
+        setTextContent(text)
+        setFilePreview('markdown-preview')
+      } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {
+        // Load image preview
+        const fileBuffer = await window.electron.readFile(filePath)
+
+        // Determine MIME type
+        let mimeType = 'image/jpeg'
+        if (ext === 'png') mimeType = 'image/png'
+        else if (ext === 'gif') mimeType = 'image/gif'
+        else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+
+        // Create blob with correct MIME type
+        const blob = new Blob([fileBuffer], { type: mimeType })
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          setFilePreview(e.target?.result as string)
+          setPdfPreviewLoading(false)
+        }
+        reader.readAsDataURL(blob)
+        return // Don't set loading to false here, reader.onload will do it
+      } else {
+        // For other file types, just show the path
+        setFilePreview(filePath)
+      }
+
+      setPdfPreviewLoading(false)
     } catch (e) {
       console.error('Failed to load file preview:', e)
+      setFilePreview('preview-error')
+      setPdfPreviewLoading(false)
     }
   }
 
@@ -329,170 +425,97 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     loadDetailedEntities()
   }, [activeStep, formData.contributions, allEntities])
 
-  // Render PDF first page to canvas
-  const renderPdfPreview = async (file: File) => {
+  // File upload handler using Electron dialog
+  const handleFileUpload = async () => {
     try {
-      setPdfPreviewLoading(true)
+      // Use Electron dialog to select file and get absolute path
+      const absolutePath = await window.electron.selectFile()
 
-      // Read file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer()
-
-      // Load PDF document
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-
-      // Get first page
-      const page = await pdf.getPage(1)
-
-      // Set canvas size
-      const viewport = page.getViewport({ scale: 1.5 })
-      const canvas = canvasRef.current
-
-      if (canvas) {
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-
-        const context = canvas.getContext('2d')
-        if (context) {
-          // Render PDF page - PDF.js expects this format
-          const renderContext = {
-            canvasContext: context,
-            viewport: viewport
-          }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await page.render(renderContext as any).promise
-
-          // Convert canvas to data URL for preview
-          const dataUrl = canvas.toDataURL()
-          setFilePreview(dataUrl)
-        }
+      if (!absolutePath) {
+        // User cancelled
+        return
       }
 
-      setPdfPreviewLoading(false)
-    } catch (e) {
-      console.error('Failed to render PDF preview:', e)
-      setPdfPreviewLoading(false)
-      setFilePreview('pdf-preview-error')
-    }
-  }
+      console.log('File selected with absolute path:', absolutePath)
 
-  // Render text file preview (txt only)
-  const renderTextPreview = async (file: File) => {
-    try {
-      setPdfPreviewLoading(true)
+      // Extract file name from path
+      const fileName = absolutePath.split(/[\\/]/).pop() || ''
+      const fileExtension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase()
 
-      // Read file as text
-      const text = await file.text()
-
-      console.log('Text file loaded:', {
-        fileName: file.name,
-        fileSize: file.size,
-        textLength: text.length,
-        preview: text.substring(0, 100)
-      })
-
-      // Store text content and set preview type
-      setTextContent(text)
-      setFilePreview('text-preview')
-
-      setPdfPreviewLoading(false)
-    } catch (e) {
-      console.error('Failed to render text preview:', e)
-      setPdfPreviewLoading(false)
-      setFilePreview('text-preview-error')
-    }
-  }
-
-  // Render Markdown file preview (md)
-  const renderMarkdownPreview = async (file: File) => {
-    try {
-      setPdfPreviewLoading(true)
-
-      // Read file as text
-      const text = await file.text()
-
-      console.log('Markdown file loaded:', {
-        fileName: file.name,
-        fileSize: file.size,
-        textLength: text.length,
-        preview: text.substring(0, 100)
-      })
-
-      // Store markdown content and set preview type
-      setTextContent(text)
-      setFilePreview('markdown-preview')
-
-      setPdfPreviewLoading(false)
-    } catch (e) {
-      console.error('Failed to render Markdown preview:', e)
-      setPdfPreviewLoading(false)
-      setFilePreview('markdown-preview-error')
-    }
-  }
-
-  // Render Word document preview (doc, docx)
-  const renderWordPreview = async (file: File) => {
-    try {
-      setPdfPreviewLoading(true)
-
-      // Read file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer()
-
-      // Convert Word document to HTML with better styling options
-      const result = await mammoth.convertToHtml({
-        arrayBuffer: arrayBuffer
-      } as { arrayBuffer: ArrayBuffer })
-
-      // Store HTML content and set preview type
-      setTextContent(result.value)
-      setFilePreview('word-preview')
-
-      setPdfPreviewLoading(false)
-    } catch (e) {
-      console.error('Failed to render Word preview:', e)
-      setPdfPreviewLoading(false)
-      setFilePreview('word-preview-error')
-    }
-  }
-
-  // File upload handler
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
       // Validate file type
       const validExtensions = ['.md', '.txt', '.doc', '.docx', '.pdf', '.jpg', '.jpeg', '.png', '.gif']
-      const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-
       if (!validExtensions.includes(fileExtension)) {
         toast.error('Invalid file type. Supported formats: md, txt, doc(x), pdf, and images (jpg, png, gif)')
         return
       }
 
-      // Store file and generate preview
-      setFormData({ ...formData, file, artPath: file.name })
+      // Clear previous preview state
+      setFilePreview(null)
+      setTextContent('')
+      setPdfPreviewLoading(true)
+
+      // Store absolute path (no File object needed)
+      setFormData({ ...formData, file: null, artPath: absolutePath })
 
       // Generate preview based on file type
       if (['.jpg', '.jpeg', '.png', '.gif'].includes(fileExtension)) {
-        // Image preview
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          setFilePreview(e.target?.result as string)
-        }
-        reader.readAsDataURL(file)
-      } else if (fileExtension === '.pdf') {
-        // Render PDF first page
-        await renderPdfPreview(file)
-      } else if (fileExtension === '.txt') {
-        // Render text file
-        await renderTextPreview(file)
-      } else if (fileExtension === '.md') {
-        // Render Markdown file
-        await renderMarkdownPreview(file)
-      } else if (['.doc', '.docx'].includes(fileExtension)) {
-        // Render Word document
-        await renderWordPreview(file)
-      }
+        // Image preview - read file and convert to data URL
+        try {
+          const fileBuffer = await window.electron.readFile(absolutePath)
 
-      console.log('File selected:', file.name)
+          // Determine MIME type based on extension
+          let mimeType = 'image/jpeg'
+          if (fileExtension === '.png') mimeType = 'image/png'
+          else if (fileExtension === '.gif') mimeType = 'image/gif'
+          else if (['.jpg', '.jpeg'].includes(fileExtension)) mimeType = 'image/jpeg'
+
+          // Create blob with correct MIME type
+          const blob = new Blob([fileBuffer], { type: mimeType })
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            setFilePreview(e.target?.result as string)
+          }
+          reader.readAsDataURL(blob)
+        } catch (e) {
+          console.error('Failed to load image preview:', e)
+          toast.error('Failed to load image preview')
+        }
+      } else if (fileExtension === '.pdf') {
+        // Render PDF first page from absolute path
+        await loadFilePreview(absolutePath)
+      } else if (fileExtension === '.txt') {
+        // Render text file from absolute path
+        try {
+          const fileBuffer = await window.electron.readFile(absolutePath)
+          const text = new TextDecoder().decode(fileBuffer)
+          setTextContent(text)
+          setFilePreview('text-preview')
+          setPdfPreviewLoading(false)
+        } catch (e) {
+          console.error('Failed to load text preview:', e)
+          toast.error('Failed to load text preview')
+          setPdfPreviewLoading(false)
+        }
+      } else if (fileExtension === '.md') {
+        // Render Markdown file from absolute path
+        try {
+          const fileBuffer = await window.electron.readFile(absolutePath)
+          const text = new TextDecoder().decode(fileBuffer)
+          setTextContent(text)
+          setFilePreview('markdown-preview')
+          setPdfPreviewLoading(false)
+        } catch (e) {
+          console.error('Failed to load markdown preview:', e)
+          toast.error('Failed to load markdown preview')
+          setPdfPreviewLoading(false)
+        }
+      } else if (['.doc', '.docx'].includes(fileExtension)) {
+        // Render Word document from absolute path
+        await loadFilePreview(absolutePath)
+      }
+    } catch (error) {
+      console.error('Failed to select file:', error)
+      toast.error('Failed to select file')
     }
   }
 
@@ -1055,23 +1078,17 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           </Typography>
           <Button
             variant="outlined"
-            component="label"
             startIcon={<CloudUploadIcon />}
             fullWidth
             sx={{ mb: 2 }}
+            onClick={handleFileUpload}
           >
-            {formData.file ? formData.file.name : formData.artPath || 'Choose File'}
-            <input
-              type="file"
-              hidden
-              accept=".md,.txt,.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif"
-              onChange={handleFileUpload}
-            />
+            {formData.artPath ? formData.artPath.split(/[\\/]/).pop() : 'Choose File'}
           </Button>
 
-          {formData.file && (
+          {formData.artPath && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-              Selected: {formData.file.name} ({(formData.file.size / 1024 / 1024).toFixed(2)} MB)
+              Selected: {formData.artPath}
             </Typography>
           )}
 
@@ -1112,8 +1129,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 </Box>
               ) : filePreview === 'text-preview' ? (
                 // Text file preview (txt, md)
-                <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid #444', borderRadius: 1, maxHeight: 400, overflow: 'auto' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                <Box sx={{ p: 2, bgcolor: '#ffffff', border: '1px solid #ddd', borderRadius: 1, maxHeight: 400, overflow: 'auto' }}>
+                  <Typography variant="caption" sx={{ color: '#666' }} gutterBottom>
                     📝 Text Content:
                   </Typography>
                   <Box sx={{
@@ -1121,19 +1138,20 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                     fontFamily: 'monospace',
                     fontSize: '0.875rem',
                     whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
+                    wordBreak: 'break-word',
+                    color: '#000000'
                   }}>
                     {textContent.length > 0 ? (
                       <>
                         {textContent.substring(0, 2000)}
                         {textContent.length > 2000 && (
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, fontStyle: 'italic' }}>
+                          <Typography variant="caption" sx={{ display: 'block', mt: 2, fontStyle: 'italic', color: '#666' }}>
                             ... (showing first 2000 characters of {textContent.length} total)
                           </Typography>
                         )}
                       </>
                     ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
                         (Empty file)
                       </Typography>
                     )}
@@ -1153,8 +1171,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 // Markdown file preview
                 <Box sx={{
                   p: 3,
-                  bgcolor: 'background.paper',
-                  border: '1px solid #444',
+                  bgcolor: '#ffffff',
+                  border: '1px solid #ddd',
                   borderRadius: 1,
                   maxHeight: 400,
                   overflow: 'auto',
@@ -1307,8 +1325,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                 // Word document preview
                 <Box sx={{
                   p: 3,
-                  bgcolor: 'background.paper',
-                  border: '1px solid #444',
+                  bgcolor: '#ffffff',
+                  border: '1px solid #ddd',
                   borderRadius: 1,
                   maxHeight: 400,
                   overflow: 'auto',
@@ -1507,10 +1525,10 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         <strong>Publication:</strong> {ref.refPublication}
-                        {ref.refYear && ` (${ref.refYear})`}
-                        {ref.refVolume && `, Vol. ${ref.refVolume}`}
-                        {ref.refIssue && `, Issue ${ref.refIssue}`}
-                        {(ref.refStartPage || ref.refEndPage) && `, pp. ${ref.refStartPage || '?'}-${ref.refEndPage}`}
+                        {ref.refYear !== null && Math.floor(ref.refYear) !== -1 && ` (${Math.floor(ref.refYear)})`}
+                        {ref.refVolume !== null && Math.floor(ref.refVolume) !== -1 && `, Vol. ${Math.floor(ref.refVolume)}`}
+                        {ref.refIssue !== null && Math.floor(ref.refIssue) !== -1 && `, Issue ${Math.floor(ref.refIssue)}`}
+                        {((ref.refStartPage !== null && Math.floor(ref.refStartPage) !== -1) || (ref.refEndPage !== null && Math.floor(ref.refEndPage) !== -1)) && `, pp. ${ref.refStartPage !== null && Math.floor(ref.refStartPage) !== -1 ? Math.floor(ref.refStartPage) : '?'}-${ref.refEndPage !== null && Math.floor(ref.refEndPage) !== -1 ? Math.floor(ref.refEndPage) : '?'}`}
                       </Typography>
 
                       {ref.refDoi && (
@@ -1827,19 +1845,22 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           )}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
+              const { key, ...tagProps } = getTagProps({ index })
               if (typeof option === 'string') {
                 return (
                   <Chip
+                    key={key}
                     label={option}
-                    {...getTagProps({ index })}
+                    {...tagProps}
                     size="small"
                   />
                 )
               }
               return (
                 <Chip
+                  key={key}
                   label={option.name}
-                  {...getTagProps({ index })}
+                  {...tagProps}
                   size="small"
                   color={
                     option.type === 'object' ? 'primary' :
@@ -2312,8 +2333,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               </Box>
             ) : filePreview === 'text-preview' ? (
               // Text file preview (txt, md)
-              <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid #444', borderRadius: 1, maxHeight: 300, overflow: 'auto' }}>
-                <Typography variant="caption" color="text.secondary" gutterBottom>
+              <Box sx={{ p: 2, bgcolor: '#ffffff', border: '1px solid #ddd', borderRadius: 1, maxHeight: 300, overflow: 'auto' }}>
+                <Typography variant="caption" sx={{ color: '#666' }} gutterBottom>
                   📝 Text Content:
                 </Typography>
                 <Box sx={{
@@ -2322,20 +2343,19 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                   fontSize: '0.875rem',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  color: '#000000',
-                  backgroundColor: '#ffffff'
+                  color: '#000000'
                 }}>
                   {textContent.length > 0 ? (
                     <>
                       {textContent.substring(0, 1500)}
                       {textContent.length > 1500 && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, fontStyle: 'italic' }}>
+                        <Typography variant="caption" sx={{ display: 'block', mt: 2, fontStyle: 'italic', color: '#666' }}>
                           ... (showing first 1500 characters of {textContent.length} total)
                         </Typography>
                       )}
                     </>
                   ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
                       (Empty file)
                     </Typography>
                   )}
@@ -2355,8 +2375,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               // Markdown file preview
               <Box sx={{
                 p: 3,
-                bgcolor: 'background.paper',
-                border: '1px solid #444',
+                bgcolor: '#ffffff',
+                border: '1px solid #ddd',
                 borderRadius: 1,
                 maxHeight: 300,
                 overflow: 'auto',
@@ -2510,8 +2530,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               // Word document preview
               <Box sx={{
                 p: 3,
-                bgcolor: 'background.paper',
-                border: '1px solid #444',
+                bgcolor: '#ffffff',
+                border: '1px solid #ddd',
                 borderRadius: 1,
                 maxHeight: 300,
                 overflow: 'auto',
@@ -2701,13 +2721,13 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      {ref.refYear && (
+                      {ref.refYear !== null && Math.floor(ref.refYear) !== -1 && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Typography variant="caption" color="text.secondary">
                             Year:
                           </Typography>
                           <Typography variant="body2">
-                            {ref.refYear}
+                            {Math.floor(ref.refYear)}
                           </Typography>
                         </Box>
                       )}
@@ -2721,35 +2741,35 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
                           </Typography>
                         </Box>
                       )}
-                      {ref.refVolume && (
+                      {ref.refVolume !== null && Math.floor(ref.refVolume) !== -1 && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Typography variant="caption" color="text.secondary">
                             Volume:
                           </Typography>
                           <Typography variant="body2">
-                            {ref.refVolume}
+                            {Math.floor(ref.refVolume)}
                           </Typography>
                         </Box>
                       )}
-                      {ref.refIssue && (
+                      {ref.refIssue !== null && Math.floor(ref.refIssue) !== -1 && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Typography variant="caption" color="text.secondary">
                             Issue:
                           </Typography>
                           <Typography variant="body2">
-                            {ref.refIssue}
+                            {Math.floor(ref.refIssue)}
                           </Typography>
                         </Box>
                       )}
-                      {(ref.refStartPage || ref.refEndPage) && (
+                      {((ref.refStartPage !== null && Math.floor(ref.refStartPage) !== -1) || (ref.refEndPage !== null && Math.floor(ref.refEndPage) !== -1)) && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Typography variant="caption" color="text.secondary">
                             Pages:
                           </Typography>
                           <Typography variant="body2">
-                            {ref.refStartPage && ref.refEndPage
-                              ? `${ref.refStartPage}-${ref.refEndPage}`
-                              : ref.refStartPage || ref.refEndPage}
+                            {(ref.refStartPage !== null && Math.floor(ref.refStartPage) !== -1) && (ref.refEndPage !== null && Math.floor(ref.refEndPage) !== -1)
+                              ? `${Math.floor(ref.refStartPage)}-${Math.floor(ref.refEndPage)}`
+                              : (ref.refStartPage !== null && Math.floor(ref.refStartPage) !== -1) ? Math.floor(ref.refStartPage) : (ref.refEndPage !== null ? Math.floor(ref.refEndPage) : '')}
                           </Typography>
                         </Box>
                       )}
