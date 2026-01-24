@@ -18,6 +18,7 @@ import {
   Divider
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import { toast } from 'react-toastify'
 
 interface MainDomain {
   id: string
@@ -97,11 +98,11 @@ function AlgoDialog({
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      alert('Please enter a name')
+      toast.error('Please enter a name')
       return
     }
     if (!subjectId) {
-      alert('Please select a domain (subject)')
+      toast.error('Please select a domain (subject)')
       return
     }
 

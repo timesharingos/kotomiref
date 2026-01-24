@@ -7,17 +7,24 @@ import {
   TextField,
   Button,
   Box,
+  Typography,
+  Autocomplete,
+  IconButton,
+  Divider,
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  IconButton,
-  Typography,
-  Autocomplete,
-  Divider
+  MenuItem
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { toast } from 'react-toastify'
+
+interface Entity {
+  id: string
+  name: string
+  type: string
+  typeName: string
+}
 
 interface MainDomain {
   id: string
@@ -30,74 +37,82 @@ interface SubDomain {
   mainDomainId: string
 }
 
-interface EntityItem {
-  id: string
-  name: string
-  type: string
-  typeName: string
-}
-
-interface ContributionData {
-  id?: string
-  description: string
-  subjectId: string // Required: Main Domain or Sub Domain ID
-  aliasIds: string[] // Optional: Alias entities
-  parentIds: string[] // Optional: Parent entities
-  relationIds: string[] // Optional: Related entities
-  improvementIds: string[] // Required: At least one improvement
-  algoIds: string[] // Optional: Algorithm entities
-  objectIds: string[] // Optional: Object entities
-  solutionToId: string // Required: Definition entity (which problem this solves)
-}
-
-interface ContributionDialogProps {
+interface QuickAddContributionDialogProps {
   open: boolean
-  mode: 'add' | 'edit'
-  contribution: ContributionData | null
+  allEntities: Entity[]
   mainDomains: MainDomain[]
   subDomains: SubDomain[]
-  allEntities: EntityItem[]
   onClose: () => void
-  onSave: (data: ContributionData) => void
+  onSave: (data: {
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    improvementIds: string[]
+    algoIds: string[]
+    objectIds: string[]
+    solutionToId: string
+  }) => void
   onQuickAddDomain: () => void
+  onQuickAddImprovement: () => void
+  onQuickAddAlgo: () => void
+  onQuickAddObject: () => void
+  onQuickAddDefinition: () => void
 }
 
-function ContributionDialog({
+function QuickAddContributionDialog({
   open,
-  mode,
-  contribution,
+  allEntities,
   mainDomains,
   subDomains,
-  allEntities,
   onClose,
   onSave,
-  onQuickAddDomain
-}: ContributionDialogProps) {
-  const [description, setDescription] = useState(mode === 'edit' && contribution ? contribution.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && contribution ? contribution.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.relationIds : [])
-  const [improvementIds, setImprovementIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.improvementIds : [])
-  const [algoIds, setAlgoIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.algoIds : [])
-  const [objectIds, setObjectIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.objectIds : [])
-  const [solutionToId, setSolutionToId] = useState(mode === 'edit' && contribution ? contribution.solutionToId : '')
+  onQuickAddDomain,
+  onQuickAddImprovement,
+  onQuickAddAlgo,
+  onQuickAddObject,
+  onQuickAddDefinition
+}: QuickAddContributionDialogProps) {
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [improvementIds, setImprovementIds] = useState<string[]>([])
+  const [algoIds, setAlgoIds] = useState<string[]>([])
+  const [objectIds, setObjectIds] = useState<string[]>([])
+  const [solutionToId, setSolutionToId] = useState('')
+  const descInputRef = useRef<HTMLInputElement>(null)
 
-  const descriptionInputRef = useRef<HTMLInputElement>(null)
-
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        descriptionInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setImprovementIds([])
+      setAlgoIds([])
+      setObjectIds([])
+      setSolutionToId('')
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      descInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
-    const trimmedDescription = description.trim()
-    if (!trimmedDescription) {
-      toast.error('Please enter a description')
+    const trimmedDesc = description.trim()
+    if (!trimmedDesc) {
+      toast.error('Please enter contribution description')
       return
     }
     if (!subjectId) {
@@ -112,10 +127,8 @@ function ContributionDialog({
       toast.error('Please select a scenario (solution to)')
       return
     }
-
-    const data: ContributionData = {
-      id: contribution?.id,
-      description: trimmedDescription,
+    onSave({
+      description: trimmedDesc,
       subjectId,
       aliasIds,
       parentIds,
@@ -124,16 +137,21 @@ function ContributionDialog({
       algoIds,
       objectIds,
       solutionToId
-    }
-
-    onSave(data)
+    })
+    setDescription('')
+    setSubjectId('')
+    setAliasIds([])
+    setParentIds([])
+    setRelationIds([])
+    setImprovementIds([])
+    setAlgoIds([])
+    setObjectIds([])
+    setSolutionToId('')
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {mode === 'add' ? 'Add Contribution' : 'Edit Contribution'}
-      </DialogTitle>
+      <DialogTitle>Quick Add Contribution</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
           {/* Description - Required (No Name field for Contribution) */}
@@ -145,7 +163,7 @@ function ContributionDialog({
             required
             multiline
             rows={4}
-            inputRef={descriptionInputRef}
+            inputRef={descInputRef}
             helperText="Contribution does not have a name field. Please provide a detailed description."
           />
 
@@ -290,9 +308,14 @@ function ContributionDialog({
 
           {/* Improvement - Required, Multiple Select */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Improvement *
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                Improvement *
+              </Typography>
+              <IconButton size="small" onClick={onQuickAddImprovement} title="Quick add improvement">
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
               Select at least one improvement that this contribution includes.
             </Typography>
@@ -318,9 +341,14 @@ function ContributionDialog({
 
           {/* Algorithm - Optional, Multiple Select */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Algorithm
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                Algorithm
+              </Typography>
+              <IconButton size="small" onClick={onQuickAddAlgo} title="Quick add algorithm">
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
               Select algorithms that this contribution includes (optional).
             </Typography>
@@ -346,9 +374,14 @@ function ContributionDialog({
 
           {/* Object - Optional, Multiple Select */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Research Object
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                Research Object
+              </Typography>
+              <IconButton size="small" onClick={onQuickAddObject} title="Quick add research object">
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
               Select research objects that this contribution includes (optional).
             </Typography>
@@ -378,9 +411,14 @@ function ContributionDialog({
 
           {/* Solution To - Required, Single Select */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Solution To (Scenario) *
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+                Solution To (Scenario) *
+              </Typography>
+              <IconButton size="small" onClick={onQuickAddDefinition} title="Quick add definition">
+                <AddIcon fontSize="small" />
+              </IconButton>
+            </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
               Select the scenario (definition) that this contribution solves.
             </Typography>
@@ -401,12 +439,12 @@ function ContributionDialog({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained">
-          {mode === 'add' ? 'Add' : 'Save'}
+          Add
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export default ContributionDialog
+export default QuickAddContributionDialog
 

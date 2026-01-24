@@ -17,6 +17,7 @@ import {
   Radio,
   FormLabel
 } from '@mui/material'
+import { toast } from 'react-toastify'
 
 interface MainDomain {
   id: string
@@ -68,11 +69,11 @@ function QuickAddDomainDialog({
   const handleSave = async () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      alert('Please enter a domain name')
+      toast.error('Please enter a domain name')
       return
     }
     if (domainType === 'sub' && !mainDomainId) {
-      alert('Please select a main domain')
+      toast.error('Please select a main domain')
       return
     }
 
@@ -88,11 +89,11 @@ function QuickAddDomainDialog({
       if (result.success) {
         onClose()
       } else {
-        alert(`Failed to add domain: ${result.error}`)
+        toast.error(`Failed to add domain: ${result.error}`)
       }
     } catch (e) {
       console.error('Failed to add domain:', e)
-      alert('An error occurred while adding domain')
+      toast.error('An error occurred while adding domain')
     } finally {
       setSaving(false)
     }

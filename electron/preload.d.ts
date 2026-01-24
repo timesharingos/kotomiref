@@ -31,6 +31,22 @@ interface AuthorAffiliation {
   affiliationId: string;
 }
 
+interface Signature {
+  id: string;
+  name: string;
+  authorId: string;
+  affiliationId: string;
+  sigNo: number;
+}
+
+interface SignatureData {
+  id?: string;
+  name: string;
+  authorId: string | null;
+  affiliationId: string | null;
+  referenceId?: string;
+}
+
 interface MainDomain {
   id: string;
   name: string;
@@ -82,6 +98,15 @@ interface EntityItem {
   refineNames?: string[];
   scenarioIds?: string[];
   scenarioNames?: string[];
+  // Contribution-specific fields
+  improvementIds?: string[];
+  improvementNames?: string[];
+  algoIds?: string[];
+  algoNames?: string[];
+  objectIds?: string[];
+  objectNames?: string[];
+  solutionToId?: string;
+  solutionToName?: string;
 }
 
 interface AllEntityItem {
@@ -167,6 +192,49 @@ interface ContributionData {
   solutionToId: string;
 }
 
+interface ReferenceSignature {
+  id?: string;
+  authorId: string;
+  affiliationId: string;
+  order: number;
+}
+
+interface Reference {
+  id?: string;
+  refNo: number;
+  refIndex: string;
+  refTitle: string;
+  refYear: number | null;
+  refPublication: string;
+  refVolume: number | null;
+  refIssue: number | null;
+  refStartPage: number | null;
+  refEndPage: number | null;
+  refDoi: string;
+  refAbs: string;
+  signatures: ReferenceSignature[];
+}
+
+interface Article {
+  id: string;
+  artTitle: string;
+  artPath: string;
+  artPrimaryRefEntry: number | null;
+  references: Reference[];
+  entityTags: string[];
+  contributions: string[];
+}
+
+interface ArticleData {
+  id?: string;
+  artTitle: string;
+  artPath: string;
+  artPrimaryRefEntry: number | null;
+  references: Reference[];
+  entityTags: string[];
+  contributions: string[];
+}
+
 declare global {
   interface Window {
     dev: {
@@ -188,6 +256,10 @@ declare global {
       reset: (includeConfig: boolean) => Promise<boolean>;
       selectDirectory: () => Promise<string | null>;
     };
+    electron: {
+      readFile: (filePath: string) => Promise<Buffer>;
+      selectFile: () => Promise<string | null>;
+    };
     affiliation: {
       getAll: () => Promise<Affiliation[]>;
       getHierarchy: () => Promise<AffiliationHierarchy[]>;
@@ -201,6 +273,14 @@ declare global {
       add: (data: { name: string; affiliations: string[] }) => Promise<{ success: boolean; id?: string; error?: string }>;
       update: (data: { id: string; name: string; affiliations: string[] }) => Promise<{ success: boolean; error?: string }>;
       delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+    };
+    signature: {
+      getAll: () => Promise<Signature[]>;
+      getByReference: (referenceId: string) => Promise<Signature[]>;
+      save: (data: SignatureData) => Promise<{ success: boolean; id?: string; error?: string }>;
+      delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+      linkToReference: (referenceId: string, signatureId: string) => Promise<{ success: boolean; id?: string; error?: string }>;
+      unlinkFromReference: (referenceId: string, signatureId: string) => Promise<{ success: boolean; error?: string }>;
     };
     domain: {
       getAllMain: () => Promise<MainDomain[]>;
@@ -234,6 +314,13 @@ declare global {
       addContribution: (data: ContributionData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
       updateContribution: (data: ContributionData) => Promise<{ success: boolean; error?: string }>;
       deleteContribution: (id: string) => Promise<{ success: boolean; error?: string }>;
+    };
+    article: {
+      getAll: () => Promise<Article[]>;
+      getById: (id: string) => Promise<Article | null>;
+      add: (data: ArticleData) => Promise<{ success: boolean; id?: string; error?: string }>;
+      update: (data: ArticleData) => Promise<{ success: boolean; error?: string }>;
+      delete: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

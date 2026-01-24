@@ -7,6 +7,7 @@ import {
   TextField,
   Button
 } from '@mui/material'
+import { toast } from 'react-toastify'
 
 interface MainDomain {
   id: string
@@ -47,7 +48,7 @@ function MainDomainDialog({
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      alert('Please enter a main domain name')
+      toast.error('Please enter a main domain name')
       return
     }
     onSave({ name: trimmedName, description: description.trim() })

@@ -7,14 +7,14 @@ import {
   TextField,
   Button,
   Box,
+  Typography,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   IconButton,
-  Typography,
-  Autocomplete,
-  Divider
+  Autocomplete
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { toast } from 'react-toastify'
@@ -30,105 +30,115 @@ interface SubDomain {
   mainDomainId: string
 }
 
-interface EntityItem {
+interface Entity {
   id: string
   name: string
   type: string
   typeName: string
 }
 
-interface DefinitionData {
-  id?: string
-  name: string
-  description: string
-  subjectId: string // Required: Main Domain or Sub Domain ID
-  aliasIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  parentIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  relationIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  refineIds: string[] // Optional: Multiple Problem IDs (Definition specific - which problem to refine)
-  scenarioIds: string[] // Optional: Multiple Entity IDs (Definition specific - scenario entities)
-  evoIds: string[] // Optional: Multiple Definition IDs (Definition specific - definition evolution)
-}
-
-interface DefinitionDialogProps {
+interface QuickAddAlgoDialogProps {
   open: boolean
-  mode: 'add' | 'edit'
-  definition: DefinitionData | null
+  allEntities: Entity[]
   mainDomains: MainDomain[]
   subDomains: SubDomain[]
-  allEntities: EntityItem[]
   onClose: () => void
-  onSave: (data: DefinitionData) => void
+  onSave: (data: {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    targetIds: string[]
+    expectationIds: string[]
+    transformationIds: string[]
+  }) => void
   onQuickAddDomain: () => void
 }
 
-function DefinitionDialog({
+function QuickAddAlgoDialog({
   open,
-  mode,
-  definition,
+  allEntities,
   mainDomains,
   subDomains,
-  allEntities,
   onClose,
   onSave,
   onQuickAddDomain
-}: DefinitionDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && definition ? definition.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && definition ? definition.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && definition ? definition.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && definition ? definition.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && definition ? definition.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && definition ? definition.relationIds : [])
-  const [refineIds, setRefineIds] = useState<string[]>(mode === 'edit' && definition ? definition.refineIds : [])
-  const [scenarioIds, setScenarioIds] = useState<string[]>(mode === 'edit' && definition ? definition.scenarioIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && definition ? definition.evoIds : [])
-
+}: QuickAddAlgoDialogProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [targetIds, setTargetIds] = useState<string[]>([])
+  const [expectationIds, setExpectationIds] = useState<string[]>([])
+  const [transformationIds, setTransformationIds] = useState<string[]>([])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setTargetIds([])
+      setExpectationIds([])
+      setTransformationIds([])
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      toast.error('Please enter a name')
+      toast.error('Please enter algorithm name')
       return
     }
     if (!subjectId) {
       toast.error('Please select a domain (subject)')
       return
     }
-
-    const data: DefinitionData = {
-      id: definition?.id,
+    onSave({
       name: trimmedName,
       description: description.trim(),
       subjectId,
       aliasIds,
       parentIds,
       relationIds,
-      refineIds,
-      scenarioIds,
-      evoIds
-    }
-
-    onSave(data)
+      targetIds,
+      expectationIds,
+      transformationIds
+    })
+    setName('')
+    setDescription('')
+    setSubjectId('')
+    setAliasIds([])
+    setParentIds([])
+    setRelationIds([])
+    setTargetIds([])
+    setExpectationIds([])
+    setTransformationIds([])
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {mode === 'add' ? 'Add Scenario' : 'Edit Scenario'}
-      </DialogTitle>
+      <DialogTitle>Quick Add Algorithm</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-          {/* Name */}
+          {/* Name - Required */}
           <TextField
             label="Name"
             value={name}
@@ -136,9 +146,10 @@ function DefinitionDialog({
             fullWidth
             required
             inputRef={nameInputRef}
+            placeholder="e.g., Transformer, BERT"
           />
 
-          {/* Description */}
+          {/* Description - Required */}
           <TextField
             label="Description"
             value={description}
@@ -146,6 +157,7 @@ function DefinitionDialog({
             fullWidth
             multiline
             rows={3}
+            placeholder="Describe the algorithm..."
           />
 
           {/* Subject (Domain) - Required, Single Select */}
@@ -196,13 +208,16 @@ function DefinitionDialog({
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Entity Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Entity Relations (Optional)</Typography>
           </Divider>
 
           {/* Alias - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Alias (Synonyms)
+              Alias
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are aliases of this algorithm (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -217,7 +232,8 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "default"
                 }
               }}
             />
@@ -226,7 +242,10 @@ function DefinitionDialog({
           {/* Parent - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Parent Entities
+              Parent
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select parent entities of this algorithm (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -241,16 +260,20 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "info"
                 }
               }}
             />
           </Box>
 
-          {/* Relations - Optional, Multiple Select */}
+          {/* Relation - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Related Entities
+              Relation
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are related to this algorithm (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -265,62 +288,63 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "secondary"
                 }
               }}
             />
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Scenario Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Algorithm Relations (Optional)</Typography>
           </Divider>
 
-          {/* Refine - Optional, Multiple Select (Definition specific - which problem to refine) */}
+          {/* Target - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Refine (Problem)
+              Target (Input)
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select the problem(s) that this scenario refines/specifies.
-            </Typography>
-            <Autocomplete
-              multiple
-              options={allEntities.filter(e => e.type === 'problem')}
-              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => refineIds.includes(e.id))}
-              onChange={(_event, newValue) => {
-                setRefineIds(newValue.map(v => v.id))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Select problem(s) to refine" />
-              )}
-              slotProps={{
-                chip: {
-                  size: "small",
-                  color: "info"
-                }
-              }}
-            />
-          </Box>
-
-          {/* Scenario - Optional, Multiple Select (Definition specific - scenario entities) */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Scenario (Context Entities)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select entities that describe the specific scenario/context for this definition.
+              Select the input entities that this algorithm targets (optional).
             </Typography>
             <Autocomplete
               multiple
               options={allEntities}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => scenarioIds.includes(e.id))}
+              value={allEntities.filter(e => targetIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setScenarioIds(newValue.map(v => v.id))
+                setTargetIds(newValue.map(v => v.id))
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select scenario entities" />
+                <TextField {...params} placeholder="Select target entities" />
+              )}
+              slotProps={{
+                chip: {
+                  size: "small",
+                  color: "primary"
+                }
+              }}
+            />
+          </Box>
+
+          {/* Expectation - Optional, Multiple Select */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Expectation (Output)
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select the expected output entities of this algorithm (optional).
+            </Typography>
+            <Autocomplete
+              multiple
+              options={allEntities}
+              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
+              value={allEntities.filter(e => expectationIds.includes(e.id))}
+              onChange={(_event, newValue) => {
+                setExpectationIds(newValue.map(v => v.id))
+              }}
+              renderInput={(params) => (
+                <TextField {...params} placeholder="Select expectation entities" />
               )}
               slotProps={{
                 chip: {
@@ -331,24 +355,24 @@ function DefinitionDialog({
             />
           </Box>
 
-          {/* Evo - Optional, Multiple Select (Definition specific - definition evolution) */}
+          {/* Transformation - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Evolution (Scenario Evolution)
+              Transformation (Process)
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Note: This scenario evolved from the selected scenario(s). The current scenario is more recent/advanced.
+              Select the transformation process entities of this algorithm (optional).
             </Typography>
             <Autocomplete
               multiple
-              options={allEntities.filter(e => e.type === 'definition')}
+              options={allEntities}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => evoIds.includes(e.id))}
+              value={allEntities.filter(e => transformationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setEvoIds(newValue.map(v => v.id))
+                setTransformationIds(newValue.map(v => v.id))
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select scenario(s) this evolved from" />
+                <TextField {...params} placeholder="Select transformation entities" />
               )}
               slotProps={{
                 chip: {
@@ -363,12 +387,12 @@ function DefinitionDialog({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained">
-          {mode === 'add' ? 'Add' : 'Save'}
+          Add
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export default DefinitionDialog
+export default QuickAddAlgoDialog
 

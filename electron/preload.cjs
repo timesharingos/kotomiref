@@ -32,6 +32,14 @@ contextBridge.exposeInMainWorld(
 )
 
 contextBridge.exposeInMainWorld(
+    'electron',
+    {
+        readFile: (filePath) => ipcRenderer.invoke("electron:readFile", filePath),
+        selectFile: () => ipcRenderer.invoke("electron:selectFile")
+    }
+)
+
+contextBridge.exposeInMainWorld(
     'affiliation',
     {
         getAll: () => ipcRenderer.invoke("affiliation:getAll"),
@@ -50,6 +58,18 @@ contextBridge.exposeInMainWorld(
         add: (data) => ipcRenderer.invoke("author:add", data),
         update: (data) => ipcRenderer.invoke("author:update", data),
         delete: (id) => ipcRenderer.invoke("author:delete", id)
+    }
+)
+
+contextBridge.exposeInMainWorld(
+    'signature',
+    {
+        getAll: () => ipcRenderer.invoke("signature:getAll"),
+        getByReference: (referenceId) => ipcRenderer.invoke("signature:getByReference", referenceId),
+        save: (data) => ipcRenderer.invoke("signature:save", data),
+        delete: (id) => ipcRenderer.invoke("signature:delete", id),
+        linkToReference: (referenceId, signatureId) => ipcRenderer.invoke("signature:linkToReference", referenceId, signatureId),
+        unlinkFromReference: (referenceId, signatureId) => ipcRenderer.invoke("signature:unlinkFromReference", referenceId, signatureId)
     }
 )
 
@@ -91,5 +111,16 @@ contextBridge.exposeInMainWorld(
         addContribution: (data) => ipcRenderer.invoke("entity:addContribution", data),
         updateContribution: (data) => ipcRenderer.invoke("entity:updateContribution", data),
         deleteContribution: (id) => ipcRenderer.invoke("entity:deleteContribution", id)
+    }
+)
+
+contextBridge.exposeInMainWorld(
+    'article',
+    {
+        getAll: () => ipcRenderer.invoke("article:getAll"),
+        getById: (id) => ipcRenderer.invoke("article:getById", id),
+        add: (data) => ipcRenderer.invoke("article:add", data),
+        update: (data) => ipcRenderer.invoke("article:update", data),
+        delete: (id) => ipcRenderer.invoke("article:delete", id)
     }
 )

@@ -20,6 +20,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import AffiliationDialog from './AffiliationDialog'
+import { toast } from 'react-toastify'
 
 interface Affiliation {
   id: string
@@ -88,18 +89,18 @@ function AffiliationTab() {
         if (result.success) {
           await loadAffiliations()
         } else {
-          alert(`Failed to delete: ${result.error}`)
+          toast.error(`Failed to delete: ${result.error}`)
         }
       } catch (e) {
         console.error('Delete failed:', e)
-        alert('An error occurred while deleting')
+        toast.error('An error occurred while deleting')
       }
     }
   }
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) {
-      alert('Please select affiliations to delete')
+      toast.error('Please select affiliations to delete')
       return
     }
 
@@ -119,7 +120,7 @@ function AffiliationTab() {
         await loadAffiliations()
       } catch (e) {
         console.error('Batch delete failed:', e)
-        alert('An error occurred during batch delete')
+        toast.error('An error occurred during batch delete')
       }
     }
   }
@@ -145,11 +146,11 @@ function AffiliationTab() {
         await loadAffiliations()
         handleDialogClose()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Save failed:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 

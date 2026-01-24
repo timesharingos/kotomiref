@@ -7,14 +7,14 @@ import {
   TextField,
   Button,
   Box,
+  Typography,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   IconButton,
-  Typography,
-  Autocomplete,
-  Divider
+  Autocomplete
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { toast } from 'react-toastify'
@@ -30,83 +30,88 @@ interface SubDomain {
   mainDomainId: string
 }
 
-interface EntityItem {
+interface Entity {
   id: string
   name: string
   type: string
   typeName: string
 }
 
-interface DefinitionData {
-  id?: string
-  name: string
-  description: string
-  subjectId: string // Required: Main Domain or Sub Domain ID
-  aliasIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  parentIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  relationIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  refineIds: string[] // Optional: Multiple Problem IDs (Definition specific - which problem to refine)
-  scenarioIds: string[] // Optional: Multiple Entity IDs (Definition specific - scenario entities)
-  evoIds: string[] // Optional: Multiple Definition IDs (Definition specific - definition evolution)
-}
-
-interface DefinitionDialogProps {
+interface QuickAddDefinitionDialogProps {
   open: boolean
-  mode: 'add' | 'edit'
-  definition: DefinitionData | null
+  allEntities: Entity[]
   mainDomains: MainDomain[]
   subDomains: SubDomain[]
-  allEntities: EntityItem[]
   onClose: () => void
-  onSave: (data: DefinitionData) => void
+  onSave: (data: {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    refineIds: string[]
+    scenarioIds: string[]
+    evoIds: string[]
+  }) => void
   onQuickAddDomain: () => void
 }
 
-function DefinitionDialog({
+function QuickAddDefinitionDialog({
   open,
-  mode,
-  definition,
+  allEntities,
   mainDomains,
   subDomains,
-  allEntities,
   onClose,
   onSave,
   onQuickAddDomain
-}: DefinitionDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && definition ? definition.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && definition ? definition.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && definition ? definition.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && definition ? definition.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && definition ? definition.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && definition ? definition.relationIds : [])
-  const [refineIds, setRefineIds] = useState<string[]>(mode === 'edit' && definition ? definition.refineIds : [])
-  const [scenarioIds, setScenarioIds] = useState<string[]>(mode === 'edit' && definition ? definition.scenarioIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && definition ? definition.evoIds : [])
-
+}: QuickAddDefinitionDialogProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [refineIds, setRefineIds] = useState<string[]>([])
+  const [scenarioIds, setScenarioIds] = useState<string[]>([])
+  const [evoIds, setEvoIds] = useState<string[]>([])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setRefineIds([])
+      setScenarioIds([])
+      setEvoIds([])
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      toast.error('Please enter a name')
+      toast.error('Please enter definition name')
       return
     }
     if (!subjectId) {
       toast.error('Please select a domain (subject)')
       return
     }
-
-    const data: DefinitionData = {
-      id: definition?.id,
+    onSave({
       name: trimmedName,
       description: description.trim(),
       subjectId,
@@ -116,19 +121,24 @@ function DefinitionDialog({
       refineIds,
       scenarioIds,
       evoIds
-    }
-
-    onSave(data)
+    })
+    setName('')
+    setDescription('')
+    setSubjectId('')
+    setAliasIds([])
+    setParentIds([])
+    setRelationIds([])
+    setRefineIds([])
+    setScenarioIds([])
+    setEvoIds([])
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {mode === 'add' ? 'Add Scenario' : 'Edit Scenario'}
-      </DialogTitle>
+      <DialogTitle>Quick Add Definition</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-          {/* Name */}
+          {/* Name - Required */}
           <TextField
             label="Name"
             value={name}
@@ -136,9 +146,10 @@ function DefinitionDialog({
             fullWidth
             required
             inputRef={nameInputRef}
+            placeholder="e.g., Image Classification Problem"
           />
 
-          {/* Description */}
+          {/* Description - Required */}
           <TextField
             label="Description"
             value={description}
@@ -146,6 +157,7 @@ function DefinitionDialog({
             fullWidth
             multiline
             rows={3}
+            placeholder="Describe the definition/scenario..."
           />
 
           {/* Subject (Domain) - Required, Single Select */}
@@ -196,13 +208,16 @@ function DefinitionDialog({
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Entity Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Entity Relations (Optional)</Typography>
           </Divider>
 
           {/* Alias - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Alias (Synonyms)
+              Alias
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are aliases of this definition (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -217,7 +232,8 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "default"
                 }
               }}
             />
@@ -226,7 +242,10 @@ function DefinitionDialog({
           {/* Parent - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Parent Entities
+              Parent
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select parent entities of this definition (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -241,16 +260,20 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "info"
                 }
               }}
             />
           </Box>
 
-          {/* Relations - Optional, Multiple Select */}
+          {/* Relation - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Related Entities
+              Relation
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are related to this definition (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -265,23 +288,24 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "secondary"
                 }
               }}
             />
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Scenario Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Definition Relations (Optional)</Typography>
           </Divider>
 
-          {/* Refine - Optional, Multiple Select (Definition specific - which problem to refine) */}
+          {/* Refine - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Refine (Problem)
+              Refine (Problem to Refine)
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select the problem(s) that this scenario refines/specifies.
+              Select the problem entities that this definition refines (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -292,24 +316,24 @@ function DefinitionDialog({
                 setRefineIds(newValue.map(v => v.id))
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select problem(s) to refine" />
+                <TextField {...params} placeholder="Select problem entities to refine" />
               )}
               slotProps={{
                 chip: {
                   size: "small",
-                  color: "info"
+                  color: "warning"
                 }
               }}
             />
           </Box>
 
-          {/* Scenario - Optional, Multiple Select (Definition specific - scenario entities) */}
+          {/* Scenario - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Scenario (Context Entities)
+              Scenario
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select entities that describe the specific scenario/context for this definition.
+              Select the scenario entities related to this definition (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -325,19 +349,19 @@ function DefinitionDialog({
               slotProps={{
                 chip: {
                   size: "small",
-                  color: "success"
+                  color: "primary"
                 }
               }}
             />
           </Box>
 
-          {/* Evo - Optional, Multiple Select (Definition specific - definition evolution) */}
+          {/* Evolution - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Evolution (Scenario Evolution)
+              Evolution
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Note: This scenario evolved from the selected scenario(s). The current scenario is more recent/advanced.
+              Select the definition entities that this definition evolves from (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -348,12 +372,12 @@ function DefinitionDialog({
                 setEvoIds(newValue.map(v => v.id))
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select scenario(s) this evolved from" />
+                <TextField {...params} placeholder="Select definition entities for evolution" />
               )}
               slotProps={{
                 chip: {
                   size: "small",
-                  color: "warning"
+                  color: "success"
                 }
               }}
             />
@@ -363,12 +387,12 @@ function DefinitionDialog({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained">
-          {mode === 'add' ? 'Add' : 'Save'}
+          Add
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export default DefinitionDialog
+export default QuickAddDefinitionDialog
 

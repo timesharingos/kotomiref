@@ -235,18 +235,20 @@ class ArticleTag extends kg_interface.InstanceRel{
     }
     static get instance(){return ArticleTag.#instance}
 }
-class RefAuthor extends kg_interface.InstanceRel{
+
+class RefSignature extends kg_interface.InstanceRel{
     static #first_create = true
-    static #instance = new RefAuthor()
+    static #instance = new RefSignature()
     constructor(){
-        if(!RefAuthor.#first_create){
-            throw new TypeError("RefAuthor is not constructable, use RefAuthor.instance instead.")
+        if(!RefSignature.#first_create){
+            throw new TypeError("RefSignature is not constructable, use RefSignature.instance instead.")
         }
-        RefAuthor.#first_create = false
-        super("refAuthor", Reference.instance.id, kg_signature.Author.instance.id)
+        RefSignature.#first_create = false
+        super("refSignature", Reference.instance.id, kg_signature.Signature.instance.id)
     }
-    static get instance(){return RefAuthor.#instance}
+    static get instance(){return RefSignature.#instance}
 }
+
 class ArticleContrib extends kg_interface.InstanceRel{
     static #first_create = true
     static #instance = new ArticleContrib()
@@ -267,5 +269,5 @@ module.exports = {
     AttributeRefStartPage, AttributeRefEndPage, AttributeRefDoi,
     AttributeRefAbstract,
     Article, Reference,
-    ArticleRefEntry, ArticleContrib, ArticleTag, RefAuthor
+    ArticleRefEntry, ArticleContrib, ArticleTag, RefSignature
 }

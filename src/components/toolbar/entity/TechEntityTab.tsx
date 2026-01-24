@@ -28,6 +28,7 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
+import { toast } from 'react-toastify'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
 import ViewColumnIcon from '@mui/icons-material/ViewColumn'
@@ -386,11 +387,11 @@ function TechEntityTab() {
         if (result.success) {
           await loadData()
         } else {
-          alert(`Failed to delete: ${result.error}`)
+          toast.error(`Failed to delete: ${result.error}`)
         }
       } catch (e) {
         console.error('Delete failed:', e)
-        alert('An error occurred while deleting')
+        toast.error('An error occurred while deleting')
       }
     }
   }
@@ -426,7 +427,7 @@ function TechEntityTab() {
         await loadData()
       } catch (e) {
         console.error('Batch delete failed:', e)
-        alert('An error occurred during batch delete')
+        toast.error('An error occurred during batch delete')
       }
     }
   }
@@ -457,11 +458,11 @@ function TechEntityTab() {
         handleObjectDialogClose()
         await loadData()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Failed to save object:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 
@@ -494,11 +495,11 @@ function TechEntityTab() {
         handleAlgoDialogClose()
         await loadData()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Failed to save algo:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 
@@ -533,11 +534,11 @@ function TechEntityTab() {
         handleImprovementDialogClose()
         await loadData()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Failed to save improvement:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 
@@ -570,11 +571,11 @@ function TechEntityTab() {
         handleContributionDialogClose()
         await loadData()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Failed to save contribution:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 
@@ -606,11 +607,11 @@ function TechEntityTab() {
         handleProblemDialogClose()
         await loadData()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Failed to save problem:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 
@@ -643,11 +644,11 @@ function TechEntityTab() {
         handleDefinitionDialogClose()
         await loadData()
       } else {
-        alert(`Failed to save: ${result?.error}`)
+        toast.error(`Failed to save: ${result?.error}`)
       }
     } catch (e) {
       console.error('Failed to save definition:', e)
-      alert('An error occurred while saving')
+      toast.error('An error occurred while saving')
     }
   }
 

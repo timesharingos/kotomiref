@@ -7,14 +7,14 @@ import {
   TextField,
   Button,
   Box,
+  Typography,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   IconButton,
-  Typography,
-  Autocomplete,
-  Divider
+  Autocomplete
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { toast } from 'react-toastify'
@@ -30,102 +30,100 @@ interface SubDomain {
   mainDomainId: string
 }
 
-interface EntityItem {
+interface Entity {
   id: string
   name: string
   type: string
   typeName: string
 }
 
-interface ProblemData {
-  id?: string
-  name: string
-  description: string
-  subjectId: string // Required: Main Domain or Sub Domain ID
-  aliasIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  parentIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  relationIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  domainIds: string[] // Optional: Multiple Entity IDs (Problem specific - related domain entities)
-  evoIds: string[] // Optional: Multiple Entity IDs (Problem specific - problem evolution)
-}
-
-interface ProblemDialogProps {
+interface QuickAddObjectDialogProps {
   open: boolean
-  mode: 'add' | 'edit'
-  problem: ProblemData | null
+  allEntities: Entity[]
   mainDomains: MainDomain[]
   subDomains: SubDomain[]
-  allEntities: EntityItem[]
   onClose: () => void
-  onSave: (data: ProblemData) => void
+  onSave: (data: {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+  }) => void
   onQuickAddDomain: () => void
 }
 
-function ProblemDialog({
+function QuickAddObjectDialog({
   open,
-  mode,
-  problem,
+  allEntities,
   mainDomains,
   subDomains,
-  allEntities,
   onClose,
   onSave,
   onQuickAddDomain
-}: ProblemDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && problem ? problem.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && problem ? problem.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && problem ? problem.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && problem ? problem.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && problem ? problem.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && problem ? problem.relationIds : [])
-  const [domainIds, setDomainIds] = useState<string[]>(mode === 'edit' && problem ? problem.domainIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && problem ? problem.evoIds : [])
-
+}: QuickAddObjectDialogProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      toast.error('Please enter a name')
+      toast.error('Please enter research object name')
       return
     }
     if (!subjectId) {
       toast.error('Please select a domain (subject)')
       return
     }
-
-    const data: ProblemData = {
-      id: problem?.id,
+    onSave({
       name: trimmedName,
       description: description.trim(),
       subjectId,
       aliasIds,
       parentIds,
-      relationIds,
-      domainIds,
-      evoIds
-    }
-
-    onSave(data)
+      relationIds
+    })
+    setName('')
+    setDescription('')
+    setSubjectId('')
+    setAliasIds([])
+    setParentIds([])
+    setRelationIds([])
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {mode === 'add' ? 'Add Problem' : 'Edit Problem'}
-      </DialogTitle>
+      <DialogTitle>Quick Add Research Object</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-          {/* Name */}
+          {/* Name - Required */}
           <TextField
             label="Name"
             value={name}
@@ -133,9 +131,10 @@ function ProblemDialog({
             fullWidth
             required
             inputRef={nameInputRef}
+            placeholder="e.g., Deep Learning, Neural Network"
           />
 
-          {/* Description */}
+          {/* Description - Required */}
           <TextField
             label="Description"
             value={description}
@@ -143,6 +142,7 @@ function ProblemDialog({
             fullWidth
             multiline
             rows={3}
+            placeholder="Describe the research object..."
           />
 
           {/* Subject (Domain) - Required, Single Select */}
@@ -193,13 +193,16 @@ function ProblemDialog({
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Entity Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Entity Relations (Optional)</Typography>
           </Divider>
 
           {/* Alias - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Alias (Synonyms)
+              Alias
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are aliases of this research object (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -214,7 +217,8 @@ function ProblemDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "default"
                 }
               }}
             />
@@ -223,7 +227,10 @@ function ProblemDialog({
           {/* Parent - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Parent Entities
+              Parent
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select parent entities of this research object (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -238,16 +245,20 @@ function ProblemDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "info"
                 }
               }}
             />
           </Box>
 
-          {/* Relations - Optional, Multiple Select */}
+          {/* Relation - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Related Entities
+              Relation
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are related to this research object (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -262,64 +273,8 @@ function ProblemDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
-                }
-              }}
-            />
-          </Box>
-
-          <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Problem Relations</Typography>
-          </Divider>
-
-          {/* Domain - Optional, Multiple Select (Problem specific - related domain entities) */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Domain (Related Domain Entities)
-            </Typography>
-            <Autocomplete
-              multiple
-              options={allEntities}
-              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => domainIds.includes(e.id))}
-              onChange={(_event, newValue) => {
-                setDomainIds(newValue.map(v => v.id))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Select related domain entities" />
-              )}
-              slotProps={{
-                chip: {
                   size: "small",
-                  color: "info"
-                }
-              }}
-            />
-          </Box>
-
-          {/* Evo - Optional, Multiple Select (Problem specific - problem evolution) */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Evolution (Problem Evolution)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Note: This problem evolved from the selected problem(s). The current problem is more recent/advanced.
-            </Typography>
-            <Autocomplete
-              multiple
-              options={allEntities.filter(e => e.type === 'problem')}
-              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => evoIds.includes(e.id))}
-              onChange={(_event, newValue) => {
-                setEvoIds(newValue.map(v => v.id))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Select problem(s) this evolved from" />
-              )}
-              slotProps={{
-                chip: {
-                  size: "small",
-                  color: "warning"
+                  color: "secondary"
                 }
               }}
             />
@@ -329,12 +284,12 @@ function ProblemDialog({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained">
-          {mode === 'add' ? 'Add' : 'Save'}
+          Add
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export default ProblemDialog
+export default QuickAddObjectDialog
 

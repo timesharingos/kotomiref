@@ -7,59 +7,65 @@ import {
   TextField,
   Button,
   Box,
-  Chip,
+  Typography,
   Autocomplete,
-  IconButton,
-  Typography
+  Chip,
+  IconButton
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ClearIcon from '@mui/icons-material/Clear'
 import { toast } from 'react-toastify'
 
-interface Author {
+interface Affiliation {
   id: string
   name: string
-  affiliations: string[]
+  parentId?: string | null
 }
 
-interface AffiliationInfo {
-  id: string
-  name: string
-}
-
-interface AuthorDialogProps {
+interface QuickAddAuthorDialogProps {
   open: boolean
-  mode: 'add' | 'edit'
-  author: Author | null
-  availableAffiliations: AffiliationInfo[]
+  affiliations: Affiliation[]
   onClose: () => void
-  onSave: (data: { name: string; affiliations: string[] }) => void
+  onSave: (name: string, affiliationIds: string[]) => void
 }
 
-function AuthorDialog({ open, mode, author, availableAffiliations, onClose, onSave }: AuthorDialogProps) {
-  // Initialize state directly from props (works with key-based reset)
-  const [name, setName] = useState(mode === 'edit' && author ? author.name : '')
-  const [selectedAffiliations, setSelectedAffiliations] = useState<string[]>(
-    mode === 'edit' && author ? author.affiliations : []
-  )
+function QuickAddAuthorDialog({
+  open,
+  affiliations,
+  onClose,
+  onSave
+}: QuickAddAuthorDialogProps) {
+  const [name, setName] = useState('')
+  const [selectedAffiliations, setSelectedAffiliations] = useState<string[]>([])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  // Focus management only
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
+      setName('')
+      setSelectedAffiliations([])
     }
+    resetForm()
+
+    // Focus on name input after a short delay
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
       toast.error('Please enter author name')
       return
     }
-    onSave({ name: name.trim(), affiliations: selectedAffiliations })
+    onSave(trimmedName, selectedAffiliations)
+    setName('')
+    setSelectedAffiliations([])
   }
 
   const handleAddAffiliation = (affiliationId: string | null) => {
@@ -80,19 +86,17 @@ function AuthorDialog({ open, mode, author, availableAffiliations, onClose, onSa
 
   // Get affiliation name by ID
   const getAffiliationName = (id: string) => {
-    return availableAffiliations.find(a => a.id === id)?.name ?? id
+    return affiliations.find(a => a.id === id)?.name ?? id
   }
 
   // Get unselected affiliations for autocomplete
-  const unselectedAffiliations = availableAffiliations.filter(
+  const unselectedAffiliations = affiliations.filter(
     a => !selectedAffiliations.includes(a.id)
   )
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {mode === 'add' ? 'Add Author' : 'Edit Author'}
-      </DialogTitle>
+      <DialogTitle>Quick Add Author</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
           {/* Name Field */}
@@ -103,6 +107,7 @@ function AuthorDialog({ open, mode, author, availableAffiliations, onClose, onSa
             fullWidth
             required
             inputRef={nameInputRef}
+            placeholder="e.g., John Doe"
           />
 
           {/* Affiliations Section */}
@@ -164,12 +169,12 @@ function AuthorDialog({ open, mode, author, availableAffiliations, onClose, onSa
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained">
-          {mode === 'add' ? 'Add' : 'Save'}
+          Add
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export default AuthorDialog
+export default QuickAddAuthorDialog
 

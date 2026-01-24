@@ -7,14 +7,14 @@ import {
   TextField,
   Button,
   Box,
+  Typography,
+  Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   IconButton,
-  Typography,
-  Autocomplete,
-  Divider
+  Autocomplete
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { toast } from 'react-toastify'
@@ -30,105 +30,125 @@ interface SubDomain {
   mainDomainId: string
 }
 
-interface EntityItem {
+interface Entity {
   id: string
   name: string
   type: string
   typeName: string
 }
 
-interface DefinitionData {
-  id?: string
-  name: string
-  description: string
-  subjectId: string // Required: Main Domain or Sub Domain ID
-  aliasIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  parentIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  relationIds: string[] // Optional: Multiple Entity IDs (Base entity relation)
-  refineIds: string[] // Optional: Multiple Problem IDs (Definition specific - which problem to refine)
-  scenarioIds: string[] // Optional: Multiple Entity IDs (Definition specific - scenario entities)
-  evoIds: string[] // Optional: Multiple Definition IDs (Definition specific - definition evolution)
-}
-
-interface DefinitionDialogProps {
+interface QuickAddImprovementDialogProps {
   open: boolean
-  mode: 'add' | 'edit'
-  definition: DefinitionData | null
+  allEntities: Entity[]
   mainDomains: MainDomain[]
   subDomains: SubDomain[]
-  allEntities: EntityItem[]
   onClose: () => void
-  onSave: (data: DefinitionData) => void
+  onSave: (data: {
+    name: string
+    description: string
+    subjectId: string
+    metric: string
+    metricResultString: string
+    metricResultNumber: number | null
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    originIds: string[]
+    advanceIds: string[]
+  }) => void
   onQuickAddDomain: () => void
 }
 
-function DefinitionDialog({
+function QuickAddImprovementDialog({
   open,
-  mode,
-  definition,
+  allEntities,
   mainDomains,
   subDomains,
-  allEntities,
   onClose,
   onSave,
   onQuickAddDomain
-}: DefinitionDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && definition ? definition.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && definition ? definition.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && definition ? definition.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && definition ? definition.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && definition ? definition.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && definition ? definition.relationIds : [])
-  const [refineIds, setRefineIds] = useState<string[]>(mode === 'edit' && definition ? definition.refineIds : [])
-  const [scenarioIds, setScenarioIds] = useState<string[]>(mode === 'edit' && definition ? definition.scenarioIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && definition ? definition.evoIds : [])
-
+}: QuickAddImprovementDialogProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [metric, setMetric] = useState('')
+  const [metricResultString, setMetricResultString] = useState('')
+  const [metricResultNumber, setMetricResultNumber] = useState<string>('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [originIds, setOriginIds] = useState<string[]>([])
+  const [advanceIds, setAdvanceIds] = useState<string[]>([])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        nameInputRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (!open) return
+
+    // Reset form state
+    const resetForm = () => {
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setMetric('')
+      setMetricResultString('')
+      setMetricResultNumber('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setOriginIds([])
+      setAdvanceIds([])
     }
+    resetForm()
+
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      toast.error('Please enter a name')
+      toast.error('Please enter improvement name')
       return
     }
     if (!subjectId) {
       toast.error('Please select a domain (subject)')
       return
     }
-
-    const data: DefinitionData = {
-      id: definition?.id,
+    onSave({
       name: trimmedName,
       description: description.trim(),
       subjectId,
+      metric: metric.trim(),
+      metricResultString: metricResultString.trim(),
+      metricResultNumber: metricResultNumber ? parseFloat(metricResultNumber) : null,
       aliasIds,
       parentIds,
       relationIds,
-      refineIds,
-      scenarioIds,
-      evoIds
-    }
-
-    onSave(data)
+      originIds,
+      advanceIds
+    })
+    setName('')
+    setDescription('')
+    setSubjectId('')
+    setMetric('')
+    setMetricResultString('')
+    setMetricResultNumber('')
+    setAliasIds([])
+    setParentIds([])
+    setRelationIds([])
+    setOriginIds([])
+    setAdvanceIds([])
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {mode === 'add' ? 'Add Scenario' : 'Edit Scenario'}
-      </DialogTitle>
+      <DialogTitle>Quick Add Improvement</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-          {/* Name */}
+          {/* Name - Required */}
           <TextField
             label="Name"
             value={name}
@@ -136,9 +156,10 @@ function DefinitionDialog({
             fullWidth
             required
             inputRef={nameInputRef}
+            placeholder="e.g., Faster Training"
           />
 
-          {/* Description */}
+          {/* Description - Required */}
           <TextField
             label="Description"
             value={description}
@@ -146,6 +167,7 @@ function DefinitionDialog({
             fullWidth
             multiline
             rows={3}
+            placeholder="Describe the improvement..."
           />
 
           {/* Subject (Domain) - Required, Single Select */}
@@ -196,13 +218,16 @@ function DefinitionDialog({
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Entity Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Entity Relations (Optional)</Typography>
           </Divider>
 
           {/* Alias - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Alias (Synonyms)
+              Alias
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are aliases of this improvement (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -217,7 +242,8 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "default"
                 }
               }}
             />
@@ -226,7 +252,10 @@ function DefinitionDialog({
           {/* Parent - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Parent Entities
+              Parent
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select parent entities of this improvement (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -241,16 +270,20 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "info"
                 }
               }}
             />
           </Box>
 
-          {/* Relations - Optional, Multiple Select */}
+          {/* Relation - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Related Entities
+              Relation
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select entities that are related to this improvement (optional).
             </Typography>
             <Autocomplete
               multiple
@@ -265,90 +298,72 @@ function DefinitionDialog({
               )}
               slotProps={{
                 chip: {
-                  size: "small"
+                  size: "small",
+                  color: "secondary"
                 }
               }}
             />
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Scenario Relations</Typography>
+            <Typography variant="caption" color="text.secondary">Metric Information (Optional)</Typography>
           </Divider>
 
-          {/* Refine - Optional, Multiple Select (Definition specific - which problem to refine) */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Refine (Problem)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select the problem(s) that this scenario refines/specifies.
-            </Typography>
-            <Autocomplete
-              multiple
-              options={allEntities.filter(e => e.type === 'problem')}
-              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => refineIds.includes(e.id))}
-              onChange={(_event, newValue) => {
-                setRefineIds(newValue.map(v => v.id))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Select problem(s) to refine" />
-              )}
-              slotProps={{
-                chip: {
-                  size: "small",
-                  color: "info"
-                }
-              }}
-            />
-          </Box>
+          {/* Metric */}
+          <TextField
+            label="Metric"
+            value={metric}
+            onChange={(e) => setMetric(e.target.value)}
+            fullWidth
+            placeholder="e.g., Accuracy, Speed, Memory Usage"
+            helperText="Optional: Specify the metric being improved"
+          />
 
-          {/* Scenario - Optional, Multiple Select (Definition specific - scenario entities) */}
+          {/* Metric Result String */}
+          <TextField
+            label="Result (String)"
+            value={metricResultString}
+            onChange={(e) => setMetricResultString(e.target.value)}
+            fullWidth
+            disabled={!metric.trim()}
+            placeholder="e.g., 'Improved by 20%', 'Significantly faster'"
+            helperText={!metric.trim() ? "Available when metric is specified" : "Optional: Describe the result"}
+          />
+
+          {/* Metric Result Number */}
+          <TextField
+            label="Result (Number)"
+            value={metricResultNumber}
+            onChange={(e) => setMetricResultNumber(e.target.value)}
+            fullWidth
+            type="number"
+            disabled={!metric.trim()}
+            placeholder="e.g., 95.5, 1000"
+            helperText={!metric.trim() ? "Available when metric is specified" : "Optional: Numeric result value"}
+          />
+
+          <Divider sx={{ my: 1 }}>
+            <Typography variant="caption" color="text.secondary">Improvement Relations (Optional)</Typography>
+          </Divider>
+
+          {/* Origin - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Scenario (Context Entities)
+              Origin (Original Technology)
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select entities that describe the specific scenario/context for this definition.
+              Select the original technology that this improvement is based on (optional).
             </Typography>
             <Autocomplete
               multiple
               options={allEntities}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => scenarioIds.includes(e.id))}
+              value={allEntities.filter(e => originIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setScenarioIds(newValue.map(v => v.id))
+                setOriginIds(newValue.map(v => v.id))
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select scenario entities" />
-              )}
-              slotProps={{
-                chip: {
-                  size: "small",
-                  color: "success"
-                }
-              }}
-            />
-          </Box>
-
-          {/* Evo - Optional, Multiple Select (Definition specific - definition evolution) */}
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Evolution (Scenario Evolution)
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Note: This scenario evolved from the selected scenario(s). The current scenario is more recent/advanced.
-            </Typography>
-            <Autocomplete
-              multiple
-              options={allEntities.filter(e => e.type === 'definition')}
-              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => evoIds.includes(e.id))}
-              onChange={(_event, newValue) => {
-                setEvoIds(newValue.map(v => v.id))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Select scenario(s) this evolved from" />
+                <TextField {...params} placeholder="Select origin entities" />
               )}
               slotProps={{
                 chip: {
@@ -358,17 +373,45 @@ function DefinitionDialog({
               }}
             />
           </Box>
+
+          {/* Advance - Optional, Multiple Select */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Advance (Improved Technology)
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
+              Select the improved technology that results from this improvement (optional).
+            </Typography>
+            <Autocomplete
+              multiple
+              options={allEntities}
+              getOptionLabel={(option) => `${option.name} (${option.typeName})`}
+              value={allEntities.filter(e => advanceIds.includes(e.id))}
+              onChange={(_event, newValue) => {
+                setAdvanceIds(newValue.map(v => v.id))
+              }}
+              renderInput={(params) => (
+                <TextField {...params} placeholder="Select advance entities" />
+              )}
+              slotProps={{
+                chip: {
+                  size: "small",
+                  color: "success"
+                }
+              }}
+            />
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained">
-          {mode === 'add' ? 'Add' : 'Save'}
+          Add
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export default DefinitionDialog
+export default QuickAddImprovementDialog
 

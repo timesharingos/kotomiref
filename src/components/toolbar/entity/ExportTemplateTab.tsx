@@ -17,6 +17,7 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import LockIcon from '@mui/icons-material/Lock'
+import { toast } from 'react-toastify'
 
 interface ExportTemplate {
   id: number
@@ -37,7 +38,7 @@ function ExportTemplateTab() {
   const [templates] = useState<ExportTemplate[]>(DEFAULT_TEMPLATES)
 
   const showComingSoon = () => {
-    alert('敬请期待新版本！\nComing soon in future versions!')
+    toast.info('敬请期待新版本！\nComing soon in future versions!')
   }
 
   return (

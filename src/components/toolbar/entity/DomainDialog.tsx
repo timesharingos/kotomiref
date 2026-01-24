@@ -7,6 +7,7 @@ import {
   TextField,
   Button
 } from '@mui/material'
+import { toast } from 'react-toastify'
 
 interface Domain {
   id: string
@@ -49,7 +50,7 @@ function DomainDialog({
   const handleSave = () => {
     const trimmedName = name.trim()
     if (!trimmedName) {
-      alert('Please enter a name')
+      toast.error('Please enter a name')
       return
     }
     onSave({ name: trimmedName, description: description.trim() })
