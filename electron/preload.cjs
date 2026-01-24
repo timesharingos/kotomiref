@@ -124,3 +124,14 @@ contextBridge.exposeInMainWorld(
         delete: (id) => ipcRenderer.invoke("article:delete", id)
     }
 )
+
+contextBridge.exposeInMainWorld(
+    'search',
+    {
+        problemEvolutionChain: (problemId) => ipcRenderer.invoke("search:problemEvolutionChain", problemId),
+        definitionEvolutionChain: (definitionId) => ipcRenderer.invoke("search:definitionEvolutionChain", definitionId),
+        entityImprovementPath: (entityId) => ipcRenderer.invoke("search:entityImprovementPath", entityId),
+        problemDefinitionsAndSolutions: (problemId) => ipcRenderer.invoke("search:problemDefinitionsAndSolutions", problemId),
+        oneHopNeighbors: (nodeId) => ipcRenderer.invoke("search:oneHopNeighbors", nodeId)
+    }
+)

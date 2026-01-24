@@ -322,5 +322,30 @@ declare global {
       update: (data: ArticleData) => Promise<{ success: boolean; error?: string }>;
       delete: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
+    search: {
+      problemEvolutionChain: (problemId: string) => Promise<SearchGraphResult>;
+      definitionEvolutionChain: (definitionId: string) => Promise<SearchGraphResult>;
+      entityImprovementPath: (entityId: string) => Promise<SearchGraphResult>;
+      problemDefinitionsAndSolutions: (problemId: string) => Promise<SearchGraphResult>;
+      oneHopNeighbors: (nodeId: string) => Promise<SearchGraphResult>;
+    };
   }
+}
+
+interface SearchNode {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+}
+
+interface SearchEdge {
+  from: string;
+  to: string;
+  type: string;
+}
+
+interface SearchGraphResult {
+  nodes: SearchNode[];
+  edges: SearchEdge[];
 }
