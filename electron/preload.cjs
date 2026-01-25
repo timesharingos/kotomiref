@@ -91,26 +91,23 @@ contextBridge.exposeInMainWorld(
 contextBridge.exposeInMainWorld(
     'entity',
     {
-        getAllByType: (entityType) => ipcRenderer.invoke("entity:getAllByType", entityType),
-        getAll: () => ipcRenderer.invoke("entity:getAll"),
-        addObject: (data) => ipcRenderer.invoke("entity:addObject", data),
-        updateObject: (data) => ipcRenderer.invoke("entity:updateObject", data),
-        deleteObject: (id) => ipcRenderer.invoke("entity:deleteObject", id),
-        addAlgo: (data) => ipcRenderer.invoke("entity:addAlgo", data),
-        updateAlgo: (data) => ipcRenderer.invoke("entity:updateAlgo", data),
-        deleteAlgo: (id) => ipcRenderer.invoke("entity:deleteAlgo", id),
-        addImprovement: (data) => ipcRenderer.invoke("entity:addImprovement", data),
-        updateImprovement: (data) => ipcRenderer.invoke("entity:updateImprovement", data),
-        deleteImprovement: (id) => ipcRenderer.invoke("entity:deleteImprovement", id),
-        addProblem: (data) => ipcRenderer.invoke("entity:addProblem", data),
-        updateProblem: (data) => ipcRenderer.invoke("entity:updateProblem", data),
-        deleteProblem: (id) => ipcRenderer.invoke("entity:deleteProblem", id),
-        addDefinition: (data) => ipcRenderer.invoke("entity:addDefinition", data),
-        updateDefinition: (data) => ipcRenderer.invoke("entity:updateDefinition", data),
-        deleteDefinition: (id) => ipcRenderer.invoke("entity:deleteDefinition", id),
-        addContribution: (data) => ipcRenderer.invoke("entity:addContribution", data),
-        updateContribution: (data) => ipcRenderer.invoke("entity:updateContribution", data),
-        deleteContribution: (id) => ipcRenderer.invoke("entity:deleteContribution", id)
+        // Penetration APIs
+        getRelatedEntity: (realEntityId) => ipcRenderer.invoke("entity:getRelatedEntity", realEntityId),
+        getRelatedNodes: (entityId) => ipcRenderer.invoke("entity:getRelatedNodes", entityId),
+
+        // Entity APIs (abstract layer)
+        getAllEntities: () => ipcRenderer.invoke("entity:getAllEntities"),
+        getEntityById: (entityId) => ipcRenderer.invoke("entity:getEntityById", entityId),
+        addEntity: (data) => ipcRenderer.invoke("entity:addEntity", data),
+        updateEntity: (entityId, data) => ipcRenderer.invoke("entity:updateEntity", entityId, data),
+        deleteEntity: (entityId) => ipcRenderer.invoke("entity:deleteEntity", entityId),
+
+        // Node APIs (concrete layer)
+        getAllNodes: (entityType) => ipcRenderer.invoke("entity:getAllNodes", entityType),
+        getNodeById: (nodeId) => ipcRenderer.invoke("entity:getNodeById", nodeId),
+        addNode: (entityType, data) => ipcRenderer.invoke("entity:addNode", entityType, data),
+        updateNode: (nodeId, data) => ipcRenderer.invoke("entity:updateNode", nodeId, data),
+        deleteNode: (nodeId) => ipcRenderer.invoke("entity:deleteNode", nodeId)
     }
 )
 

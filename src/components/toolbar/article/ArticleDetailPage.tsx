@@ -101,9 +101,12 @@ function ArticleDetailPage() {
 
         setArticle(articleData)
 
-        // Load entity tags
+        // Load entity tags using new API
         if (articleData.entityTags && articleData.entityTags.length > 0) {
-          const entities = await window.entity.getAll()
+          const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+          const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+          const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+          const entities = allEntitiesArrays.flat()
           const tags = articleData.entityTags
             .map(tagId => entities.find(e => e.id === tagId))
             .filter(e => e !== undefined)
@@ -119,7 +122,7 @@ function ArticleDetailPage() {
         if (articleData.contributions && articleData.contributions.length > 0) {
           const contribPromises = articleData.contributions.map(async (contribId) => {
             try {
-              const contribData = await window.entity.getAllByType('contrib')
+              const contribData = await window.entity.getAllNodes('contrib')
               const contrib = contribData.find(c => c.id === contribId)
               if (!contrib) return null
 
@@ -155,11 +158,16 @@ function ArticleDetailPage() {
           setContributions(validContribs)
         }
 
-        // Load authors, affiliations, entities, and domains
-        const [authorsData, affiliationsData, entitiesData, mainDomainsData, subDomainsData] = await Promise.all([
+        // Load authors, affiliations, entities, and domains using new API
+        const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const [authorsData, affiliationsData, ...allEntitiesArrays] = await Promise.all([
           window.author.getAll(),
           window.affiliation.getAll(),
-          window.entity.getAll(),
+          ...allEntitiesPromises
+        ])
+        const entitiesData = allEntitiesArrays.flat()
+        const [mainDomainsData, subDomainsData] = await Promise.all([
           window.domain.getAllMain(),
           window.domain.getAllSub()
         ])

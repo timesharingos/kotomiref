@@ -78,7 +78,7 @@ class EvoEntity extends kg_interface.Concept{
             throw new TypeError("EvoEntity is not constructable, use EvoEntity.instance instead.")
         }
         EvoEntity.#first_create = false
-        super([], "evoEntity")
+        super([AttributeEvoName.instance.id], "evoEntity")
     }
     static get instance(){return EvoEntity.#instance}
 }

@@ -90,14 +90,20 @@ function SearchPage() {
       }
 
       if (entityType === 'all') {
-        const allEntities = await window.entity.getAll()
+        // Use new API: getAllNodes for each type
+        const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+        const allEntities = allEntitiesArrays.flat()
+
         setEntities(allEntities.map(e => ({
           id: e.id,
           name: e.name,
-          type: e.typeName || e.type
+          type: e.type
         })))
       } else {
-        const result = await window.entity.getAllByType(entityType)
+        // Use new API: getAllNodes
+        const result = await window.entity.getAllNodes(entityType)
         setEntities(result.map(e => ({
           id: e.id,
           name: e.name || '',

@@ -45,6 +45,14 @@ import QuickAddDomainDialog from './QuickAddDomainDialog'
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
+// Helper function to load all entities using new API
+const loadAllEntities = async () => {
+  const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+  const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+  const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+  return allEntitiesArrays.flat()
+}
+
 // Type definitions
 interface Signature {
   id?: string
@@ -200,8 +208,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   // Load data function
   const loadData = async () => {
     try {
-      // Load all entities for tagging
-      const entitiesResult = await window.entity.getAll()
+      // Load all entities for tagging using new API
+      const entitiesResult = await loadAllEntities()
       setAllEntities(entitiesResult)
 
       // Load authors and affiliations for signature management
@@ -393,8 +401,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         const entity = allEntities.find(e => e.id === id)
         if (entity && entity.type) {
           try {
-            // Fetch full entity details based on type
-            const entities = await window.entity.getAllByType(entity.type)
+            // Fetch full entity details based on type using new API
+            const entities = await window.entity.getAllNodes(entity.type)
             const fullEntity = entities.find(e => e.id === id)
             if (fullEntity) {
               // Convert EntityItem to EntityType
@@ -746,7 +754,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         setQuickAddImprovementDialogOpen(false)
         toast.success('Improvement added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
         toast.error(result.error || 'Failed to add improvement')
@@ -784,7 +792,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         setQuickAddAlgoDialogOpen(false)
         toast.success('Algorithm added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
         toast.error(result.error || 'Failed to add algorithm')
@@ -816,7 +824,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         setQuickAddObjectDialogOpen(false)
         toast.success('Research object added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
         toast.error(result.error || 'Failed to add research object')
@@ -854,7 +862,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         setQuickAddDefinitionDialogOpen(false)
         toast.success('Definition added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
         toast.error(result.error || 'Failed to add definition')
@@ -962,7 +970,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           contributions: [...formData.contributions, newContribution]
         })
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
         toast.error(result.error || 'Failed to add contribution')
@@ -1953,7 +1961,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               if (value) {
                 // Fetch full contribution details
                 try {
-                  const contributions = await window.entity.getAllByType('contrib')
+                  const contributions = await window.entity.getAllNodes('contrib')
                   const fullContribution = contributions.find(c => c.id === value.id)
                   if (fullContribution) {
                     // Convert EntityItem to EntityType

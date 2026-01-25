@@ -147,8 +147,11 @@ const ArticleTab = () => {
         const authorMap = new Map(authorsData.map((author: { id: string; name: string }) => [author.id, author.name]))
         setAllAuthors(authorsData)
 
-        // Load all entities for domain matching
-        const entitiesData = await window.entity.getAll()
+        // Load all entities for domain matching using new API
+        const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+        const entitiesData = allEntitiesArrays.flat()
         setAllEntities(entitiesData)
 
         // Transform articles to display format
@@ -390,10 +393,11 @@ const ArticleTab = () => {
           }))
         }))
 
-        // Load entity details for tags and contributions
-        const [allEntities] = await Promise.all([
-          window.entity.getAll()
-        ])
+        // Load entity details for tags and contributions using new API
+        const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+        const allEntities = allEntitiesArrays.flat()
 
         // Convert entity tag IDs to entity objects
         const entityTagObjects: EntityTag[] = fullArticle.entityTags
@@ -415,8 +419,8 @@ const ArticleTab = () => {
         const contributionObjects = await Promise.all(
           fullArticle.contributions.map(async (contribId) => {
             try {
-              // Get full contribution details
-              const contribEntities = await window.entity.getAllByType('contrib')
+              // Get full contribution details using new API
+              const contribEntities = await window.entity.getAllNodes('contrib')
               const fullContrib = contribEntities.find(e => e.id === contribId)
 
               if (fullContrib) {
