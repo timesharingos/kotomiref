@@ -104,17 +104,41 @@ function ArticleDetailPage() {
         // Load entity tags using new API
         if (articleData.entityTags && articleData.entityTags.length > 0) {
           const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
-          const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+          const allEntitiesPromises = types.map(async (type) => {
+            const entities = await window.entity.getAllNodes(type)
+            // Add type field to each entity
+            return entities.map(entity => ({
+              ...entity,
+              type: type
+            }))
+          })
           const allEntitiesArrays = await Promise.all(allEntitiesPromises)
           const entities = allEntitiesArrays.flat()
-          const tags = articleData.entityTags
-            .map(tagId => entities.find(e => e.id === tagId))
-            .filter(e => e !== undefined)
-            .map(e => ({
-              id: e!.id,
-              name: e!.name,
-              type: e!.type
-            }))
+
+          // Convert Entity IDs to Real Entity IDs
+          const entityTagsPromises = articleData.entityTags.map(async (entityId) => {
+            try {
+              // Convert Entity ID to Real Entity ID
+              const relatedNodes = await window.entity.getRelatedNodes(entityId)
+              if (relatedNodes && relatedNodes.length > 0) {
+                const realEntityId = relatedNodes[0].id
+                const entity = entities.find(e => e.id === realEntityId)
+                if (entity) {
+                  return {
+                    id: entity.id,
+                    name: entity.name,
+                    type: entity.type
+                  }
+                }
+              }
+              return null
+            } catch (error) {
+              console.error(`Failed to convert Entity ID ${entityId}:`, error)
+              return null
+            }
+          })
+
+          const tags = (await Promise.all(entityTagsPromises)).filter(tag => tag !== null) as Array<{ id: string; name: string; type: string }>
           setEntityTags(tags)
         }
 
@@ -160,7 +184,16 @@ function ArticleDetailPage() {
 
         // Load authors, affiliations, entities, and domains using new API
         const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
-        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesPromises = types.map(async (type) => {
+          const entities = await window.entity.getAllNodes(type)
+          // Add type field to each entity and ensure name is always a string
+          return entities.map(entity => ({
+            id: entity.id,
+            name: entity.name || entity.id, // Fallback to ID if name is missing
+            type: type,
+            description: entity.description
+          }))
+        })
         const [authorsData, affiliationsData, ...allEntitiesArrays] = await Promise.all([
           window.author.getAll(),
           window.affiliation.getAll(),

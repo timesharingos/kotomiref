@@ -149,7 +149,16 @@ const ArticleTab = () => {
 
         // Load all entities for domain matching using new API
         const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
-        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesPromises = types.map(async (type) => {
+          const entities = await window.entity.getAllNodes(type)
+          // Add type field to each entity
+          return entities.map(entity => ({
+            id: entity.id,
+            name: entity.name || entity.id, // Fallback to ID if name is missing
+            type: type,
+            subjectId: entity.subjectId
+          }))
+        })
         const allEntitiesArrays = await Promise.all(allEntitiesPromises)
         const entitiesData = allEntitiesArrays.flat()
         setAllEntities(entitiesData)
@@ -419,7 +428,14 @@ const ArticleTab = () => {
           'definition': 'Definition',
           'contrib': 'Contribution'
         }
-        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesPromises = types.map(async (type) => {
+          const entities = await window.entity.getAllNodes(type)
+          // Add type field to each entity
+          return entities.map(entity => ({
+            ...entity,
+            type: type
+          }))
+        })
         const allEntitiesArrays = await Promise.all(allEntitiesPromises)
         const allEntities = allEntitiesArrays.flat()
 

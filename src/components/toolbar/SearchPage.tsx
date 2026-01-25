@@ -92,15 +92,19 @@ function SearchPage() {
       if (entityType === 'all') {
         // Use new API: getAllNodes for each type
         const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
-        const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+        const allEntitiesPromises = types.map(async (type) => {
+          const entities = await window.entity.getAllNodes(type)
+          // Add type field to each entity and ensure name is always a string
+          return entities.map(entity => ({
+            id: entity.id,
+            name: entity.name || entity.id, // Fallback to ID if name is missing
+            type: type
+          }))
+        })
         const allEntitiesArrays = await Promise.all(allEntitiesPromises)
         const allEntities = allEntitiesArrays.flat()
 
-        setEntities(allEntities.map(e => ({
-          id: e.id,
-          name: e.name,
-          type: e.type
-        })))
+        setEntities(allEntities)
       } else {
         // Use new API: getAllNodes
         const result = await window.entity.getAllNodes(entityType)
