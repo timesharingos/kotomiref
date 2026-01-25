@@ -119,8 +119,9 @@ function QuickAddContributionDialog({
       toast.error('Please select a domain (subject)')
       return
     }
-    if (improvementIds.length === 0) {
-      toast.error('Please select at least one improvement')
+    // At least one of improvement, algo, or object should be selected
+    if (improvementIds.length === 0 && algoIds.length === 0 && objectIds.length === 0) {
+      toast.error('Please select at least one component (improvement, algorithm, or object)')
       return
     }
     if (!solutionToId) {
@@ -171,41 +172,23 @@ function QuickAddContributionDialog({
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-                Domain (Subject) *
+                Domain (Subject) * - Only Sub Domain
               </Typography>
               <IconButton size="small" onClick={onQuickAddDomain} title="Quick add domain">
                 <AddIcon fontSize="small" />
               </IconButton>
             </Box>
             <FormControl fullWidth required>
-              <InputLabel>Select Domain</InputLabel>
+              <InputLabel>Select Sub Domain</InputLabel>
               <Select
                 value={subjectId}
-                label="Select Domain"
+                label="Select Sub Domain"
                 onChange={(e) => setSubjectId(e.target.value)}
               >
-                {/* Main Domains */}
-                {mainDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    Main Domains
-                  </MenuItem>
-                )}
-                {mainDomains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
-                    {domain.name}
-                  </MenuItem>
-                ))}
-
-                {/* Sub Domains */}
-                {subDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
-                    Sub Domains
-                  </MenuItem>
-                )}
                 {subDomains.map((domain) => {
                   const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
                   return (
-                    <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                    <MenuItem key={domain.id} value={domain.id}>
                       {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
                     </MenuItem>
                   )
