@@ -44,9 +44,9 @@ interface ContributionData {
   aliasIds: string[] // Optional: Alias entities
   parentIds: string[] // Optional: Parent entities
   relationIds: string[] // Optional: Related entities
-  improvementIds: string[] // Required: At least one improvement
-  algoIds: string[] // Optional: Algorithm entities
-  objectIds: string[] // Optional: Object entities
+  improvementIds: string[] // Optional: Improvement entities (at least one of improvement/algo/object required)
+  algoIds: string[] // Optional: Algorithm entities (at least one of improvement/algo/object required)
+  objectIds: string[] // Optional: Object entities (at least one of improvement/algo/object required)
   solutionToId: string // Required: Definition entity (which problem this solves)
 }
 
@@ -73,15 +73,57 @@ function ContributionDialog({
   onSave,
   onQuickAddDomain
 }: ContributionDialogProps) {
-  const [description, setDescription] = useState(mode === 'edit' && contribution ? contribution.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && contribution ? contribution.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.relationIds : [])
-  const [improvementIds, setImprovementIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.improvementIds : [])
-  const [algoIds, setAlgoIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.algoIds : [])
-  const [objectIds, setObjectIds] = useState<string[]>(mode === 'edit' && contribution ? contribution.objectIds : [])
-  const [solutionToId, setSolutionToId] = useState(mode === 'edit' && contribution ? contribution.solutionToId : '')
+  interface TypedContributionData {
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    improvementIds: string[]
+    algoIds: string[]
+    objectIds: string[]
+    solutionToId: string
+  }
+
+  const [formData, setFormData] = useState<TypedContributionData>(() => {
+    if (mode === 'edit' && contribution) {
+      return {
+        description: contribution.description,
+        subjectId: contribution.subjectId,
+        aliasIds: contribution.aliasIds,
+        parentIds: contribution.parentIds,
+        relationIds: contribution.relationIds,
+        improvementIds: contribution.improvementIds,
+        algoIds: contribution.algoIds,
+        objectIds: contribution.objectIds,
+        solutionToId: contribution.solutionToId
+      }
+    } else {
+      return {
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        improvementIds: [],
+        algoIds: [],
+        objectIds: [],
+        solutionToId: ''
+      }
+    }
+  })
+
+  const {
+    description,
+    subjectId,
+    aliasIds,
+    parentIds,
+    relationIds,
+    improvementIds,
+    algoIds,
+    objectIds,
+    solutionToId
+  } = formData
 
   const descriptionInputRef = useRef<HTMLInputElement>(null)
 
@@ -104,8 +146,10 @@ function ContributionDialog({
       toast.error('Please select a domain (subject)')
       return
     }
-    if (improvementIds.length === 0) {
-      toast.error('Please select at least one improvement')
+    // Note: improvement, algo, and object are all optional
+    // At least one of them should be selected, but not strictly required
+    if (improvementIds.length === 0 && algoIds.length === 0 && objectIds.length === 0) {
+      toast.error('Please select at least one component (improvement, algorithm, or object)')
       return
     }
     if (!solutionToId) {
@@ -140,7 +184,7 @@ function ContributionDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             required
             multiline
@@ -160,34 +204,22 @@ function ContributionDialog({
               </IconButton>
             </Box>
             <FormControl fullWidth required>
-              <InputLabel>Select Domain</InputLabel>
+              <InputLabel>Select Sub Domain</InputLabel>
               <Select
                 value={subjectId}
-                label="Select Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                label="Select Sub Domain"
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
-                {/* Main Domains */}
-                {mainDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    Main Domains
-                  </MenuItem>
-                )}
-                {mainDomains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
-                    {domain.name}
-                  </MenuItem>
-                ))}
-
-                {/* Sub Domains */}
-                {subDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
-                    Sub Domains
+                {/* Only Sub Domains - Type Constraint */}
+                {subDomains.length === 0 && (
+                  <MenuItem disabled>
+                    No Sub Domains available
                   </MenuItem>
                 )}
                 {subDomains.map((domain) => {
                   const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
                   return (
-                    <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                    <MenuItem key={domain.id} value={domain.id}>
                       {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
                     </MenuItem>
                   )
@@ -214,7 +246,7 @@ function ContributionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -242,7 +274,7 @@ function ContributionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -270,7 +302,7 @@ function ContributionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -285,27 +317,27 @@ function ContributionDialog({
           </Box>
 
           <Divider sx={{ my: 1 }}>
-            <Typography variant="caption" color="text.secondary">Contribution Components (Required)</Typography>
+            <Typography variant="caption" color="text.secondary">Contribution Components (At least one required)</Typography>
           </Divider>
 
-          {/* Improvement - Required, Multiple Select */}
+          {/* Improvement - Optional, Multiple Select */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Improvement *
+              Improvement
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontStyle: 'italic' }}>
-              Select at least one improvement that this contribution includes.
+              Select improvement entities. At least one of improvement/algorithm/object is required.
             </Typography>
             <Autocomplete
               multiple
               options={allEntities.filter(e => e.type === 'improvement')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => improvementIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'improvement' && improvementIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setImprovementIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, improvementIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
-                <TextField {...params} placeholder="Select improvement entities" required={improvementIds.length === 0} />
+                <TextField {...params} placeholder="Select improvement entities" />
               )}
               slotProps={{
                 chip: {
@@ -328,9 +360,9 @@ function ContributionDialog({
               multiple
               options={allEntities.filter(e => e.type === 'algo')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => algoIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'algo' && algoIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAlgoIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, algoIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select algorithm entities" />
@@ -356,9 +388,9 @@ function ContributionDialog({
               multiple
               options={allEntities.filter(e => e.type === 'object')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => objectIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'object' && objectIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setObjectIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, objectIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select research object entities" />
@@ -389,7 +421,7 @@ function ContributionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.find(e => e.id === solutionToId) || null}
               onChange={(_event, newValue) => {
-                setSolutionToId(newValue ? newValue.id : '')
+                setFormData(prev => ({ ...prev, solutionToId: newValue ? newValue.id : '' }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select scenario" required={!solutionToId} />

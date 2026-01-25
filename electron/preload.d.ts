@@ -109,88 +109,8 @@ interface EntityItem {
   solutionToName?: string;
 }
 
-interface AllEntityItem {
-  id: string;
-  name: string;
-  type: string;
-  typeName: string;
-}
-
-interface ObjectData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-}
-
-interface AlgoData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  targetIds: string[];
-  expectationIds: string[];
-  transformationIds: string[];
-}
-
-interface ImprovementData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  metric?: string;
-  metricResultString?: string;
-  metricResultNumber?: number;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  originIds: string[];
-  advanceIds: string[];
-}
-
-interface ProblemData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  domainIds: string[];
-  evoIds: string[];
-}
-
-interface DefinitionData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  refineIds: string[];
-  scenarioIds: string[];
-  evoIds: string[];
-}
-
-interface ContributionData {
-  id?: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  improvementIds: string[];
-  algoIds: string[];
-  objectIds: string[];
-  solutionToId: string;
-}
+// Type for adding new entities (id is not required)
+type EntityItemInput = Omit<EntityItem, 'id'> & { id?: string };
 
 interface ReferenceSignature {
   id?: string;
@@ -294,26 +214,23 @@ declare global {
       deleteSub: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
     entity: {
-      getAllByType: (entityType: string) => Promise<EntityItem[]>;
-      getAll: () => Promise<AllEntityItem[]>;
-      addObject: (data: ObjectData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateObject: (data: ObjectData) => Promise<{ success: boolean; error?: string }>;
-      deleteObject: (id: string) => Promise<{ success: boolean; error?: string }>;
-      addAlgo: (data: AlgoData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateAlgo: (data: AlgoData) => Promise<{ success: boolean; error?: string }>;
-      deleteAlgo: (id: string) => Promise<{ success: boolean; error?: string }>;
-      addImprovement: (data: ImprovementData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateImprovement: (data: ImprovementData) => Promise<{ success: boolean; error?: string }>;
-      deleteImprovement: (id: string) => Promise<{ success: boolean; error?: string }>;
-      addProblem: (data: ProblemData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateProblem: (data: ProblemData) => Promise<{ success: boolean; error?: string }>;
-      deleteProblem: (id: string) => Promise<{ success: boolean; error?: string }>;
-      addDefinition: (data: DefinitionData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateDefinition: (data: DefinitionData) => Promise<{ success: boolean; error?: string }>;
-      deleteDefinition: (id: string) => Promise<{ success: boolean; error?: string }>;
-      addContribution: (data: ContributionData) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateContribution: (data: ContributionData) => Promise<{ success: boolean; error?: string }>;
-      deleteContribution: (id: string) => Promise<{ success: boolean; error?: string }>;
+      // Penetration APIs
+      getRelatedEntity: (realEntityId: string) => Promise<{ id: string; name: string; type: string } | null>;
+      getRelatedNodes: (entityId: string) => Promise<EntityItem[]>;
+
+      // Entity APIs (abstract layer)
+      getAllEntities: () => Promise<EntityItem[]>;
+      getEntityById: (entityId: string) => Promise<EntityItem | null>;
+      addEntity: (data: EntityItem) => Promise<{ success: boolean; id?: string; error?: string }>;
+      updateEntity: (entityId: string, data: EntityItem) => Promise<{ success: boolean; error?: string }>;
+      deleteEntity: (entityId: string) => Promise<{ success: boolean; error?: string }>;
+
+      // Node APIs (concrete layer)
+      getAllNodes: (entityType: string) => Promise<EntityItem[]>;
+      getNodeById: (nodeId: string) => Promise<EntityItem | null>;
+      addNode: (entityType: string, data: EntityItemInput) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
+      updateNode: (nodeId: string, data: EntityItemInput) => Promise<{ success: boolean; error?: string }>;
+      deleteNode: (nodeId: string) => Promise<{ success: boolean; error?: string }>;
     };
     article: {
       getAll: () => Promise<Article[]>;
@@ -322,5 +239,30 @@ declare global {
       update: (data: ArticleData) => Promise<{ success: boolean; error?: string }>;
       delete: (id: string) => Promise<{ success: boolean; error?: string }>;
     };
+    search: {
+      problemEvolutionChain: (problemId: string) => Promise<SearchGraphResult>;
+      definitionEvolutionChain: (definitionId: string) => Promise<SearchGraphResult>;
+      entityImprovementPath: (entityId: string) => Promise<SearchGraphResult>;
+      problemDefinitionsAndSolutions: (problemId: string) => Promise<SearchGraphResult>;
+      oneHopNeighbors: (nodeId: string) => Promise<SearchGraphResult>;
+    };
   }
+}
+
+interface SearchNode {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+}
+
+interface SearchEdge {
+  from: string;
+  to: string;
+  type: string;
+}
+
+interface SearchGraphResult {
+  nodes: SearchNode[];
+  edges: SearchEdge[];
 }

@@ -75,17 +75,66 @@ function ImprovementDialog({
   onSave,
   onQuickAddDomain
 }: ImprovementDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && improvement ? improvement.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && improvement ? improvement.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && improvement ? improvement.subjectId : '')
-  const [metric, setMetric] = useState(mode === 'edit' && improvement ? improvement.metric || '' : '')
-  const [metricResultString, setMetricResultString] = useState(mode === 'edit' && improvement ? improvement.metricResultString || '' : '')
-  const [metricResultNumber, setMetricResultNumber] = useState(mode === 'edit' && improvement ? improvement.metricResultNumber?.toString() || '' : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.relationIds : [])
-  const [originIds, setOriginIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.originIds : [])
-  const [advanceIds, setAdvanceIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.advanceIds : [])
+  interface TypedImprovementData {
+    name: string
+    description: string
+    subjectId: string
+    metric: string
+    metricResultString: string
+    metricResultNumber: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    originIds: string[]
+    advanceIds: string[]
+  }
+
+  const [formData, setFormData] = useState<TypedImprovementData>(() => {
+    if (mode === 'edit' && improvement) {
+      return {
+        name: improvement.name,
+        description: improvement.description,
+        subjectId: improvement.subjectId,
+        metric: improvement.metric || '',
+        metricResultString: improvement.metricResultString || '',
+        // Handle -1 as empty value (use epsilon comparison for floating point)
+        metricResultNumber: improvement.metricResultNumber !== undefined && Math.abs(improvement.metricResultNumber - (-1)) > 0.0001 ? improvement.metricResultNumber.toString() : '',
+        aliasIds: improvement.aliasIds,
+        parentIds: improvement.parentIds,
+        relationIds: improvement.relationIds,
+        originIds: improvement.originIds,
+        advanceIds: improvement.advanceIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        metric: '',
+        metricResultString: '',
+        metricResultNumber: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        originIds: [],
+        advanceIds: []
+      }
+    }
+  })
+
+  const {
+    name,
+    description,
+    subjectId,
+    metric,
+    metricResultString,
+    metricResultNumber,
+    aliasIds,
+    parentIds,
+    relationIds,
+    originIds,
+    advanceIds
+  } = formData
 
   const nameInputRef = useRef<HTMLInputElement>(null)
 
@@ -149,7 +198,7 @@ function ImprovementDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -159,52 +208,40 @@ function ImprovementDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             required
             multiline
             rows={3}
           />
 
-          {/* Subject (Domain) - Required, Single Select */}
+          {/* Subject (Domain) - Required, Single Select - Only SubDomains */}
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-                Domain (Subject) *
+                Domain (Subject) * - Only Sub Domains
               </Typography>
               <IconButton size="small" onClick={onQuickAddDomain} title="Quick add domain">
                 <AddIcon fontSize="small" />
               </IconButton>
             </Box>
             <FormControl fullWidth required>
-              <InputLabel>Select Domain</InputLabel>
+              <InputLabel>Select Sub Domain</InputLabel>
               <Select
                 value={subjectId}
-                label="Select Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                label="Select Sub Domain"
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
-                {/* Main Domains */}
-                {mainDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    Main Domains
-                  </MenuItem>
-                )}
-                {mainDomains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
-                    {domain.name}
-                  </MenuItem>
-                ))}
-
-                {/* Sub Domains */}
-                {subDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
-                    Sub Domains
+                {/* Only Sub Domains - Type Constraint */}
+                {subDomains.length === 0 && (
+                  <MenuItem disabled>
+                    No Sub Domains available
                   </MenuItem>
                 )}
                 {subDomains.map((domain) => {
                   const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
                   return (
-                    <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                    <MenuItem key={domain.id} value={domain.id}>
                       {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
                     </MenuItem>
                   )
@@ -228,7 +265,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -252,7 +289,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -276,7 +313,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -297,7 +334,7 @@ function ImprovementDialog({
           <TextField
             label="Metric"
             value={metric}
-            onChange={(e) => setMetric(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, metric: e.target.value }))}
             fullWidth
             placeholder="e.g., Accuracy, Speed, Memory Usage"
             helperText="Optional: Specify the metric being improved"
@@ -307,7 +344,7 @@ function ImprovementDialog({
           <TextField
             label="Result (String)"
             value={metricResultString}
-            onChange={(e) => setMetricResultString(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, metricResultString: e.target.value }))}
             fullWidth
             disabled={!metric.trim()}
             placeholder="e.g., 'Improved by 20%', 'Significantly faster'"
@@ -318,7 +355,7 @@ function ImprovementDialog({
           <TextField
             label="Result (Number)"
             value={metricResultNumber}
-            onChange={(e) => setMetricResultNumber(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, metricResultNumber: e.target.value }))}
             fullWidth
             type="number"
             disabled={!metric.trim()}
@@ -341,7 +378,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => originIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setOriginIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, originIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select original technology entities" />
@@ -366,7 +403,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => advanceIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAdvanceIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, advanceIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select improved technology entities" />

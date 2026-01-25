@@ -174,8 +174,12 @@ function ConfigPage() {
               onChange={(e) => setFilemode(e.target.value)}
             >
               <MenuItem value="readonly">Read Only</MenuItem>
-              <MenuItem value="copy">Copy</MenuItem>
-              <MenuItem value="cut">Cut</MenuItem>
+              <MenuItem value="copy" disabled>
+                Copy (Coming Soon)
+              </MenuItem>
+              <MenuItem value="cut" disabled>
+                Cut (Coming Soon)
+              </MenuItem>
             </Select>
           </FormControl>
 
@@ -227,15 +231,15 @@ function ConfigPage() {
             </Typography>
             <br />
             <Typography variant="caption" color="text.secondary">
-              • Read Only: Files remain in their original location
+              • Read Only: Files remain in their original location (Recommended)
             </Typography>
             <br />
-            <Typography variant="caption" color="text.secondary">
-              • Copy: Files are copied to the specified directory
+            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+              • Copy: Files are copied to the specified directory (Coming Soon)
             </Typography>
             <br />
-            <Typography variant="caption" color="text.secondary">
-              • Cut: Files are moved to the specified directory
+            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+              • Cut: Files are moved to the specified directory (Coming Soon)
             </Typography>
           </Box>
         )}

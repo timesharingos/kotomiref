@@ -72,16 +72,56 @@ function ProblemDialog({
   onSave,
   onQuickAddDomain
 }: ProblemDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && problem ? problem.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && problem ? problem.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && problem ? problem.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && problem ? problem.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && problem ? problem.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && problem ? problem.relationIds : [])
-  const [domainIds, setDomainIds] = useState<string[]>(mode === 'edit' && problem ? problem.domainIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && problem ? problem.evoIds : [])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  interface typedProblemData {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    domainIds: string[]
+    evoIds: string[]
+  }
+  
+  const [formData, setFormData] = useState<typedProblemData>(() => {
+    if(mode === 'edit' && problem) {
+      return {
+        name: problem.name,
+        description: problem.description,
+        subjectId: problem.subjectId,
+        aliasIds: problem.aliasIds,
+        parentIds: problem.parentIds,
+        relationIds: problem.relationIds,
+        domainIds: problem.domainIds,
+        evoIds: problem.evoIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        domainIds: [],
+        evoIds: []
+      }
+    }
+  });
+
+  const { 
+    name, 
+    description, 
+    subjectId, 
+    aliasIds, 
+    parentIds, 
+    relationIds, 
+    domainIds, 
+    evoIds 
+  } = formData
 
   useEffect(() => {
     if (open) {
@@ -129,7 +169,7 @@ function ProblemDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -139,7 +179,7 @@ function ProblemDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
@@ -156,34 +196,22 @@ function ProblemDialog({
               </IconButton>
             </Box>
             <FormControl fullWidth required>
-              <InputLabel>Select Domain</InputLabel>
+              <InputLabel>Select Sub Domain</InputLabel>
               <Select
                 value={subjectId}
-                label="Select Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                label="Select Sub Domain"
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
-                {/* Main Domains */}
-                {mainDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    Main Domains
-                  </MenuItem>
-                )}
-                {mainDomains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
-                    {domain.name}
-                  </MenuItem>
-                ))}
-
-                {/* Sub Domains */}
-                {subDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
-                    Sub Domains
+                {/* Only Sub Domains - Type Constraint */}
+                {subDomains.length === 0 && (
+                  <MenuItem disabled>
+                    No Sub Domains available
                   </MenuItem>
                 )}
                 {subDomains.map((domain) => {
                   const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
                   return (
-                    <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                    <MenuItem key={domain.id} value={domain.id}>
                       {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
                     </MenuItem>
                   )
@@ -207,7 +235,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -231,7 +259,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -255,7 +283,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -283,7 +311,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => domainIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setDomainIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, domainIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related domain entities" />
@@ -309,9 +337,9 @@ function ProblemDialog({
               multiple
               options={allEntities.filter(e => e.type === 'problem')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => evoIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'problem' && evoIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setEvoIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, evoIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select problem(s) this evolved from" />

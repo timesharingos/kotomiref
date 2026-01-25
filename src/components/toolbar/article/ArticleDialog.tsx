@@ -45,6 +45,35 @@ import QuickAddDomainDialog from './QuickAddDomainDialog'
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
+// Helper function to load all entities using new API
+const loadAllEntities = async () => {
+  const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+  const typeNameMap: Record<string, string> = {
+    'object': 'Object',
+    'algo': 'Algorithm',
+    'improvement': 'Improvement',
+    'problem': 'Problem',
+    'definition': 'Definition',
+    'contrib': 'Contribution'
+  }
+
+  const allEntitiesPromises = types.map(async (type) => {
+    const entities = await window.entity.getAllNodes(type)
+    // Add type field to each entity and ensure name is always a string
+    return entities.map(entity => ({
+      ...entity,
+      type: type,
+      typeName: typeNameMap[type],
+      name: entity.name || entity.id // Fallback to ID if name is missing
+    }))
+  })
+
+  const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+  const flatEntities = allEntitiesArrays.flat()
+
+  return flatEntities as EntityType[]
+}
+
 // Type definitions
 interface Signature {
   id?: string
@@ -200,8 +229,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
   // Load data function
   const loadData = async () => {
     try {
-      // Load all entities for tagging
-      const entitiesResult = await window.entity.getAll()
+      // Load all entities for tagging using new API
+      const entitiesResult = await loadAllEntities()
       setAllEntities(entitiesResult)
 
       // Load authors and affiliations for signature management
@@ -334,6 +363,34 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     const initializeData = async () => {
       await loadData()
 
+      // Convert Entity IDs to Real Entity IDs for edit mode
+      let convertedEntityTags: string[] = []
+      if (mode === 'edit' && article && article.entityTags && article.entityTags.length > 0) {
+        // article.entityTags contains Entity IDs (strings), we need to convert them to Real Entity IDs
+        const entityIdStrings = article.entityTags.map(tag =>
+          typeof tag === 'string' ? tag : tag.id
+        )
+
+        const conversionPromises = entityIdStrings.map(async (entityId) => {
+          try {
+            // Get all real entities related to this Entity node
+            const relatedNodes = await window.entity.getRelatedNodes(entityId)
+
+            // Return the first real entity ID (there should be only one per Entity)
+            if (relatedNodes && relatedNodes.length > 0) {
+              return relatedNodes[0].id
+            }
+            // Fallback to original ID if conversion fails
+            return entityId
+          } catch (error) {
+            console.error(`Error converting Entity ID ${entityId}:`, error)
+            return entityId
+          }
+        })
+
+        convertedEntityTags = await Promise.all(conversionPromises)
+      }
+
       // Initialize form data
       const initialFormData = mode === 'edit' && article ? {
         id: article.id,
@@ -342,7 +399,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         artPrimaryRefEntry: article.artPrimaryRefEntry || null,
         file: null,
         references: article.references || [],
-        entityTags: article.entityTags || [],
+        entityTags: convertedEntityTags, // Use converted Real Entity IDs
         contributions: article.contributions || []
       } : {
         id: '',
@@ -393,8 +450,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         const entity = allEntities.find(e => e.id === id)
         if (entity && entity.type) {
           try {
-            // Fetch full entity details based on type
-            const entities = await window.entity.getAllByType(entity.type)
+            // Fetch full entity details based on type using new API
+            const entities = await window.entity.getAllNodes(entity.type)
             const fullEntity = entities.find(e => e.id === id)
             if (fullEntity) {
               // Convert EntityItem to EntityType
@@ -721,7 +778,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     subjectId: string
     metric: string
     metricResultString: string
-    metricResultNumber: number | null
+    metricResultNumber: number
     aliasIds: string[]
     parentIds: string[]
     relationIds: string[]
@@ -729,27 +786,15 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     advanceIds: string[]
   }) => {
     try {
-      const result = await window.entity.addImprovement({
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        metric: data.metric,
-        metricResultString: data.metricResultString,
-        metricResultNumber: data.metricResultNumber || undefined,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        originIds: data.originIds,
-        advanceIds: data.advanceIds
-      })
-      if (result.success) {
+      const result = await window.entity.addNode('improvement', data)
+      if (result?.success) {
         setQuickAddImprovementDialogOpen(false)
         toast.success('Improvement added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
-        toast.error(result.error || 'Failed to add improvement')
+        toast.error(result?.error || 'Failed to add improvement')
       }
     } catch (error) {
       console.error('Failed to add improvement:', error)
@@ -769,25 +814,15 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     transformationIds: string[]
   }) => {
     try {
-      const result = await window.entity.addAlgo({
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        targetIds: data.targetIds,
-        expectationIds: data.expectationIds,
-        transformationIds: data.transformationIds
-      })
-      if (result.success) {
+      const result = await window.entity.addNode('algo', data)
+      if (result?.success) {
         setQuickAddAlgoDialogOpen(false)
         toast.success('Algorithm added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
-        toast.error(result.error || 'Failed to add algorithm')
+        toast.error(result?.error || 'Failed to add algorithm')
       }
     } catch (error) {
       console.error('Failed to add algorithm:', error)
@@ -804,22 +839,15 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     relationIds: string[]
   }) => {
     try {
-      const result = await window.entity.addObject({
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds
-      })
-      if (result.success) {
+      const result = await window.entity.addNode('object', data)
+      if (result?.success) {
         setQuickAddObjectDialogOpen(false)
         toast.success('Research object added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
-        toast.error(result.error || 'Failed to add research object')
+        toast.error(result?.error || 'Failed to add research object')
       }
     } catch (error) {
       console.error('Failed to add research object:', error)
@@ -839,25 +867,15 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     evoIds: string[]
   }) => {
     try {
-      const result = await window.entity.addDefinition({
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        refineIds: data.refineIds,
-        scenarioIds: data.scenarioIds,
-        evoIds: data.evoIds
-      })
-      if (result.success) {
+      const result = await window.entity.addNode('definition', data)
+      if (result?.success) {
         setQuickAddDefinitionDialogOpen(false)
         toast.success('Definition added successfully')
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
-        toast.error(result.error || 'Failed to add definition')
+        toast.error(result?.error || 'Failed to add definition')
       }
     } catch (error) {
       console.error('Failed to add definition:', error)
@@ -928,18 +946,8 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     solutionToId: string
   }) => {
     try {
-      const result = await window.entity.addContribution({
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        improvementIds: data.improvementIds,
-        algoIds: data.algoIds,
-        objectIds: data.objectIds,
-        solutionToId: data.solutionToId
-      })
-      if (result.success && result.id) {
+      const result = await window.entity.addNode('contribution', data)
+      if (result?.success && result?.id) {
         setQuickAddContributionDialogOpen(false)
         toast.success('Contribution added successfully')
         // Add to contributions list
@@ -962,10 +970,10 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           contributions: [...formData.contributions, newContribution]
         })
         // Reload entities
-        const entitiesResult = await window.entity.getAll()
+        const entitiesResult = await loadAllEntities()
         setAllEntities(entitiesResult)
       } else {
-        toast.error(result.error || 'Failed to add contribution')
+        toast.error(result?.error || 'Failed to add contribution')
       }
     } catch (error) {
       console.error('Failed to add contribution:', error)
@@ -1012,6 +1020,24 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
   const handleSave = async () => {
     try {
+      // Convert real entity IDs to Entity IDs for entityTags
+      const realEntityIds = formData.entityTags.map((tag) =>
+        typeof tag === 'string' ? tag : tag.id
+      )
+
+      // Convert each real entity ID to its corresponding Entity ID
+      const entityIdPromises = realEntityIds.map(async (realEntityId) => {
+        const entityResult = await window.entity.getRelatedEntity(realEntityId)
+        if (entityResult && entityResult.id) {
+          return entityResult.id
+        }
+        // Fallback to original ID if conversion fails
+        console.warn(`Failed to convert real entity ID ${realEntityId} to Entity ID`)
+        return realEntityId
+      })
+
+      const entityIds = await Promise.all(entityIdPromises)
+
       // Prepare article data for saving
       const articleData = {
         id: formData.id,
@@ -1020,9 +1046,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
         artPrimaryRefEntry: formData.artPrimaryRefEntry,
         file: formData.file,
         references: formData.references as never[],
-        entityTags: formData.entityTags.map((tag) =>
-          typeof tag === 'string' ? tag : tag.id
-        ),
+        entityTags: entityIds, // Use converted Entity IDs
         contributions: formData.contributions.map((contrib) =>
           typeof contrib === 'string' ? contrib : contrib.id
         )
@@ -1819,6 +1843,16 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
 
   // Step 3: Entity Tags
   const renderEntityTagsStep = () => {
+    // Convert formData.entityTags (string IDs) to EntityType objects for Autocomplete
+    const selectedEntityObjects = formData.entityTags
+      .map(tagId => {
+        if (typeof tagId === 'string') {
+          return allEntities.find(entity => entity.id === tagId)
+        }
+        return tagId
+      })
+      .filter(entity => entity !== undefined) as EntityType[]
+
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Typography variant="h6" gutterBottom>
@@ -1832,9 +1866,18 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
           multiple
           options={allEntities}
           getOptionLabel={(option) => typeof option === 'string' ? option : `${option.name} (${option.typeName})`}
-          value={formData.entityTags}
+          value={selectedEntityObjects}
           onChange={(_, newValue) => {
-            setFormData({ ...formData, entityTags: newValue })
+            // Convert EntityType objects back to string IDs for formData
+            const entityIds = newValue.map(entity =>
+              typeof entity === 'string' ? entity : entity.id
+            )
+            setFormData({ ...formData, entityTags: entityIds })
+          }}
+          slotProps={{
+            chip: {
+              size: 'small'
+            }
           }}
           renderInput={(params) => (
             <TextField
@@ -1843,38 +1886,6 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               placeholder="Select entities to tag"
             />
           )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...tagProps } = getTagProps({ index })
-              if (typeof option === 'string') {
-                return (
-                  <Chip
-                    key={key}
-                    label={option}
-                    {...tagProps}
-                    size="small"
-                  />
-                )
-              }
-              return (
-                <Chip
-                  key={key}
-                  label={option.name}
-                  {...tagProps}
-                  size="small"
-                  color={
-                    option.type === 'object' ? 'primary' :
-                    option.type === 'algo' ? 'secondary' :
-                    option.type === 'improvement' ? 'success' :
-                    option.type === 'problem' ? 'warning' :
-                    option.type === 'definition' ? 'info' :
-                    option.type === 'contrib' ? 'error' :
-                    'default'
-                  }
-                />
-              )
-            })
-          }
         />
 
         {formData.entityTags.length > 0 && (
@@ -1885,6 +1896,27 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
               {formData.entityTags.map((tag, index) => {
                 if (typeof tag === 'string') {
+                  // Find the entity object from allEntities
+                  const entity = allEntities.find(e => e.id === tag)
+                  if (entity) {
+                    return (
+                      <Chip
+                        key={index}
+                        label={`${entity.name} (${entity.typeName})`}
+                        size="medium"
+                        color={
+                          entity.type === 'object' ? 'primary' :
+                          entity.type === 'algo' ? 'secondary' :
+                          entity.type === 'improvement' ? 'success' :
+                          entity.type === 'problem' ? 'warning' :
+                          entity.type === 'definition' ? 'info' :
+                          entity.type === 'contrib' ? 'error' :
+                          'default'
+                        }
+                      />
+                    )
+                  }
+                  // Fallback if entity not found
                   return (
                     <Chip
                       key={index}
@@ -1953,7 +1985,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               if (value) {
                 // Fetch full contribution details
                 try {
-                  const contributions = await window.entity.getAllByType('contrib')
+                  const contributions = await window.entity.getAllNodes('contrib')
                   const fullContribution = contributions.find(c => c.id === value.id)
                   if (fullContribution) {
                     // Convert EntityItem to EntityType

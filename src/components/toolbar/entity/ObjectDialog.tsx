@@ -70,12 +70,45 @@ function ObjectDialog({
   onSave,
   onQuickAddDomain
 }: ObjectDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && object ? object.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && object ? object.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && object ? object.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && object ? object.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && object ? object.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && object ? object.relationIds : [])
+  interface TypedObjectData {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+  }
+
+  const [formData, setFormData] = useState<TypedObjectData>(() => {
+    if (mode === 'edit' && object) {
+      return {
+        name: object.name,
+        description: object.description,
+        subjectId: object.subjectId,
+        aliasIds: object.aliasIds,
+        parentIds: object.parentIds,
+        relationIds: object.relationIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: []
+      }
+    }
+  })
+
+  const {
+    name,
+    description,
+    subjectId,
+    aliasIds,
+    parentIds,
+    relationIds
+  } = formData
 
   const nameInputRef = useRef<HTMLInputElement>(null)
 
@@ -123,7 +156,7 @@ function ObjectDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -133,51 +166,39 @@ function ObjectDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
           />
 
-          {/* Subject (Domain) - Required, Single Select */}
+          {/* Subject (Domain) - Required, Single Select - Only SubDomains */}
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-                Domain (Subject) *
+                Domain (Subject) * - Only Sub Domains
               </Typography>
               <IconButton size="small" onClick={onQuickAddDomain} title="Quick add domain">
                 <AddIcon fontSize="small" />
               </IconButton>
             </Box>
             <FormControl fullWidth required>
-              <InputLabel>Select Domain</InputLabel>
+              <InputLabel>Select Sub Domain</InputLabel>
               <Select
                 value={subjectId}
-                label="Select Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                label="Select Sub Domain"
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
-                {/* Main Domains */}
-                {mainDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    Main Domains
-                  </MenuItem>
-                )}
-                {mainDomains.map((domain) => (
-                  <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
-                    {domain.name}
-                  </MenuItem>
-                ))}
-
-                {/* Sub Domains */}
-                {subDomains.length > 0 && (
-                  <MenuItem disabled sx={{ fontWeight: 'bold', color: 'primary.main', mt: 1 }}>
-                    Sub Domains
+                {/* Only Sub Domains - Type Constraint */}
+                {subDomains.length === 0 && (
+                  <MenuItem disabled>
+                    No Sub Domains available
                   </MenuItem>
                 )}
                 {subDomains.map((domain) => {
                   const mainDomain = mainDomains.find(m => m.id === domain.mainDomainId)
                   return (
-                    <MenuItem key={domain.id} value={domain.id} sx={{ pl: 4 }}>
+                    <MenuItem key={domain.id} value={domain.id}>
                       {domain.name} {mainDomain && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>({mainDomain.name})</Typography>}
                     </MenuItem>
                   )
@@ -197,7 +218,7 @@ function ObjectDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -226,7 +247,7 @@ function ObjectDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -255,7 +276,7 @@ function ObjectDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />

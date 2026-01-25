@@ -98,6 +98,7 @@ interface EntityItem {
   id: string
   name?: string
   description?: string
+  type?: string
   metric?: string
   metricResultString?: string
   metricResultNumber?: number
@@ -140,6 +141,8 @@ interface EntityItem {
   objectNames?: string[]
   solutionToId?: string
   solutionToName?: string
+  // For delete operation
+  entityId?: string
 }
 
 interface SubDomain {
@@ -234,12 +237,39 @@ function TechEntityTab() {
       })
       setSubDomains(subDomainsWithMain)
 
-      // Load entities of current type
-      const entitiesData = await window.entity.getAllByType(selectedType)
+      // Load entities of current type using new API
+      const entitiesData = await window.entity.getAllNodes(selectedType)
       setEntities(entitiesData)
 
-      // Load all entities for relationship selection
-      const allEntitiesData = await window.entity.getAll()
+      // Load all entities for relationship selection using new API
+      const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+      const allEntitiesPromises = types.map(async (type) => {
+        const entities = await window.entity.getAllNodes(type)
+        return entities.map(entity => ({
+          ...entity,
+          type: type
+        }))
+      })
+      const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+      const allEntitiesFlat = allEntitiesArrays.flat()
+
+      // Add typeName field for display
+      const typeNameMap: Record<string, string> = {
+        'object': 'Object',
+        'algo': 'Algo',
+        'improvement': 'Improvement',
+        'contrib': 'Contribution',
+        'problem': 'Problem',
+        'definition': 'Definition'
+      }
+
+      const allEntitiesData = allEntitiesFlat.map((entity) => ({
+        id: entity.id,
+        name: entity.name || '',
+        type: entity.type || 'unknown',
+        typeName: typeNameMap[entity.type as string] || entity.type || 'Unknown'
+      }))
+
       setAllEntities(allEntitiesData)
     })
     } catch (e) {
@@ -365,24 +395,19 @@ function TechEntityTab() {
     )
     if (confirmed) {
       try {
-        let result
-        if (selectedType === 'object') {
-          result = await window.entity.deleteObject(entity.id)
-        } else if (selectedType === 'algo') {
-          result = await window.entity.deleteAlgo(entity.id)
-        } else if (selectedType === 'improvement') {
-          result = await window.entity.deleteImprovement(entity.id)
-        } else if (selectedType === 'contrib') {
-          result = await window.entity.deleteContribution(entity.id)
-        } else if (selectedType === 'problem') {
-          result = await window.entity.deleteProblem(entity.id)
-        } else if (selectedType === 'definition') {
-          result = await window.entity.deleteDefinition(entity.id)
-        } else {
-          // TODO: Implement for other types
-          console.log('Delete entity:', entity)
-          return
+        // Step 1: Find the corresponding Entity node
+        const entityId = entity.entityId
+
+        // Step 2: Delete Entity node if it exists
+        if (entityId) {
+          const entityResult = await window.entity.deleteEntity(entityId)
+          if (!entityResult.success) {
+            console.warn('Failed to delete Entity node:', entityResult.error)
+          }
         }
+
+        // Step 3: Delete the real entity node
+        const result = await window.entity.deleteNode(entity.id)
 
         if (result.success) {
           await loadData()
@@ -405,22 +430,20 @@ function TechEntityTab() {
     )
     if (confirmed) {
       try {
+        // Delete each entity (Entity node + real entity node)
         for (const id of Array.from(selectedIds)) {
-          if (selectedType === 'object') {
-            await window.entity.deleteObject(id)
-          } else if (selectedType === 'algo') {
-            await window.entity.deleteAlgo(id)
-          } else if (selectedType === 'improvement') {
-            await window.entity.deleteImprovement(id)
-          } else if (selectedType === 'contrib') {
-            await window.entity.deleteContribution(id)
-          } else if (selectedType === 'problem') {
-            await window.entity.deleteProblem(id)
-          } else if (selectedType === 'definition') {
-            await window.entity.deleteDefinition(id)
-          } else {
-            // TODO: Implement for other types
-            console.log('Delete entity:', id)
+          const entity = entities.find(e => e.id === id)
+          if (entity) {
+            // Step 1: Find the corresponding Entity node
+            const entityId = entity.entityId
+
+            // Step 2: Delete Entity node if it exists
+            if (entityId) {
+              await window.entity.deleteEntity(entityId)
+            }
+
+            // Step 3: Delete the real entity node
+            await window.entity.deleteNode(id)
           }
         }
         setSelectedIds(new Set())
@@ -449,9 +472,11 @@ function TechEntityTab() {
     try {
       let result
       if (objectDialogMode === 'add') {
-        result = await window.entity.addObject(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...nodeData } = data
+        result = await window.entity.addNode('object', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateObject(data)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -486,9 +511,11 @@ function TechEntityTab() {
     try {
       let result
       if (algoDialogMode === 'add') {
-        result = await window.entity.addAlgo(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...nodeData } = data
+        result = await window.entity.addNode('algo', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateAlgo(data)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -525,9 +552,11 @@ function TechEntityTab() {
     try {
       let result
       if (improvementDialogMode === 'add') {
-        result = await window.entity.addImprovement(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...nodeData } = data
+        result = await window.entity.addNode('improvement', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateImprovement(data)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -562,9 +591,11 @@ function TechEntityTab() {
     try {
       let result
       if (contributionDialogMode === 'add') {
-        result = await window.entity.addContribution(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...nodeData } = data
+        result = await window.entity.addNode('contribution', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateContribution(data)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -598,9 +629,11 @@ function TechEntityTab() {
     try {
       let result
       if (problemDialogMode === 'add') {
-        result = await window.entity.addProblem(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...nodeData } = data
+        result = await window.entity.addNode('problem', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateProblem(data)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -635,9 +668,11 @@ function TechEntityTab() {
     try {
       let result
       if (definitionDialogMode === 'add') {
-        result = await window.entity.addDefinition(data)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...nodeData } = data
+        result = await window.entity.addNode('definition', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateDefinition(data)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -764,7 +799,8 @@ function TechEntityTab() {
       case 'Result (String)':
         return entity.metricResultString || '-'
       case 'Result (Number)':
-        return entity.metricResultNumber !== undefined ? entity.metricResultNumber : '-'
+        // Treat -1 as empty value (use epsilon comparison for floating point)
+        return (entity.metricResultNumber !== undefined && Math.abs(entity.metricResultNumber - (-1)) > 0.0001) ? entity.metricResultNumber : '-'
       case 'Origin':
         return entity.originNames && entity.originNames.length > 0 ? (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

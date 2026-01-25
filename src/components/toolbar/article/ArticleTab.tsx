@@ -147,12 +147,24 @@ const ArticleTab = () => {
         const authorMap = new Map(authorsData.map((author: { id: string; name: string }) => [author.id, author.name]))
         setAllAuthors(authorsData)
 
-        // Load all entities for domain matching
-        const entitiesData = await window.entity.getAll()
+        // Load all entities for domain matching using new API
+        const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+        const allEntitiesPromises = types.map(async (type) => {
+          const entities = await window.entity.getAllNodes(type)
+          // Add type field to each entity
+          return entities.map(entity => ({
+            id: entity.id,
+            name: entity.name || entity.id, // Fallback to ID if name is missing
+            type: type,
+            subjectId: entity.subjectId
+          }))
+        })
+        const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+        const entitiesData = allEntitiesArrays.flat()
         setAllEntities(entitiesData)
 
         // Transform articles to display format
-        const transformedArticles = articlesResult.map((article: {
+        const transformedArticlesPromises = articlesResult.map(async (article: {
           id: string
           artTitle: string
           artPath: string
@@ -181,14 +193,28 @@ const ArticleTab = () => {
           }
 
           // Get entity tag details with names and types
-          const entityTagDetails = article.entityTags.map(tagId => {
-            const entity = entitiesData.find((e: { id: string; name: string; type: string }) => e.id === tagId)
-            return entity ? {
-              id: entity.id,
-              name: entity.name,
-              type: entity.type
-            } : null
-          }).filter(tag => tag !== null)
+          // Note: article.entityTags contains Entity IDs (abstract nodes)
+          // We need to convert them to Real Entity IDs to match with entitiesData
+          const entityTagDetailsPromises = article.entityTags.map(async (entityId) => {
+            try {
+              // Convert Entity ID to Real Entity ID
+              const relatedNodes = await window.entity.getRelatedNodes(entityId)
+              if (relatedNodes && relatedNodes.length > 0) {
+                const realEntityId = relatedNodes[0].id
+                const entity = entitiesData.find((e: { id: string; name: string; type: string }) => e.id === realEntityId)
+                return entity ? {
+                  id: entity.id,
+                  name: entity.name,
+                  type: entity.type
+                } : null
+              }
+              return null
+            } catch (error) {
+              console.error(`Failed to convert Entity ID ${entityId}:`, error)
+              return null
+            }
+          })
+          const entityTagDetails = (await Promise.all(entityTagDetailsPromises)).filter(tag => tag !== null)
 
           return {
             id: article.id,
@@ -203,6 +229,8 @@ const ArticleTab = () => {
             contributions: article.contributions
           }
         })
+
+        const transformedArticles = await Promise.all(transformedArticlesPromises)
 
         setArticles(transformedArticles)
         setFilteredArticles(transformedArticles)
@@ -390,33 +418,61 @@ const ArticleTab = () => {
           }))
         }))
 
-        // Load entity details for tags and contributions
-        const [allEntities] = await Promise.all([
-          window.entity.getAll()
-        ])
+        // Load entity details for tags and contributions using new API
+        const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
+        const typeNameMap: Record<string, string> = {
+          'object': 'Object',
+          'algo': 'Algorithm',
+          'improvement': 'Improvement',
+          'problem': 'Problem',
+          'definition': 'Definition',
+          'contrib': 'Contribution'
+        }
+        const allEntitiesPromises = types.map(async (type) => {
+          const entities = await window.entity.getAllNodes(type)
+          // Add type field to each entity
+          return entities.map(entity => ({
+            ...entity,
+            type: type
+          }))
+        })
+        const allEntitiesArrays = await Promise.all(allEntitiesPromises)
+        const allEntities = allEntitiesArrays.flat()
 
         // Convert entity tag IDs to entity objects
-        const entityTagObjects: EntityTag[] = fullArticle.entityTags
-          .map(tagId => {
-            const entity = allEntities.find(e => e.id === tagId)
-            if (entity) {
-              return {
-                id: entity.id,
-                name: entity.name,
-                type: entity.type,
-                typeName: entity.type
+        // Note: fullArticle.entityTags contains Entity IDs (abstract nodes)
+        // We need to convert them to Real Entity IDs first
+        const entityTagObjectsPromises = fullArticle.entityTags.map(async (entityId) => {
+          try {
+            // Convert Entity ID to Real Entity ID
+            const relatedNodes = await window.entity.getRelatedNodes(entityId)
+            if (relatedNodes && relatedNodes.length > 0) {
+              const realEntityId = relatedNodes[0].id
+              const entity = allEntities.find(e => e.id === realEntityId)
+              if (entity) {
+                return {
+                  id: entity.id,
+                  name: entity.name,
+                  type: entity.type,
+                  typeName: typeNameMap[entity.type] || entity.type
+                }
               }
             }
             return null
-          })
+          } catch (error) {
+            console.error(`Failed to convert Entity ID ${entityId}:`, error)
+            return null
+          }
+        })
+        const entityTagObjects: EntityTag[] = (await Promise.all(entityTagObjectsPromises))
           .filter((tag): tag is EntityTag => tag !== null)
 
         // Load full contribution data
         const contributionObjects = await Promise.all(
           fullArticle.contributions.map(async (contribId) => {
             try {
-              // Get full contribution details
-              const contribEntities = await window.entity.getAllByType('contrib')
+              // Get full contribution details using new API
+              const contribEntities = await window.entity.getAllNodes('contrib')
               const fullContrib = contribEntities.find(e => e.id === contribId)
 
               if (fullContrib) {
