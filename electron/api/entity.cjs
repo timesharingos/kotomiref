@@ -138,7 +138,36 @@ function extractAttributes(db, node) {
     return result
 }
 
+// Helper function: Convert Entity IDs to Real Entity IDs (for frontend Edit mode)
+// This is a CONVERSION function, not changing the semantics of getEntityRelations
+function convertEntityIdsToRealEntityIds(db, entityIds) {
+    return entityIds.map(entityId => {
+        const entityNode = db.nodeops.queryNodeById(entityId)
+        if (!entityNode) return entityId
+
+        const entityName = entityNode.name
+
+        // Try to find real entity node with same name
+        const types = [
+            evolutionType.evoConcepts.EvoObject.instance,
+            evolutionType.evoConcepts.EvoAlgo.instance,
+            evolutionType.evoConcepts.EvoImprovement.instance,
+            evolutionType.evoConcepts.EvoContrib.instance,
+            evolutionType.evoConcepts.EvoProblem.instance,
+            evolutionType.evoConcepts.EvoDefinition.instance
+        ]
+
+        for (const type of types) {
+            const realNode = db.nodeops.queryNodeByName(type.id, entityName)
+            if (realNode) return realNode.id
+        }
+
+        return entityId // Fallback to entity ID if no real entity found
+    })
+}
+
 // Get Entity relations (Subject, Alias, Parent, Relation)
+// Returns Entity node IDs (not real entity IDs)
 function getEntityRelations(db, entityNodeId) {
     const result = {}
 
@@ -202,7 +231,7 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
 
     // Algo-specific relations
     if (nodeType === evolutionType.evoConcepts.EvoAlgo.instance.id) {
-        // Target: a1 -> e2, need to get e2's name
+        // Target: a1 -> Entity node (e2)
         const targetRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTarget.instance
         const targetRels = db.relops.queryRelsByFromId(targetRelType.id, nodeId)
         result.targetIds = targetRels.map(rel => rel.to)
@@ -215,7 +244,7 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
             return rel.to
         })
 
-        // Expectation
+        // Expectation: a1 -> Entity node (e2)
         const expectationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoExpectation.instance
         const expectationRels = db.relops.queryRelsByFromId(expectationRelType.id, nodeId)
         result.expectationIds = expectationRels.map(rel => rel.to)
@@ -228,7 +257,7 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
             return rel.to
         })
 
-        // Transformation
+        // Transformation: a1 -> Entity node (e2)
         const transformationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTransformation.instance
         const transformationRels = db.relops.queryRelsByFromId(transformationRelType.id, nodeId)
         result.transformationIds = transformationRels.map(rel => rel.to)
@@ -244,7 +273,7 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
 
     // Improvement-specific relations
     if (nodeType === evolutionType.evoConcepts.EvoImprovement.instance.id) {
-        // Origin
+        // Origin: i1 -> Entity node (e2)
         const originRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementOrigin.instance
         const originRels = db.relops.queryRelsByFromId(originRelType.id, nodeId)
         result.originIds = originRels.map(rel => rel.to)
@@ -257,7 +286,7 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
             return rel.to
         })
 
-        // Advance
+        // Advance: i1 -> Entity node (e2)
         const advanceRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementAdvance.instance
         const advanceRels = db.relops.queryRelsByFromId(advanceRelType.id, nodeId)
         result.advanceIds = advanceRels.map(rel => rel.to)
@@ -327,7 +356,7 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
 
     // Problem-specific relations
     if (nodeType === evolutionType.evoConcepts.EvoProblem.instance.id) {
-        // Domain
+        // Domain: p1 -> Entity node (e2)
         const domainRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemDomain.instance
         const domainRels = db.relops.queryRelsByFromId(domainRelType.id, nodeId)
         result.domainIds = domainRels.map(rel => rel.to)
@@ -340,15 +369,15 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
             return rel.to
         })
 
-        // Evo
+        // Evo: p1 -> p2 (Problem node)
         const evoRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemEvo.instance
         const evoRels = db.relops.queryRelsByFromId(evoRelType.id, nodeId)
         result.evoIds = evoRels.map(rel => rel.to)
         result.evoNames = evoRels.map(rel => {
-            const entityNode = db.nodeops.queryNodeById(rel.to)
-            if (entityNode) {
-                const attrs = extractAttributes(db, entityNode)
-                return attrs.name || entityNode.name
+            const problemNode = db.nodeops.queryNodeById(rel.to)
+            if (problemNode) {
+                const attrs = extractAttributes(db, problemNode)
+                return attrs.name || problemNode.name
             }
             return rel.to
         })
@@ -356,20 +385,20 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
 
     // Definition-specific relations
     if (nodeType === evolutionType.evoConcepts.EvoDefinition.instance.id) {
-        // Refine
+        // Refine: s1 -> p1 (Problem node)
         const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
         const refineRels = db.relops.queryRelsByFromId(refineRelType.id, nodeId)
         result.refineIds = refineRels.map(rel => rel.to)
         result.refineNames = refineRels.map(rel => {
-            const entityNode = db.nodeops.queryNodeById(rel.to)
-            if (entityNode) {
-                const attrs = extractAttributes(db, entityNode)
-                return attrs.name || entityNode.name
+            const problemNode = db.nodeops.queryNodeById(rel.to)
+            if (problemNode) {
+                const attrs = extractAttributes(db, problemNode)
+                return attrs.name || problemNode.name
             }
             return rel.to
         })
 
-        // Scenario
+        // Scenario: s1 -> Entity node (e2)
         const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
         const scenarioRels = db.relops.queryRelsByFromId(scenarioRelType.id, nodeId)
         result.scenarioIds = scenarioRels.map(rel => rel.to)
@@ -378,6 +407,19 @@ function getTypeSpecificRelations(db, nodeId, nodeType) {
             if (entityNode) {
                 const attrs = extractAttributes(db, entityNode)
                 return attrs.name || entityNode.name
+            }
+            return rel.to
+        })
+
+        // Evo: s1 -> s2 (Definition node)
+        const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+        const evoRels = db.relops.queryRelsByFromId(evoRelType.id, nodeId)
+        result.evoIds = evoRels.map(rel => rel.to)
+        result.evoNames = evoRels.map(rel => {
+            const definitionNode = db.nodeops.queryNodeById(rel.to)
+            if (definitionNode) {
+                const attrs = extractAttributes(db, definitionNode)
+                return attrs.name || definitionNode.name
             }
             return rel.to
         })
@@ -745,6 +787,49 @@ function registerEntityHandlers() {
                         ...typeSpecificRelations
                     }
 
+                    // Convert Entity IDs to Real Entity IDs for frontend Edit mode
+                    // Entity relations (aliasIds, parentIds, relationIds) contain Entity node IDs
+                    // Frontend needs Real Entity node IDs to match with allEntities
+                    if (result.aliasIds) {
+                        result.aliasIds = convertEntityIdsToRealEntityIds(db, result.aliasIds)
+                    }
+                    if (result.parentIds) {
+                        result.parentIds = convertEntityIdsToRealEntityIds(db, result.parentIds)
+                    }
+                    if (result.relationIds) {
+                        result.relationIds = convertEntityIdsToRealEntityIds(db, result.relationIds)
+                    }
+
+                    // Type-specific relations that point to Entity nodes also need conversion
+                    // Algo: targetIds, expectationIds, transformationIds
+                    if (result.targetIds) {
+                        result.targetIds = convertEntityIdsToRealEntityIds(db, result.targetIds)
+                    }
+                    if (result.expectationIds) {
+                        result.expectationIds = convertEntityIdsToRealEntityIds(db, result.expectationIds)
+                    }
+                    if (result.transformationIds) {
+                        result.transformationIds = convertEntityIdsToRealEntityIds(db, result.transformationIds)
+                    }
+
+                    // Improvement: originIds, advanceIds
+                    if (result.originIds) {
+                        result.originIds = convertEntityIdsToRealEntityIds(db, result.originIds)
+                    }
+                    if (result.advanceIds) {
+                        result.advanceIds = convertEntityIdsToRealEntityIds(db, result.advanceIds)
+                    }
+
+                    // Problem: domainIds (evoIds points to Problem nodes, no conversion needed)
+                    if (result.domainIds) {
+                        result.domainIds = convertEntityIdsToRealEntityIds(db, result.domainIds)
+                    }
+
+                    // Definition: scenarioIds (refineIds points to Problem nodes, evoIds points to Definition nodes, no conversion needed)
+                    if (result.scenarioIds) {
+                        result.scenarioIds = convertEntityIdsToRealEntityIds(db, result.scenarioIds)
+                    }
+
                     // Add type-specific attributes
                     if (attrs.metric !== undefined) result.metric = attrs.metric
                     if (attrs.metricResultString !== undefined) result.metricResultString = attrs.metricResultString
@@ -788,6 +873,47 @@ function registerEntityHandlers() {
                     entityId: entityNode ? entityNode.id : null,
                     ...entityRelations,
                     ...typeSpecificRelations
+                }
+
+                // Convert Entity IDs to Real Entity IDs for frontend Edit mode
+                if (result.aliasIds) {
+                    result.aliasIds = convertEntityIdsToRealEntityIds(db, result.aliasIds)
+                }
+                if (result.parentIds) {
+                    result.parentIds = convertEntityIdsToRealEntityIds(db, result.parentIds)
+                }
+                if (result.relationIds) {
+                    result.relationIds = convertEntityIdsToRealEntityIds(db, result.relationIds)
+                }
+
+                // Type-specific relations that point to Entity nodes also need conversion
+                // Algo: targetIds, expectationIds, transformationIds
+                if (result.targetIds) {
+                    result.targetIds = convertEntityIdsToRealEntityIds(db, result.targetIds)
+                }
+                if (result.expectationIds) {
+                    result.expectationIds = convertEntityIdsToRealEntityIds(db, result.expectationIds)
+                }
+                if (result.transformationIds) {
+                    result.transformationIds = convertEntityIdsToRealEntityIds(db, result.transformationIds)
+                }
+
+                // Improvement: originIds, advanceIds
+                if (result.originIds) {
+                    result.originIds = convertEntityIdsToRealEntityIds(db, result.originIds)
+                }
+                if (result.advanceIds) {
+                    result.advanceIds = convertEntityIdsToRealEntityIds(db, result.advanceIds)
+                }
+
+                // Problem: domainIds (evoIds points to Problem nodes, no conversion needed)
+                if (result.domainIds) {
+                    result.domainIds = convertEntityIdsToRealEntityIds(db, result.domainIds)
+                }
+
+                // Definition: scenarioIds (refineIds points to Problem nodes, evoIds points to Definition nodes, no conversion needed)
+                if (result.scenarioIds) {
+                    result.scenarioIds = convertEntityIdsToRealEntityIds(db, result.scenarioIds)
                 }
 
                 // Add type-specific attributes
