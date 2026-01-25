@@ -786,19 +786,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     advanceIds: string[]
   }) => {
     try {
-      const result = await window.entity.addNode('improvement', {
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        metric: data.metric,
-        metricResultString: data.metricResultString,
-        metricResultNumber: data.metricResultNumber,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        originIds: data.originIds,
-        advanceIds: data.advanceIds
-      } as any)
+      const result = await window.entity.addNode('improvement', data)
       if (result?.success) {
         setQuickAddImprovementDialogOpen(false)
         toast.success('Improvement added successfully')
@@ -826,17 +814,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     transformationIds: string[]
   }) => {
     try {
-      const result = await window.entity.addNode('algo', {
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        targetIds: data.targetIds,
-        expectationIds: data.expectationIds,
-        transformationIds: data.transformationIds
-      } as any)
+      const result = await window.entity.addNode('algo', data)
       if (result?.success) {
         setQuickAddAlgoDialogOpen(false)
         toast.success('Algorithm added successfully')
@@ -861,14 +839,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     relationIds: string[]
   }) => {
     try {
-      const result = await window.entity.addNode('object', {
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds
-      } as any)
+      const result = await window.entity.addNode('object', data)
       if (result?.success) {
         setQuickAddObjectDialogOpen(false)
         toast.success('Research object added successfully')
@@ -896,17 +867,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     evoIds: string[]
   }) => {
     try {
-      const result = await window.entity.addNode('definition', {
-        name: data.name,
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        refineIds: data.refineIds,
-        scenarioIds: data.scenarioIds,
-        evoIds: data.evoIds
-      } as any)
+      const result = await window.entity.addNode('definition', data)
       if (result?.success) {
         setQuickAddDefinitionDialogOpen(false)
         toast.success('Definition added successfully')
@@ -985,17 +946,7 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
     solutionToId: string
   }) => {
     try {
-      const result = await window.entity.addNode('contribution', {
-        description: data.description,
-        subjectId: data.subjectId,
-        aliasIds: data.aliasIds,
-        parentIds: data.parentIds,
-        relationIds: data.relationIds,
-        improvementIds: data.improvementIds,
-        algoIds: data.algoIds,
-        objectIds: data.objectIds,
-        solutionToId: data.solutionToId
-      } as any)
+      const result = await window.entity.addNode('contribution', data)
       if (result?.success && result?.id) {
         setQuickAddContributionDialogOpen(false)
         toast.success('Contribution added successfully')
@@ -1923,6 +1874,11 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
             )
             setFormData({ ...formData, entityTags: entityIds })
           }}
+          slotProps={{
+            chip: {
+              size: 'small'
+            }
+          }}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -1930,38 +1886,6 @@ const ArticleDialog = ({ open, mode, article, onClose, onSave }: ArticleDialogPr
               placeholder="Select entities to tag"
             />
           )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...tagProps } = getTagProps({ index })
-              if (typeof option === 'string') {
-                return (
-                  <Chip
-                    key={key}
-                    label={option}
-                    {...tagProps}
-                    size="small"
-                  />
-                )
-              }
-              return (
-                <Chip
-                  key={key}
-                  label={option.name}
-                  {...tagProps}
-                  size="small"
-                  color={
-                    option.type === 'object' ? 'primary' :
-                    option.type === 'algo' ? 'secondary' :
-                    option.type === 'improvement' ? 'success' :
-                    option.type === 'problem' ? 'warning' :
-                    option.type === 'definition' ? 'info' :
-                    option.type === 'contrib' ? 'error' :
-                    'default'
-                  }
-                />
-              )
-            })
-          }
         />
 
         {formData.entityTags.length > 0 && (

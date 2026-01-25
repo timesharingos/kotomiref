@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Typography,
   Box,
@@ -62,11 +62,9 @@ function SearchPage() {
   const [loadingEntities, setLoadingEntities] = useState(false)
 
   // Load entities based on search type
-  useEffect(() => {
-    loadEntities()
-  }, [searchType])
 
-  const loadEntities = async () => {
+
+  const loadEntities = useCallback(async () => {
     setLoadingEntities(true)
     try {
       let entityType = ''
@@ -120,7 +118,11 @@ function SearchPage() {
     } finally {
       setLoadingEntities(false)
     }
-  }
+  }, [searchType])
+
+  useEffect(() => {
+    loadEntities()
+  }, [searchType, loadEntities]) 
 
   const handleSearch = async () => {
     if (!selectedEntity) {

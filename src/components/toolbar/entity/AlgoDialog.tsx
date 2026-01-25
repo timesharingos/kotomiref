@@ -74,43 +74,59 @@ function AlgoDialog({
   onSave,
   onQuickAddDomain
 }: AlgoDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [subjectId, setSubjectId] = useState('')
-  const [aliasIds, setAliasIds] = useState<string[]>([])
-  const [parentIds, setParentIds] = useState<string[]>([])
-  const [relationIds, setRelationIds] = useState<string[]>([])
-  const [targetIds, setTargetIds] = useState<string[]>([])
-  const [expectationIds, setExpectationIds] = useState<string[]>([])
-  const [transformationIds, setTransformationIds] = useState<string[]>([])
+  interface TypedAlgoData {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    targetIds: string[]
+    expectationIds: string[]
+    transformationIds: string[]
+  }
+
+  const [formData, setFormData] = useState<TypedAlgoData>(() => {
+    if (mode === 'edit' && algo) {
+      return {
+        name: algo.name,
+        description: algo.description,
+        subjectId: algo.subjectId,
+        aliasIds: algo.aliasIds,
+        parentIds: algo.parentIds,
+        relationIds: algo.relationIds,
+        targetIds: algo.targetIds,
+        expectationIds: algo.expectationIds,
+        transformationIds: algo.transformationIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        targetIds: [],
+        expectationIds: [],
+        transformationIds: []
+      }
+    }
+  })
+
+  const {
+    name,
+    description,
+    subjectId,
+    aliasIds,
+    parentIds,
+    relationIds,
+    targetIds,
+    expectationIds,
+    transformationIds
+  } = formData
 
   const nameInputRef = useRef<HTMLInputElement>(null)
-
-  // Update form when algo changes (for edit mode)
-  useEffect(() => {
-    if (mode === 'edit' && algo) {
-      setName(algo.name)
-      setDescription(algo.description)
-      setSubjectId(algo.subjectId)
-      setAliasIds(algo.aliasIds)
-      setParentIds(algo.parentIds)
-      setRelationIds(algo.relationIds)
-      setTargetIds(algo.targetIds)
-      setExpectationIds(algo.expectationIds)
-      setTransformationIds(algo.transformationIds)
-    } else if (mode === 'add') {
-      // Reset form for add mode
-      setName('')
-      setDescription('')
-      setSubjectId('')
-      setAliasIds([])
-      setParentIds([])
-      setRelationIds([])
-      setTargetIds([])
-      setExpectationIds([])
-      setTransformationIds([])
-    }
-  }, [mode, algo])
 
   useEffect(() => {
     if (open) {
@@ -157,7 +173,7 @@ function AlgoDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -167,7 +183,7 @@ function AlgoDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
@@ -188,7 +204,7 @@ function AlgoDialog({
               <Select
                 value={subjectId}
                 label="Select Sub Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
                 {/* Only Sub Domains - Type Constraint */}
                 {subDomains.length === 0 && (
@@ -223,7 +239,7 @@ function AlgoDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -252,7 +268,7 @@ function AlgoDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -281,7 +297,7 @@ function AlgoDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -314,7 +330,7 @@ function AlgoDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => targetIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setTargetIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, targetIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select target entities (input)" />
@@ -343,7 +359,7 @@ function AlgoDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => expectationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setExpectationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, expectationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select expectation entities (output)" />
@@ -372,7 +388,7 @@ function AlgoDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => transformationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setTransformationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, transformationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select transformation entities" />

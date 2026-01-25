@@ -72,40 +72,56 @@ function ProblemDialog({
   onSave,
   onQuickAddDomain
 }: ProblemDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [subjectId, setSubjectId] = useState('')
-  const [aliasIds, setAliasIds] = useState<string[]>([])
-  const [parentIds, setParentIds] = useState<string[]>([])
-  const [relationIds, setRelationIds] = useState<string[]>([])
-  const [domainIds, setDomainIds] = useState<string[]>([])
-  const [evoIds, setEvoIds] = useState<string[]>([])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  // Update form when problem changes (for edit mode)
-  useEffect(() => {
-    if (mode === 'edit' && problem) {
-      setName(problem.name)
-      setDescription(problem.description)
-      setSubjectId(problem.subjectId)
-      setAliasIds(problem.aliasIds)
-      setParentIds(problem.parentIds)
-      setRelationIds(problem.relationIds)
-      setDomainIds(problem.domainIds)
-      setEvoIds(problem.evoIds)
-    } else if (mode === 'add') {
-      // Reset form for add mode
-      setName('')
-      setDescription('')
-      setSubjectId('')
-      setAliasIds([])
-      setParentIds([])
-      setRelationIds([])
-      setDomainIds([])
-      setEvoIds([])
+  interface typedProblemData {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    domainIds: string[]
+    evoIds: string[]
+  }
+  
+  const [formData, setFormData] = useState<typedProblemData>(() => {
+    if(mode === 'edit' && problem) {
+      return {
+        name: problem.name,
+        description: problem.description,
+        subjectId: problem.subjectId,
+        aliasIds: problem.aliasIds,
+        parentIds: problem.parentIds,
+        relationIds: problem.relationIds,
+        domainIds: problem.domainIds,
+        evoIds: problem.evoIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        domainIds: [],
+        evoIds: []
+      }
     }
-  }, [mode, problem])
+  });
+
+  const { 
+    name, 
+    description, 
+    subjectId, 
+    aliasIds, 
+    parentIds, 
+    relationIds, 
+    domainIds, 
+    evoIds 
+  } = formData
 
   useEffect(() => {
     if (open) {
@@ -153,7 +169,7 @@ function ProblemDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -163,7 +179,7 @@ function ProblemDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
@@ -184,7 +200,7 @@ function ProblemDialog({
               <Select
                 value={subjectId}
                 label="Select Sub Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
                 {/* Only Sub Domains - Type Constraint */}
                 {subDomains.length === 0 && (
@@ -219,7 +235,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -243,7 +259,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -267,7 +283,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -295,7 +311,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => domainIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setDomainIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, domainIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related domain entities" />
@@ -323,7 +339,7 @@ function ProblemDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => e.type === 'problem' && evoIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setEvoIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, evoIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select problem(s) this evolved from" />

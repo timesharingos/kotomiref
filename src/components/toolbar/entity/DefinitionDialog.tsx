@@ -73,50 +73,59 @@ function DefinitionDialog({
   onSave,
   onQuickAddDomain
 }: DefinitionDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [subjectId, setSubjectId] = useState('')
-  const [aliasIds, setAliasIds] = useState<string[]>([])
-  const [parentIds, setParentIds] = useState<string[]>([])
-  const [relationIds, setRelationIds] = useState<string[]>([])
-  const [refineIds, setRefineIds] = useState<string[]>([])
-  const [scenarioIds, setScenarioIds] = useState<string[]>([])
-  const [evoIds, setEvoIds] = useState<string[]>([])
+  interface TypedDefinitionData {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    refineIds: string[]
+    scenarioIds: string[]
+    evoIds: string[]
+  }
+
+  const [formData, setFormData] = useState<TypedDefinitionData>(() => {
+    if (mode === 'edit' && definition) {
+      return {
+        name: definition.name,
+        description: definition.description,
+        subjectId: definition.subjectId,
+        aliasIds: definition.aliasIds || [],
+        parentIds: definition.parentIds || [],
+        relationIds: definition.relationIds || [],
+        refineIds: definition.refineIds || [],
+        scenarioIds: definition.scenarioIds || [],
+        evoIds: definition.evoIds || []
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        refineIds: [],
+        scenarioIds: [],
+        evoIds: []
+      }
+    }
+  })
+
+  const {
+    name,
+    description,
+    subjectId,
+    aliasIds,
+    parentIds,
+    relationIds,
+    refineIds,
+    scenarioIds,
+    evoIds
+  } = formData
 
   const nameInputRef = useRef<HTMLInputElement>(null)
-
-  // Update form when definition changes (for edit mode)
-  useEffect(() => {
-    if (mode === 'edit' && definition) {
-      console.log('[DefinitionDialog] Edit mode - definition:', definition)
-      console.log('[DefinitionDialog] refineIds:', definition.refineIds)
-      console.log('[DefinitionDialog] scenarioIds:', definition.scenarioIds)
-      console.log('[DefinitionDialog] evoIds:', definition.evoIds)
-      console.log('[DefinitionDialog] allEntities:', allEntities)
-      console.log('[DefinitionDialog] allEntities problem type:', allEntities.filter(e => e.type === 'problem'))
-
-      setName(definition.name)
-      setDescription(definition.description)
-      setSubjectId(definition.subjectId)
-      setAliasIds(definition.aliasIds || [])
-      setParentIds(definition.parentIds || [])
-      setRelationIds(definition.relationIds || [])
-      setRefineIds(definition.refineIds || [])
-      setScenarioIds(definition.scenarioIds || [])
-      setEvoIds(definition.evoIds || [])
-    } else if (mode === 'add') {
-      // Reset form for add mode
-      setName('')
-      setDescription('')
-      setSubjectId('')
-      setAliasIds([])
-      setParentIds([])
-      setRelationIds([])
-      setRefineIds([])
-      setScenarioIds([])
-      setEvoIds([])
-    }
-  }, [mode, definition, allEntities])
 
   useEffect(() => {
     if (open) {
@@ -165,7 +174,7 @@ function DefinitionDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -175,7 +184,7 @@ function DefinitionDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
@@ -196,7 +205,7 @@ function DefinitionDialog({
               <Select
                 value={subjectId}
                 label="Select Sub Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
                 {/* Only Sub Domains - Type Constraint */}
                 {subDomains.length === 0 && (
@@ -231,7 +240,7 @@ function DefinitionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -255,7 +264,7 @@ function DefinitionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -279,7 +288,7 @@ function DefinitionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -310,7 +319,7 @@ function DefinitionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => e.type === 'problem' && refineIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRefineIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, refineIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select problem(s) to refine" />
@@ -338,7 +347,7 @@ function DefinitionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => scenarioIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setScenarioIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, scenarioIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select scenario entities" />
@@ -366,7 +375,7 @@ function DefinitionDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => e.type === 'definition' && evoIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setEvoIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, evoIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select scenario(s) this evolved from" />

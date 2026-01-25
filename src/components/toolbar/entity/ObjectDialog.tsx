@@ -70,34 +70,47 @@ function ObjectDialog({
   onSave,
   onQuickAddDomain
 }: ObjectDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [subjectId, setSubjectId] = useState('')
-  const [aliasIds, setAliasIds] = useState<string[]>([])
-  const [parentIds, setParentIds] = useState<string[]>([])
-  const [relationIds, setRelationIds] = useState<string[]>([])
+  interface TypedObjectData {
+    name: string
+    description: string
+    subjectId: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+  }
+
+  const [formData, setFormData] = useState<TypedObjectData>(() => {
+    if (mode === 'edit' && object) {
+      return {
+        name: object.name,
+        description: object.description,
+        subjectId: object.subjectId,
+        aliasIds: object.aliasIds,
+        parentIds: object.parentIds,
+        relationIds: object.relationIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: []
+      }
+    }
+  })
+
+  const {
+    name,
+    description,
+    subjectId,
+    aliasIds,
+    parentIds,
+    relationIds
+  } = formData
 
   const nameInputRef = useRef<HTMLInputElement>(null)
-
-  // Update form when object changes (for edit mode)
-  useEffect(() => {
-    if (mode === 'edit' && object) {
-      setName(object.name)
-      setDescription(object.description)
-      setSubjectId(object.subjectId)
-      setAliasIds(object.aliasIds)
-      setParentIds(object.parentIds)
-      setRelationIds(object.relationIds)
-    } else if (mode === 'add') {
-      // Reset form for add mode
-      setName('')
-      setDescription('')
-      setSubjectId('')
-      setAliasIds([])
-      setParentIds([])
-      setRelationIds([])
-    }
-  }, [mode, object])
 
   // Combine main domains and sub domains for selection
 
@@ -143,7 +156,7 @@ function ObjectDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -153,7 +166,7 @@ function ObjectDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
@@ -174,7 +187,7 @@ function ObjectDialog({
               <Select
                 value={subjectId}
                 label="Select Sub Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
                 {/* Only Sub Domains - Type Constraint */}
                 {subDomains.length === 0 && (
@@ -205,7 +218,7 @@ function ObjectDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -234,7 +247,7 @@ function ObjectDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -263,7 +276,7 @@ function ObjectDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />

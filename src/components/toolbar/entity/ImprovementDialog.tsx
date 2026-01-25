@@ -75,50 +75,68 @@ function ImprovementDialog({
   onSave,
   onQuickAddDomain
 }: ImprovementDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [subjectId, setSubjectId] = useState('')
-  const [metric, setMetric] = useState('')
-  const [metricResultString, setMetricResultString] = useState('')
-  const [metricResultNumber, setMetricResultNumber] = useState('')
-  const [aliasIds, setAliasIds] = useState<string[]>([])
-  const [parentIds, setParentIds] = useState<string[]>([])
-  const [relationIds, setRelationIds] = useState<string[]>([])
-  const [originIds, setOriginIds] = useState<string[]>([])
-  const [advanceIds, setAdvanceIds] = useState<string[]>([])
+  interface TypedImprovementData {
+    name: string
+    description: string
+    subjectId: string
+    metric: string
+    metricResultString: string
+    metricResultNumber: string
+    aliasIds: string[]
+    parentIds: string[]
+    relationIds: string[]
+    originIds: string[]
+    advanceIds: string[]
+  }
+
+  const [formData, setFormData] = useState<TypedImprovementData>(() => {
+    if (mode === 'edit' && improvement) {
+      return {
+        name: improvement.name,
+        description: improvement.description,
+        subjectId: improvement.subjectId,
+        metric: improvement.metric || '',
+        metricResultString: improvement.metricResultString || '',
+        // Handle -1 as empty value (use epsilon comparison for floating point)
+        metricResultNumber: improvement.metricResultNumber !== undefined && Math.abs(improvement.metricResultNumber - (-1)) > 0.0001 ? improvement.metricResultNumber.toString() : '',
+        aliasIds: improvement.aliasIds,
+        parentIds: improvement.parentIds,
+        relationIds: improvement.relationIds,
+        originIds: improvement.originIds,
+        advanceIds: improvement.advanceIds
+      }
+    } else {
+      return {
+        name: '',
+        description: '',
+        subjectId: '',
+        metric: '',
+        metricResultString: '',
+        metricResultNumber: '',
+        aliasIds: [],
+        parentIds: [],
+        relationIds: [],
+        originIds: [],
+        advanceIds: []
+      }
+    }
+  })
+
+  const {
+    name,
+    description,
+    subjectId,
+    metric,
+    metricResultString,
+    metricResultNumber,
+    aliasIds,
+    parentIds,
+    relationIds,
+    originIds,
+    advanceIds
+  } = formData
 
   const nameInputRef = useRef<HTMLInputElement>(null)
-
-  // Update form when improvement changes (for edit mode)
-  useEffect(() => {
-    if (mode === 'edit' && improvement) {
-      setName(improvement.name)
-      setDescription(improvement.description)
-      setSubjectId(improvement.subjectId)
-      setMetric(improvement.metric || '')
-      setMetricResultString(improvement.metricResultString || '')
-      // Handle -1 as empty value (use epsilon comparison for floating point)
-      setMetricResultNumber(improvement.metricResultNumber !== undefined && Math.abs(improvement.metricResultNumber - (-1)) > 0.0001 ? improvement.metricResultNumber.toString() : '')
-      setAliasIds(improvement.aliasIds)
-      setParentIds(improvement.parentIds)
-      setRelationIds(improvement.relationIds)
-      setOriginIds(improvement.originIds)
-      setAdvanceIds(improvement.advanceIds)
-    } else if (mode === 'add') {
-      // Reset form for add mode
-      setName('')
-      setDescription('')
-      setSubjectId('')
-      setMetric('')
-      setMetricResultString('')
-      setMetricResultNumber('')
-      setAliasIds([])
-      setParentIds([])
-      setRelationIds([])
-      setOriginIds([])
-      setAdvanceIds([])
-    }
-  }, [mode, improvement])
 
   useEffect(() => {
     if (open) {
@@ -180,7 +198,7 @@ function ImprovementDialog({
           <TextField
             label="Name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             inputRef={nameInputRef}
@@ -190,7 +208,7 @@ function ImprovementDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             fullWidth
             required
             multiline
@@ -212,7 +230,7 @@ function ImprovementDialog({
               <Select
                 value={subjectId}
                 label="Select Sub Domain"
-                onChange={(e) => setSubjectId(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
               >
                 {/* Only Sub Domains - Type Constraint */}
                 {subDomains.length === 0 && (
@@ -247,7 +265,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => aliasIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAliasIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, aliasIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select alias entities" />
@@ -271,7 +289,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => parentIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setParentIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, parentIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select parent entities" />
@@ -295,7 +313,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => relationIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setRelationIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, relationIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select related entities" />
@@ -316,7 +334,7 @@ function ImprovementDialog({
           <TextField
             label="Metric"
             value={metric}
-            onChange={(e) => setMetric(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, metric: e.target.value }))}
             fullWidth
             placeholder="e.g., Accuracy, Speed, Memory Usage"
             helperText="Optional: Specify the metric being improved"
@@ -326,7 +344,7 @@ function ImprovementDialog({
           <TextField
             label="Result (String)"
             value={metricResultString}
-            onChange={(e) => setMetricResultString(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, metricResultString: e.target.value }))}
             fullWidth
             disabled={!metric.trim()}
             placeholder="e.g., 'Improved by 20%', 'Significantly faster'"
@@ -337,7 +355,7 @@ function ImprovementDialog({
           <TextField
             label="Result (Number)"
             value={metricResultNumber}
-            onChange={(e) => setMetricResultNumber(e.target.value)}
+            onChange={(e) => setFormData(prev => ({ ...prev, metricResultNumber: e.target.value }))}
             fullWidth
             type="number"
             disabled={!metric.trim()}
@@ -360,7 +378,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => originIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setOriginIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, originIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select original technology entities" />
@@ -385,7 +403,7 @@ function ImprovementDialog({
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
               value={allEntities.filter(e => advanceIds.includes(e.id))}
               onChange={(_event, newValue) => {
-                setAdvanceIds(newValue.map(v => v.id))
+                setFormData(prev => ({ ...prev, advanceIds: newValue.map(v => v.id) }))
               }}
               renderInput={(params) => (
                 <TextField {...params} placeholder="Select improved technology entities" />

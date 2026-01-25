@@ -109,88 +109,8 @@ interface EntityItem {
   solutionToName?: string;
 }
 
-interface AllEntityItem {
-  id: string;
-  name: string;
-  type: string;
-  typeName: string;
-}
-
-interface ObjectData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-}
-
-interface AlgoData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  targetIds: string[];
-  expectationIds: string[];
-  transformationIds: string[];
-}
-
-interface ImprovementData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  metric?: string;
-  metricResultString?: string;
-  metricResultNumber?: number;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  originIds: string[];
-  advanceIds: string[];
-}
-
-interface ProblemData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  domainIds: string[];
-  evoIds: string[];
-}
-
-interface DefinitionData {
-  id?: string;
-  name: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  refineIds: string[];
-  scenarioIds: string[];
-  evoIds: string[];
-}
-
-interface ContributionData {
-  id?: string;
-  description: string;
-  subjectId: string;
-  aliasIds: string[];
-  parentIds: string[];
-  relationIds: string[];
-  improvementIds: string[];
-  algoIds: string[];
-  objectIds: string[];
-  solutionToId: string;
-}
+// Type for adding new entities (id is not required)
+type EntityItemInput = Omit<EntityItem, 'id'> & { id?: string };
 
 interface ReferenceSignature {
   id?: string;
@@ -308,8 +228,8 @@ declare global {
       // Node APIs (concrete layer)
       getAllNodes: (entityType: string) => Promise<EntityItem[]>;
       getNodeById: (nodeId: string) => Promise<EntityItem | null>;
-      addNode: (entityType: string, data: EntityItem) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
-      updateNode: (nodeId: string, data: EntityItem) => Promise<{ success: boolean; error?: string }>;
+      addNode: (entityType: string, data: EntityItemInput) => Promise<{ success: boolean; id?: string; entityId?: string; error?: string }>;
+      updateNode: (nodeId: string, data: EntityItemInput) => Promise<{ success: boolean; error?: string }>;
       deleteNode: (nodeId: string) => Promise<{ success: boolean; error?: string }>;
     };
     article: {

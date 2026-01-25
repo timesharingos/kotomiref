@@ -141,6 +141,8 @@ interface EntityItem {
   objectNames?: string[]
   solutionToId?: string
   solutionToName?: string
+  // For delete operation
+  entityId?: string
 }
 
 interface SubDomain {
@@ -241,7 +243,13 @@ function TechEntityTab() {
 
       // Load all entities for relationship selection using new API
       const types = ['object', 'algo', 'improvement', 'problem', 'definition', 'contrib']
-      const allEntitiesPromises = types.map(type => window.entity.getAllNodes(type))
+      const allEntitiesPromises = types.map(async (type) => {
+        const entities = await window.entity.getAllNodes(type)
+        return entities.map(entity => ({
+          ...entity,
+          type: type
+        }))
+      })
       const allEntitiesArrays = await Promise.all(allEntitiesPromises)
       const allEntitiesFlat = allEntitiesArrays.flat()
 
@@ -255,15 +263,12 @@ function TechEntityTab() {
         'definition': 'Definition'
       }
 
-      const allEntitiesData = allEntitiesFlat.map((entity: any) => ({
+      const allEntitiesData = allEntitiesFlat.map((entity) => ({
         id: entity.id,
         name: entity.name || '',
         type: entity.type || 'unknown',
-        typeName: typeNameMap[entity.type] || entity.type || 'Unknown'
+        typeName: typeNameMap[entity.type as string] || entity.type || 'Unknown'
       }))
-
-      console.log('[TechEntityTab] Loaded allEntities:', allEntitiesData)
-      console.log('[TechEntityTab] Problem entities:', allEntitiesData.filter(e => e.type === 'problem'))
 
       setAllEntities(allEntitiesData)
     })
@@ -391,7 +396,7 @@ function TechEntityTab() {
     if (confirmed) {
       try {
         // Step 1: Find the corresponding Entity node
-        const entityId = (entity as any).entityId
+        const entityId = entity.entityId
 
         // Step 2: Delete Entity node if it exists
         if (entityId) {
@@ -430,7 +435,7 @@ function TechEntityTab() {
           const entity = entities.find(e => e.id === id)
           if (entity) {
             // Step 1: Find the corresponding Entity node
-            const entityId = (entity as any).entityId
+            const entityId = entity.entityId
 
             // Step 2: Delete Entity node if it exists
             if (entityId) {
@@ -467,10 +472,11 @@ function TechEntityTab() {
     try {
       let result
       if (objectDialogMode === 'add') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...nodeData } = data
-        result = await window.entity.addNode('object', nodeData as any)
+        result = await window.entity.addNode('object', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateNode(data.id, data as any)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -505,10 +511,11 @@ function TechEntityTab() {
     try {
       let result
       if (algoDialogMode === 'add') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...nodeData } = data
-        result = await window.entity.addNode('algo', nodeData as any)
+        result = await window.entity.addNode('algo', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateNode(data.id, data as any)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -545,10 +552,11 @@ function TechEntityTab() {
     try {
       let result
       if (improvementDialogMode === 'add') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...nodeData } = data
-        result = await window.entity.addNode('improvement', nodeData as any)
+        result = await window.entity.addNode('improvement', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateNode(data.id, data as any)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -583,10 +591,11 @@ function TechEntityTab() {
     try {
       let result
       if (contributionDialogMode === 'add') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...nodeData } = data
-        result = await window.entity.addNode('contribution', nodeData as any)
+        result = await window.entity.addNode('contribution', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateNode(data.id, data as any)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -620,10 +629,11 @@ function TechEntityTab() {
     try {
       let result
       if (problemDialogMode === 'add') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...nodeData } = data
-        result = await window.entity.addNode('problem', nodeData as any)
+        result = await window.entity.addNode('problem', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateNode(data.id, data as any)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
@@ -658,10 +668,11 @@ function TechEntityTab() {
     try {
       let result
       if (definitionDialogMode === 'add') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...nodeData } = data
-        result = await window.entity.addNode('definition', nodeData as any)
+        result = await window.entity.addNode('definition', nodeData)
       } else if (data.id) {
-        result = await window.entity.updateNode(data.id, data as any)
+        result = await window.entity.updateNode(data.id, data)
       }
 
       if (result?.success) {
