@@ -788,8 +788,8 @@ function TechEntityTab() {
       case 'Result (String)':
         return entity.metricResultString || '-'
       case 'Result (Number)':
-        // Treat -1 as empty value (similar to article volume/issue)
-        return (entity.metricResultNumber !== undefined && entity.metricResultNumber !== -1) ? entity.metricResultNumber : '-'
+        // Treat -1 as empty value (use epsilon comparison for floating point)
+        return (entity.metricResultNumber !== undefined && Math.abs(entity.metricResultNumber - (-1)) > 0.0001) ? entity.metricResultNumber : '-'
       case 'Origin':
         return entity.originNames && entity.originNames.length > 0 ? (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

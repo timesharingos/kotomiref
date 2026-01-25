@@ -97,8 +97,8 @@ function ImprovementDialog({
       setSubjectId(improvement.subjectId)
       setMetric(improvement.metric || '')
       setMetricResultString(improvement.metricResultString || '')
-      // Handle -1 as empty value
-      setMetricResultNumber(improvement.metricResultNumber !== undefined && improvement.metricResultNumber !== -1 ? improvement.metricResultNumber.toString() : '')
+      // Handle -1 as empty value (use epsilon comparison for floating point)
+      setMetricResultNumber(improvement.metricResultNumber !== undefined && Math.abs(improvement.metricResultNumber - (-1)) > 0.0001 ? improvement.metricResultNumber.toString() : '')
       setAliasIds(improvement.aliasIds)
       setParentIds(improvement.parentIds)
       setRelationIds(improvement.relationIds)
