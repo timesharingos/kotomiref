@@ -36,7 +36,8 @@ function getTypeInstance(entityType) {
         case 'improvement': return evolutionType.evoConcepts.EvoImprovement.instance
         case 'problem': return evolutionType.evoConcepts.EvoProblem.instance
         case 'definition': return evolutionType.evoConcepts.EvoDefinition.instance
-        case 'contrib': return evolutionType.evoConcepts.EvoContrib.instance
+        case 'contrib':
+        case 'contribution': return evolutionType.evoConcepts.EvoContrib.instance
         case 'entity': return evolutionType.evoConcepts.EvoEntity.instance
         default: throw new Error(`Unknown entity type: ${entityType}`)
     }
@@ -731,10 +732,14 @@ function registerEntityHandlers() {
                     // Get type-specific relations (algo, improvement, contrib, etc.)
                     const typeSpecificRelations = getTypeSpecificRelations(db, node.id, node.type)
 
+                    // Get entity type string
+                    const entityTypeString = getEntityTypeString(node.type)
+
                     let result = {
                         id: node.id,
                         name: attrs.name || node.name,
                         description: attrs.description || '',
+                        type: entityTypeString,
                         entityId: entityNode ? entityNode.id : null,
                         ...entityRelations,
                         ...typeSpecificRelations
@@ -805,7 +810,7 @@ function registerEntityHandlers() {
     ipcMain.handle("entity:addNode", async (_ev, entityType, nodeData) => {
         try {
             return invokeDb((db) => {
-                const { name, description, metric, metricResultString, metricResultNumber,
+                let { name, description, metric, metricResultString, metricResultNumber,
                         subjectId, aliasIds, parentIds, relationIds,
                         // Algo-specific
                         targetIds, expectationIds, transformationIds,
@@ -815,6 +820,31 @@ function registerEntityHandlers() {
                         improvementIds, algoIds, objectIds, solutionToId,
                         // Problem/Definition-specific
                         domainIds, evoIds, refineIds, scenarioIds } = nodeData
+
+                // Auto-generate name for Contrib: subdomain_contrib_序号
+                if (entityType === 'contrib' || entityType === 'contribution') {
+                    if (!name) {
+                        // Get subdomain from solutionToId (which is a Definition node)
+                        let subdomain = 'unknown'
+                        if (solutionToId) {
+                            const solutionToNode = db.nodeops.queryNodeById(solutionToId)
+                            if (solutionToNode) {
+                                const solutionToAttrs = extractAttributes(db, solutionToNode)
+                                subdomain = solutionToAttrs.name || solutionToNode.name || 'unknown'
+                            }
+                        }
+
+                        // Find next sequence number for this subdomain
+                        const conceptType = getTypeInstance(entityType)
+                        const allContribs = db.nodeops.queryNodesByType(conceptType.id)
+                        const subdomainContribs = allContribs.filter(node => {
+                            const nodeName = node.name || ''
+                            return nodeName.startsWith(`${subdomain}_contrib_`)
+                        })
+                        const nextSeq = subdomainContribs.length + 1
+                        name = `${subdomain}_contrib_${nextSeq}`
+                    }
+                }
 
                 // Create real entity node (e.g., o1, a1, c1)
                 const conceptType = getTypeInstance(entityType)
@@ -1046,51 +1076,36 @@ function registerEntityHandlers() {
                         db.relops.mergeRel(solutionToRel.toDb())
                     }
 
+                    // ContribImprovement: Contrib -> Improvement (connect to real Improvement node, not Entity)
                     if (improvementIds && improvementIds.length > 0) {
                         const improvementRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribImprovement.instance
                         improvementIds.forEach(selectedNodeId => {
-                            const selectedNode = db.nodeops.queryNodeById(selectedNodeId)
-                            if (selectedNode) {
-                                const selectedNodeAttrs = extractAttributes(db, selectedNode)
-                                const selectedNodeName = selectedNodeAttrs.name || selectedNode.name
-                                const targetEntityNode = db.nodeops.queryNodeByName(entityTypeInstance.id, selectedNodeName)
-                                if (targetEntityNode) {
-                                    const improvementRel = new kg_interface.Rel(improvementRelType.id, `${nodeId}-improvement-${targetEntityNode.id}`, [], nodeId, targetEntityNode.id)
-                                    db.relops.mergeRel(improvementRel.toDb())
-                                }
-                            }
+                            // selectedNodeId is already an Improvement node (i1, i2, etc.)
+                            // Connect directly to it, no need to find Entity
+                            const improvementRel = new kg_interface.Rel(improvementRelType.id, `${nodeId}-improvement-${selectedNodeId}`, [], nodeId, selectedNodeId)
+                            db.relops.mergeRel(improvementRel.toDb())
                         })
                     }
 
+                    // ContribAlgo: Contrib -> Algo (connect to real Algo node, not Entity)
                     if (algoIds && algoIds.length > 0) {
                         const algoRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribAlgo.instance
                         algoIds.forEach(selectedNodeId => {
-                            const selectedNode = db.nodeops.queryNodeById(selectedNodeId)
-                            if (selectedNode) {
-                                const selectedNodeAttrs = extractAttributes(db, selectedNode)
-                                const selectedNodeName = selectedNodeAttrs.name || selectedNode.name
-                                const targetEntityNode = db.nodeops.queryNodeByName(entityTypeInstance.id, selectedNodeName)
-                                if (targetEntityNode) {
-                                    const algoRel = new kg_interface.Rel(algoRelType.id, `${nodeId}-algo-${targetEntityNode.id}`, [], nodeId, targetEntityNode.id)
-                                    db.relops.mergeRel(algoRel.toDb())
-                                }
-                            }
+                            // selectedNodeId is already an Algo node (a1, a2, etc.)
+                            // Connect directly to it, no need to find Entity
+                            const algoRel = new kg_interface.Rel(algoRelType.id, `${nodeId}-algo-${selectedNodeId}`, [], nodeId, selectedNodeId)
+                            db.relops.mergeRel(algoRel.toDb())
                         })
                     }
 
+                    // ContribObject: Contrib -> Object (connect to real Object node, not Entity)
                     if (objectIds && objectIds.length > 0) {
                         const objectRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribObject.instance
                         objectIds.forEach(selectedNodeId => {
-                            const selectedNode = db.nodeops.queryNodeById(selectedNodeId)
-                            if (selectedNode) {
-                                const selectedNodeAttrs = extractAttributes(db, selectedNode)
-                                const selectedNodeName = selectedNodeAttrs.name || selectedNode.name
-                                const targetEntityNode = db.nodeops.queryNodeByName(entityTypeInstance.id, selectedNodeName)
-                                if (targetEntityNode) {
-                                    const objectRel = new kg_interface.Rel(objectRelType.id, `${nodeId}-object-${targetEntityNode.id}`, [], nodeId, targetEntityNode.id)
-                                    db.relops.mergeRel(objectRel.toDb())
-                                }
-                            }
+                            // selectedNodeId is already an Object node (o1, o2, etc.)
+                            // Connect directly to it, no need to find Entity
+                            const objectRel = new kg_interface.Rel(objectRelType.id, `${nodeId}-object-${selectedNodeId}`, [], nodeId, selectedNodeId)
+                            db.relops.mergeRel(objectRel.toDb())
                         })
                     }
 
@@ -1111,38 +1126,29 @@ function registerEntityHandlers() {
                         })
                     }
 
-                    if (evoIds && evoIds.length > 0) {
+                    // ProblemEvo: Problem -> Problem (connect to real Problem node, not Entity)
+                    if (evoIds && evoIds.length > 0 && entityType === 'problem') {
                         const evoRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemEvo.instance
                         evoIds.forEach(selectedNodeId => {
-                            const selectedNode = db.nodeops.queryNodeById(selectedNodeId)
-                            if (selectedNode) {
-                                const selectedNodeAttrs = extractAttributes(db, selectedNode)
-                                const selectedNodeName = selectedNodeAttrs.name || selectedNode.name
-                                const targetEntityNode = db.nodeops.queryNodeByName(entityTypeInstance.id, selectedNodeName)
-                                if (targetEntityNode) {
-                                    const evoRel = new kg_interface.Rel(evoRelType.id, `${nodeId}-evo-${targetEntityNode.id}`, [], nodeId, targetEntityNode.id)
-                                    db.relops.mergeRel(evoRel.toDb())
-                                }
-                            }
+                            // selectedNodeId is already a Problem node (p1, p2, etc.)
+                            // Connect directly to it, no need to find Entity
+                            const evoRel = new kg_interface.Rel(evoRelType.id, `${nodeId}-evo-${selectedNodeId}`, [], nodeId, selectedNodeId)
+                            db.relops.mergeRel(evoRel.toDb())
                         })
                     }
 
+                    // DefinitionRefine: Definition -> Problem (connect to real Problem node, not Entity)
                     if (refineIds && refineIds.length > 0) {
                         const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
                         refineIds.forEach(selectedNodeId => {
-                            const selectedNode = db.nodeops.queryNodeById(selectedNodeId)
-                            if (selectedNode) {
-                                const selectedNodeAttrs = extractAttributes(db, selectedNode)
-                                const selectedNodeName = selectedNodeAttrs.name || selectedNode.name
-                                const targetEntityNode = db.nodeops.queryNodeByName(entityTypeInstance.id, selectedNodeName)
-                                if (targetEntityNode) {
-                                    const refineRel = new kg_interface.Rel(refineRelType.id, `${nodeId}-refine-${targetEntityNode.id}`, [], nodeId, targetEntityNode.id)
-                                    db.relops.mergeRel(refineRel.toDb())
-                                }
-                            }
+                            // selectedNodeId is already a Problem node (p1, p2, etc.)
+                            // Connect directly to it, no need to find Entity
+                            const refineRel = new kg_interface.Rel(refineRelType.id, `${nodeId}-refine-${selectedNodeId}`, [], nodeId, selectedNodeId)
+                            db.relops.mergeRel(refineRel.toDb())
                         })
                     }
 
+                    // DefinitionScenario: Definition -> Entity (connect to Entity node)
                     if (scenarioIds && scenarioIds.length > 0) {
                         const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
                         scenarioIds.forEach(selectedNodeId => {
@@ -1156,6 +1162,17 @@ function registerEntityHandlers() {
                                     db.relops.mergeRel(scenarioRel.toDb())
                                 }
                             }
+                        })
+                    }
+
+                    // DefinitionEvo: Definition -> Definition (connect to real Definition node, not Entity)
+                    if (evoIds && evoIds.length > 0 && entityType === 'definition') {
+                        const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+                        evoIds.forEach(selectedNodeId => {
+                            // selectedNodeId is already a Definition node (s1, s2, etc.)
+                            // Connect directly to it, no need to find Entity
+                            const evoRel = new kg_interface.Rel(evoRelType.id, `${nodeId}-evo-${selectedNodeId}`, [], nodeId, selectedNodeId)
+                            db.relops.mergeRel(evoRel.toDb())
                         })
                     }
                 }
@@ -1180,9 +1197,18 @@ function registerEntityHandlers() {
 
                 const oldAttrs = extractAttributes(db, node)
                 const oldName = oldAttrs.name || node.name
+                const entityType = getEntityTypeString(node.type)
 
                 const { name, description, metric, metricResultString, metricResultNumber,
-                        subjectId, aliasIds, parentIds, relationIds } = nodeData
+                        subjectId, aliasIds, parentIds, relationIds,
+                        // Algo-specific
+                        targetIds, expectationIds, transformationIds,
+                        // Improvement-specific
+                        originIds, advanceIds,
+                        // Contrib-specific
+                        improvementIds, algoIds, objectIds, solutionToId,
+                        // Problem/Definition-specific
+                        domainIds, evoIds, refineIds, scenarioIds } = nodeData
 
                 // Update real entity node name
                 if (name !== undefined && name !== oldName) {
@@ -1293,6 +1319,174 @@ function registerEntityHandlers() {
                         if (relationIds && relationIds.length > 0) {
                             relationIds.forEach(relationId => {
                                 addRelToDb(db, relationRelType.id, entityNode.id, relationId)
+                            })
+                        }
+                    }
+                }
+
+                // Update type-specific relations on the real entity node
+                // Algo-specific relations
+                if (entityType === 'algo') {
+                    if (targetIds !== undefined) {
+                        const targetRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTarget.instance
+                        const existingRels = db.relops.queryRelsByFromId(targetRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (targetIds && targetIds.length > 0) {
+                            targetIds.forEach(targetId => {
+                                addRelToDb(db, targetRelType.id, nodeId, targetId)
+                            })
+                        }
+                    }
+
+                    if (expectationIds !== undefined) {
+                        const expectationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoExpectation.instance
+                        const existingRels = db.relops.queryRelsByFromId(expectationRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (expectationIds && expectationIds.length > 0) {
+                            expectationIds.forEach(expectationId => {
+                                addRelToDb(db, expectationRelType.id, nodeId, expectationId)
+                            })
+                        }
+                    }
+
+                    if (transformationIds !== undefined) {
+                        const transformationRelType = evolutionType.evoInstanceRel.evoAlgoInstaceRel.AlgoTransformation.instance
+                        const existingRels = db.relops.queryRelsByFromId(transformationRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (transformationIds && transformationIds.length > 0) {
+                            transformationIds.forEach(transformationId => {
+                                addRelToDb(db, transformationRelType.id, nodeId, transformationId)
+                            })
+                        }
+                    }
+                }
+
+                // Improvement-specific relations
+                if (entityType === 'improvement') {
+                    if (originIds !== undefined) {
+                        const originRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementOrigin.instance
+                        const existingRels = db.relops.queryRelsByFromId(originRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (originIds && originIds.length > 0) {
+                            originIds.forEach(originId => {
+                                addRelToDb(db, originRelType.id, nodeId, originId)
+                            })
+                        }
+                    }
+
+                    if (advanceIds !== undefined) {
+                        const advanceRelType = evolutionType.evoInstanceRel.evoImprovementInstanceRel.ImprovementAdvance.instance
+                        const existingRels = db.relops.queryRelsByFromId(advanceRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (advanceIds && advanceIds.length > 0) {
+                            advanceIds.forEach(advanceId => {
+                                addRelToDb(db, advanceRelType.id, nodeId, advanceId)
+                            })
+                        }
+                    }
+                }
+
+                // Contrib-specific relations
+                if (entityType === 'contrib') {
+                    if (solutionToId !== undefined) {
+                        const solutionToRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribSolutionTo.instance
+                        const existingRels = db.relops.queryRelsByFromId(solutionToRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (solutionToId) {
+                            addRelToDb(db, solutionToRelType.id, nodeId, solutionToId)
+                        }
+                    }
+
+                    if (improvementIds !== undefined) {
+                        const improvementRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribImprovement.instance
+                        const existingRels = db.relops.queryRelsByFromId(improvementRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (improvementIds && improvementIds.length > 0) {
+                            improvementIds.forEach(improvementId => {
+                                addRelToDb(db, improvementRelType.id, nodeId, improvementId)
+                            })
+                        }
+                    }
+
+                    if (algoIds !== undefined) {
+                        const algoRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribAlgo.instance
+                        const existingRels = db.relops.queryRelsByFromId(algoRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (algoIds && algoIds.length > 0) {
+                            algoIds.forEach(algoId => {
+                                addRelToDb(db, algoRelType.id, nodeId, algoId)
+                            })
+                        }
+                    }
+
+                    if (objectIds !== undefined) {
+                        const objectRelType = evolutionType.evoInstanceRel.evoContribInstanceRel.ContribObject.instance
+                        const existingRels = db.relops.queryRelsByFromId(objectRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (objectIds && objectIds.length > 0) {
+                            objectIds.forEach(objectId => {
+                                addRelToDb(db, objectRelType.id, nodeId, objectId)
+                            })
+                        }
+                    }
+                }
+
+                // Problem-specific relations
+                if (entityType === 'problem') {
+                    if (domainIds !== undefined) {
+                        const domainRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemDomain.instance
+                        const existingRels = db.relops.queryRelsByFromId(domainRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (domainIds && domainIds.length > 0) {
+                            domainIds.forEach(domainId => {
+                                addRelToDb(db, domainRelType.id, nodeId, domainId)
+                            })
+                        }
+                    }
+
+                    if (evoIds !== undefined) {
+                        const evoRelType = evolutionType.evoInstanceRel.evoProblemInstanceRel.ProblemEvo.instance
+                        const existingRels = db.relops.queryRelsByFromId(evoRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (evoIds && evoIds.length > 0) {
+                            evoIds.forEach(evoId => {
+                                addRelToDb(db, evoRelType.id, nodeId, evoId)
+                            })
+                        }
+                    }
+                }
+
+                // Definition-specific relations
+                if (entityType === 'definition') {
+                    if (refineIds !== undefined) {
+                        const refineRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionRefine.instance
+                        const existingRels = db.relops.queryRelsByFromId(refineRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (refineIds && refineIds.length > 0) {
+                            refineIds.forEach(refineId => {
+                                addRelToDb(db, refineRelType.id, nodeId, refineId)
+                            })
+                        }
+                    }
+
+                    if (scenarioIds !== undefined) {
+                        const scenarioRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionScenario.instance
+                        const existingRels = db.relops.queryRelsByFromId(scenarioRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (scenarioIds && scenarioIds.length > 0) {
+                            scenarioIds.forEach(scenarioId => {
+                                addRelToDb(db, scenarioRelType.id, nodeId, scenarioId)
+                            })
+                        }
+                    }
+
+                    if (evoIds !== undefined) {
+                        const evoRelType = evolutionType.evoInstanceRel.evoDefinitionInstanceRel.DefinitionEvo.instance
+                        const existingRels = db.relops.queryRelsByFromId(evoRelType.id, nodeId)
+                        existingRels.forEach(rel => removeRelFromDb(db, rel.id))
+                        if (evoIds && evoIds.length > 0) {
+                            evoIds.forEach(evoId => {
+                                addRelToDb(db, evoRelType.id, nodeId, evoId)
                             })
                         }
                     }

@@ -258,9 +258,12 @@ function TechEntityTab() {
       const allEntitiesData = allEntitiesFlat.map((entity: any) => ({
         id: entity.id,
         name: entity.name || '',
-        type: entity.type || 'object',
-        typeName: typeNameMap[entity.type || 'object'] || entity.type || 'Unknown'
+        type: entity.type || 'unknown',
+        typeName: typeNameMap[entity.type] || entity.type || 'Unknown'
       }))
+
+      console.log('[TechEntityTab] Loaded allEntities:', allEntitiesData)
+      console.log('[TechEntityTab] Problem entities:', allEntitiesData.filter(e => e.type === 'problem'))
 
       setAllEntities(allEntitiesData)
     })
@@ -387,7 +390,18 @@ function TechEntityTab() {
     )
     if (confirmed) {
       try {
-        // Use new unified API: deleteNode
+        // Step 1: Find the corresponding Entity node
+        const entityId = (entity as any).entityId
+
+        // Step 2: Delete Entity node if it exists
+        if (entityId) {
+          const entityResult = await window.entity.deleteEntity(entityId)
+          if (!entityResult.success) {
+            console.warn('Failed to delete Entity node:', entityResult.error)
+          }
+        }
+
+        // Step 3: Delete the real entity node
         const result = await window.entity.deleteNode(entity.id)
 
         if (result.success) {
@@ -411,9 +425,21 @@ function TechEntityTab() {
     )
     if (confirmed) {
       try {
-        // Use new unified API: deleteNode
+        // Delete each entity (Entity node + real entity node)
         for (const id of Array.from(selectedIds)) {
-          await window.entity.deleteNode(id)
+          const entity = entities.find(e => e.id === id)
+          if (entity) {
+            // Step 1: Find the corresponding Entity node
+            const entityId = (entity as any).entityId
+
+            // Step 2: Delete Entity node if it exists
+            if (entityId) {
+              await window.entity.deleteEntity(entityId)
+            }
+
+            // Step 3: Delete the real entity node
+            await window.entity.deleteNode(id)
+          }
         }
         setSelectedIds(new Set())
         await loadData()
@@ -762,7 +788,8 @@ function TechEntityTab() {
       case 'Result (String)':
         return entity.metricResultString || '-'
       case 'Result (Number)':
-        return entity.metricResultNumber !== undefined ? entity.metricResultNumber : '-'
+        // Treat -1 as empty value (similar to article volume/issue)
+        return (entity.metricResultNumber !== undefined && entity.metricResultNumber !== -1) ? entity.metricResultNumber : '-'
       case 'Origin':
         return entity.originNames && entity.originNames.length > 0 ? (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

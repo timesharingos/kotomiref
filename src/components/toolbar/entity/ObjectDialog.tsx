@@ -70,14 +70,34 @@ function ObjectDialog({
   onSave,
   onQuickAddDomain
 }: ObjectDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && object ? object.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && object ? object.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && object ? object.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && object ? object.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && object ? object.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && object ? object.relationIds : [])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form when object changes (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && object) {
+      setName(object.name)
+      setDescription(object.description)
+      setSubjectId(object.subjectId)
+      setAliasIds(object.aliasIds)
+      setParentIds(object.parentIds)
+      setRelationIds(object.relationIds)
+    } else if (mode === 'add') {
+      // Reset form for add mode
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+    }
+  }, [mode, object])
 
   // Combine main domains and sub domains for selection
 

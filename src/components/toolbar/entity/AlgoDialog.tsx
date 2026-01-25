@@ -74,17 +74,43 @@ function AlgoDialog({
   onSave,
   onQuickAddDomain
 }: AlgoDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && algo ? algo.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && algo ? algo.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && algo ? algo.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && algo ? algo.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && algo ? algo.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && algo ? algo.relationIds : [])
-  const [targetIds, setTargetIds] = useState<string[]>(mode === 'edit' && algo ? algo.targetIds : [])
-  const [expectationIds, setExpectationIds] = useState<string[]>(mode === 'edit' && algo ? algo.expectationIds : [])
-  const [transformationIds, setTransformationIds] = useState<string[]>(mode === 'edit' && algo ? algo.transformationIds : [])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [targetIds, setTargetIds] = useState<string[]>([])
+  const [expectationIds, setExpectationIds] = useState<string[]>([])
+  const [transformationIds, setTransformationIds] = useState<string[]>([])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form when algo changes (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && algo) {
+      setName(algo.name)
+      setDescription(algo.description)
+      setSubjectId(algo.subjectId)
+      setAliasIds(algo.aliasIds)
+      setParentIds(algo.parentIds)
+      setRelationIds(algo.relationIds)
+      setTargetIds(algo.targetIds)
+      setExpectationIds(algo.expectationIds)
+      setTransformationIds(algo.transformationIds)
+    } else if (mode === 'add') {
+      // Reset form for add mode
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setTargetIds([])
+      setExpectationIds([])
+      setTransformationIds([])
+    }
+  }, [mode, algo])
 
   useEffect(() => {
     if (open) {

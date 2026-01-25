@@ -72,16 +72,40 @@ function ProblemDialog({
   onSave,
   onQuickAddDomain
 }: ProblemDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && problem ? problem.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && problem ? problem.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && problem ? problem.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && problem ? problem.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && problem ? problem.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && problem ? problem.relationIds : [])
-  const [domainIds, setDomainIds] = useState<string[]>(mode === 'edit' && problem ? problem.domainIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && problem ? problem.evoIds : [])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [domainIds, setDomainIds] = useState<string[]>([])
+  const [evoIds, setEvoIds] = useState<string[]>([])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form when problem changes (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && problem) {
+      setName(problem.name)
+      setDescription(problem.description)
+      setSubjectId(problem.subjectId)
+      setAliasIds(problem.aliasIds)
+      setParentIds(problem.parentIds)
+      setRelationIds(problem.relationIds)
+      setDomainIds(problem.domainIds)
+      setEvoIds(problem.evoIds)
+    } else if (mode === 'add') {
+      // Reset form for add mode
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setDomainIds([])
+      setEvoIds([])
+    }
+  }, [mode, problem])
 
   useEffect(() => {
     if (open) {
@@ -297,7 +321,7 @@ function ProblemDialog({
               multiple
               options={allEntities.filter(e => e.type === 'problem')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => evoIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'problem' && evoIds.includes(e.id))}
               onChange={(_event, newValue) => {
                 setEvoIds(newValue.map(v => v.id))
               }}

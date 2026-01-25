@@ -75,19 +75,50 @@ function ImprovementDialog({
   onSave,
   onQuickAddDomain
 }: ImprovementDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && improvement ? improvement.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && improvement ? improvement.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && improvement ? improvement.subjectId : '')
-  const [metric, setMetric] = useState(mode === 'edit' && improvement ? improvement.metric || '' : '')
-  const [metricResultString, setMetricResultString] = useState(mode === 'edit' && improvement ? improvement.metricResultString || '' : '')
-  const [metricResultNumber, setMetricResultNumber] = useState(mode === 'edit' && improvement ? improvement.metricResultNumber?.toString() || '' : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.relationIds : [])
-  const [originIds, setOriginIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.originIds : [])
-  const [advanceIds, setAdvanceIds] = useState<string[]>(mode === 'edit' && improvement ? improvement.advanceIds : [])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [metric, setMetric] = useState('')
+  const [metricResultString, setMetricResultString] = useState('')
+  const [metricResultNumber, setMetricResultNumber] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [originIds, setOriginIds] = useState<string[]>([])
+  const [advanceIds, setAdvanceIds] = useState<string[]>([])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form when improvement changes (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && improvement) {
+      setName(improvement.name)
+      setDescription(improvement.description)
+      setSubjectId(improvement.subjectId)
+      setMetric(improvement.metric || '')
+      setMetricResultString(improvement.metricResultString || '')
+      // Handle -1 as empty value
+      setMetricResultNumber(improvement.metricResultNumber !== undefined && improvement.metricResultNumber !== -1 ? improvement.metricResultNumber.toString() : '')
+      setAliasIds(improvement.aliasIds)
+      setParentIds(improvement.parentIds)
+      setRelationIds(improvement.relationIds)
+      setOriginIds(improvement.originIds)
+      setAdvanceIds(improvement.advanceIds)
+    } else if (mode === 'add') {
+      // Reset form for add mode
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setMetric('')
+      setMetricResultString('')
+      setMetricResultNumber('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setOriginIds([])
+      setAdvanceIds([])
+    }
+  }, [mode, improvement])
 
   useEffect(() => {
     if (open) {

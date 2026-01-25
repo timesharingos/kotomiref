@@ -73,17 +73,50 @@ function DefinitionDialog({
   onSave,
   onQuickAddDomain
 }: DefinitionDialogProps) {
-  const [name, setName] = useState(mode === 'edit' && definition ? definition.name : '')
-  const [description, setDescription] = useState(mode === 'edit' && definition ? definition.description : '')
-  const [subjectId, setSubjectId] = useState(mode === 'edit' && definition ? definition.subjectId : '')
-  const [aliasIds, setAliasIds] = useState<string[]>(mode === 'edit' && definition ? definition.aliasIds : [])
-  const [parentIds, setParentIds] = useState<string[]>(mode === 'edit' && definition ? definition.parentIds : [])
-  const [relationIds, setRelationIds] = useState<string[]>(mode === 'edit' && definition ? definition.relationIds : [])
-  const [refineIds, setRefineIds] = useState<string[]>(mode === 'edit' && definition ? definition.refineIds : [])
-  const [scenarioIds, setScenarioIds] = useState<string[]>(mode === 'edit' && definition ? definition.scenarioIds : [])
-  const [evoIds, setEvoIds] = useState<string[]>(mode === 'edit' && definition ? definition.evoIds : [])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [subjectId, setSubjectId] = useState('')
+  const [aliasIds, setAliasIds] = useState<string[]>([])
+  const [parentIds, setParentIds] = useState<string[]>([])
+  const [relationIds, setRelationIds] = useState<string[]>([])
+  const [refineIds, setRefineIds] = useState<string[]>([])
+  const [scenarioIds, setScenarioIds] = useState<string[]>([])
+  const [evoIds, setEvoIds] = useState<string[]>([])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form when definition changes (for edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && definition) {
+      console.log('[DefinitionDialog] Edit mode - definition:', definition)
+      console.log('[DefinitionDialog] refineIds:', definition.refineIds)
+      console.log('[DefinitionDialog] scenarioIds:', definition.scenarioIds)
+      console.log('[DefinitionDialog] evoIds:', definition.evoIds)
+      console.log('[DefinitionDialog] allEntities:', allEntities)
+      console.log('[DefinitionDialog] allEntities problem type:', allEntities.filter(e => e.type === 'problem'))
+
+      setName(definition.name)
+      setDescription(definition.description)
+      setSubjectId(definition.subjectId)
+      setAliasIds(definition.aliasIds || [])
+      setParentIds(definition.parentIds || [])
+      setRelationIds(definition.relationIds || [])
+      setRefineIds(definition.refineIds || [])
+      setScenarioIds(definition.scenarioIds || [])
+      setEvoIds(definition.evoIds || [])
+    } else if (mode === 'add') {
+      // Reset form for add mode
+      setName('')
+      setDescription('')
+      setSubjectId('')
+      setAliasIds([])
+      setParentIds([])
+      setRelationIds([])
+      setRefineIds([])
+      setScenarioIds([])
+      setEvoIds([])
+    }
+  }, [mode, definition, allEntities])
 
   useEffect(() => {
     if (open) {
@@ -275,7 +308,7 @@ function DefinitionDialog({
               multiple
               options={allEntities.filter(e => e.type === 'problem')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => refineIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'problem' && refineIds.includes(e.id))}
               onChange={(_event, newValue) => {
                 setRefineIds(newValue.map(v => v.id))
               }}
@@ -331,7 +364,7 @@ function DefinitionDialog({
               multiple
               options={allEntities.filter(e => e.type === 'definition')}
               getOptionLabel={(option) => `${option.name} (${option.typeName})`}
-              value={allEntities.filter(e => evoIds.includes(e.id))}
+              value={allEntities.filter(e => e.type === 'definition' && evoIds.includes(e.id))}
               onChange={(_event, newValue) => {
                 setEvoIds(newValue.map(v => v.id))
               }}
