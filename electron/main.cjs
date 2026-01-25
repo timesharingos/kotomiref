@@ -5,6 +5,11 @@ const path = require("path")
 const config = require("./config/default.cjs")
 const { SystemConfig } = require("./config/system.cjs")
 const { registerAllHandlers } = require("./api/index.cjs")
+const log = require('electron-log');
+const {autoUpdater} = require("electron-updater");
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+log.info('App starting...');
 
 function loadWindow(mainWin, env){
     if(app.isPackaged){
@@ -31,6 +36,27 @@ function createWindow(){
     Menu.setApplicationMenu(null)
     loadWindow(mainWin, process.env.NODE_ENV ?? "dev")
 }
+autoUpdater.on('checking-for-update', () => {
+  toast.info('Checking for update...');
+})
+autoUpdater.on('update-available', (info) => {
+  toast.info('Update available.');
+})
+autoUpdater.on('update-not-available', (info) => {
+  toast.info('Update not available.');
+})
+autoUpdater.on('error', (err) => {
+  toast.info('Error in auto-updater. ' + err);
+})
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+  toast.info(log_message);
+})
+autoUpdater.on('update-downloaded', (info) => {
+  toast.info('Update downloaded');
+});
 app.whenReady().then(() => {
     // Register all IPC handlers
     registerAllHandlers(createWindow)
