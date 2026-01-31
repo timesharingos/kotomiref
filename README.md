@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+[![Test and Build](https://github.com/timesharingos/kotomiref/actions/workflows/testandbuild.yml/badge.svg)](https://github.com/timesharingos/kotomiref/actions/workflows/testandbuild.yml)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Welcome to Kotomiref
+## What's this?
+It is a entity-oriented, semantic, and lightweight literature management system, which helps users to discover the evolvement of a method, the aspects of a problem, and the solutions to a specific scenario.
 
-Currently, two official plugins are available:
+This project originates from my urgent requirements of managing literatures when researching. The literatures relate to each other through reference, but the research objects connot be revealed by only the references. I have tried other products, such as famous Endnote, Obsidian, or online database, but none of them is suitable for me. So, this project is developed, aiming to the first-class entities, light-weight, and inferential capability. Tailoring the SGP framework, the project extends the traditional "tag-based" literature into "semantic-tag-based" literature. The primary objective of this project is to re-construct the keypoint of the literatures, so that 90% of queries can be resolved without referring back to the original literature after a one-time ingestion process.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Related products
+- Endnote
+- Obsidian
+- AMiner(which is the most similar)
 
-## React Compiler
+# Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Step1: Add domain
+1. Switch to *Entity*, select *Domain*.
+2. Adding *Domain* and *Subdomain*.
 
-## Expanding the ESLint configuration
+Note: The main domain is used to describe the category, such as NLP、CV and so on. The subdomain is used to describe a specific interest, such as LLM、compiler security, and so on.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Step2: Define the problem
+1. Select *Tech Entity*, check the *Problem* or *Scenario*.
+2. Adding proper entities.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Note: The problem is used to describe a *chanllege*, and the scenario is used to describe an *aspect*.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Step3: Add proper entity
+check other items in the *Tech entity*, and add proper entity.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Reseach Object: the "primitive" of a research, such as a data structure, a model layer, and so on.
+- Algorithm: As the name suggests, transform the input into the output.
+- Improvement: As the name suggests, improve an object and advance.
+- Contribution: A complete summary of a design, including proposing objects, algorithms, or improvments. A contribution is the solution to a scenario.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Step5: Add signatures
+Switch to the *Signature*, and add proper authors and corresponding affiliations.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Step6: Add article
+Switch to the *Article*, follow the wizard to adding articles.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Step7: Exploring the entities.
+
+> Prelude: Make sure you have added enough articles, so that at least one improvement is present.
+
+1. Switch to the *Search*, select the *Entity Improvement Path*.
+2. Select one entity to search.
+3. The improvement path of this entity is present.
